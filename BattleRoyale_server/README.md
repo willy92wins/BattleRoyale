@@ -50,7 +50,7 @@ Online Tools (COT), VPPAdminTools or none.
 | 6 | `@Community-Online-Tools` | 1564026768 | `Jacob_Mango_V3.bikey` | optional, admin tool |
 | 7 | `@VPPAdminTools` | 1828439124 | `VPP.bikey` | optional, admin tool |
 | 8 | `@BattleRoyale` | 3834219016 | the key shipped in `@BattleRoyale\keys` | always |
-| 9 | `@BattleRoyale-VPP` | (this build) | the same key as `@BattleRoyale` | only with `@VPPAdminTools` |
+| 9 | `@BattleRoyale-VPP` | 3834226297 | the same key as `@BattleRoyale` | only with `@VPPAdminTools` |
 
 Without an admin tool:
 
