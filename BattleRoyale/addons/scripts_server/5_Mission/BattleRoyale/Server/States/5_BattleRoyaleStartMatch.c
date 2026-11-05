@@ -220,3 +220,4 @@ class BattleRoyaleStartMatch: BattleRoyaleState
         super.OnPlayerKilled( player, source );
     }
 }
+#endif

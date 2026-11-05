@@ -538,3 +538,4 @@ class SpawnSelectionMenu extends UIScriptedMenu
 		}
 	}
 }
+#endif

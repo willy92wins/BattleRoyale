@@ -115,3 +115,4 @@ modded class ItemBase
 		}
 	}
 }
+#endif

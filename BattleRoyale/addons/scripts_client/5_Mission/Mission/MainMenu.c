@@ -491,3 +491,4 @@ modded class MainMenu
 		ImagenSetColor(w, color_img);
 	}
 };
+#endif

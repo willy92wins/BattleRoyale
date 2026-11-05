@@ -620,3 +620,4 @@ class BattleRoyaleZone
 		return IsPointInPolygon(position, polygon_vertices);
 	}
 }
+#endif

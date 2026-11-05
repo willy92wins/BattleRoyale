@@ -37,3 +37,4 @@ class BRMapHandler : ScriptedWidgetEventHandler
 		return super.OnMouseButtonUp(w, x, y, button);
 	}
 };
+#endif

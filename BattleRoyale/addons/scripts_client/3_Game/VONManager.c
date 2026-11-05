@@ -48,3 +48,4 @@ modded class VONManagerImplementation
 		max_voice_level = max_level;
 	}
 }
+#endif

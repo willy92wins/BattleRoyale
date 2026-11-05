@@ -550,3 +550,4 @@ class BattleRoyaleServer: BattleRoyaleBase
 #endif
     }
 }
+#endif

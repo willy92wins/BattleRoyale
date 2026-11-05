@@ -723,3 +723,4 @@ class BattleRoyalePrepare: BattleRoyaleState
         super.RemovePlayer(player);
     }
 }
+#endif

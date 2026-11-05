@@ -293,3 +293,4 @@ class BattleRoyaleRPC
 		}
 	}
 }
+#endif

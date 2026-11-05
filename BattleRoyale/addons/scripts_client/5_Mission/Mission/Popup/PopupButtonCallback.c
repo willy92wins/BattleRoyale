@@ -3,3 +3,4 @@ class PopupButtonCallback {
 	void OnButtonClick()
 	{}
 }
+#endif

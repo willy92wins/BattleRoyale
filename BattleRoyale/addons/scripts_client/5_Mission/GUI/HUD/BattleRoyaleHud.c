@@ -216,3 +216,4 @@ class BattleRoyaleHud
         m_CountdownTextWidget.SetText( display_str );
     }
 }
+#endif

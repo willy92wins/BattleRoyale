@@ -14,3 +14,4 @@ modded class PlayerBase
 		}
 	}
 }
+#endif

@@ -15,3 +15,4 @@ modded class MissionBase
 		return super.CreateScriptedMenu(id);
 	}
 }
+#endif

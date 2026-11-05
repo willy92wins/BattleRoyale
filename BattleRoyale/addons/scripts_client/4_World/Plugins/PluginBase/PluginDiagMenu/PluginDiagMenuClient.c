@@ -14,3 +14,5 @@ modded class PluginDiagMenuClient
 		BattleRoyaleUtils.Trace("CBBRDiagDummy: " + value);
 	}
 }
+#endif
+#endif

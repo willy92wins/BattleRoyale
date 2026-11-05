@@ -179,3 +179,4 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
         return players;
     }
 }
+#endif

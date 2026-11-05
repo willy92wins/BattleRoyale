@@ -73,3 +73,4 @@ class BattleRoyaleZoneData: BattleRoyaleDataBase
 			ErrorEx(errorMessage);
 	}
 };
+#endif

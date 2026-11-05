@@ -18,3 +18,4 @@ class BattleRoyaleDataBase
 	void Save() {}  // Save the config to the file
 	void Upgrade() {}  // Upgrade the config to the latest version if needed
 };
+#endif

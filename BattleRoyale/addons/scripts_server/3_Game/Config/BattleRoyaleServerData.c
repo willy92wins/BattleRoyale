@@ -59,3 +59,4 @@ class BattleRoyaleServerData: BattleRoyaleDataBase
 			ErrorEx(errorMessage);
 	}
 };
+#endif

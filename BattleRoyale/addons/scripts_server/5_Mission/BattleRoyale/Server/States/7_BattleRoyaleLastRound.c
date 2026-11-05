@@ -224,3 +224,4 @@ class BattleRoyaleLastRound: BattleRoyaleState
 		MessagePlayersUntranslated("STR_BR_ZONE_WILL_DISAPPEAR_SECOND", seconds.ToString());
     }
 }
+#endif

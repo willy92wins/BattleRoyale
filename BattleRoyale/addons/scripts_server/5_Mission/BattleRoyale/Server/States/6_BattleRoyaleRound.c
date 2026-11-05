@@ -510,3 +510,4 @@ class BattleRoyaleRound: BattleRoyaleState
 			MessagePlayersUntranslated("STR_BR_THE_LAST_ZONE_WILL_APPEAR_IN_MINUTE", minutes.ToString());
 	}
 }
+#endif

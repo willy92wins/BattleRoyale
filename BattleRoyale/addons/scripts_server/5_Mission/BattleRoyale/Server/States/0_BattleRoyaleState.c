@@ -814,3 +814,4 @@ class BattleRoyaleDebugState: BattleRoyaleState
         return f_Radius;
     }
 }
+#endif

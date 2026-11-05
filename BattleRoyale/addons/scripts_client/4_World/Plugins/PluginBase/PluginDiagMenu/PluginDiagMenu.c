@@ -21,3 +21,5 @@ modded class PluginDiagMenu
 		DiagMenu.RegisterBool(m_BRDiagDummyID, "", "Dummy Option", m_BRDiagRootMenuID);
 	}
 }
+#endif
+#endif

@@ -88,3 +88,4 @@ class PartiesCallback: RestCallback
 			BattleRoyaleUtils.Trace(data);
 	};
 };
+#endif

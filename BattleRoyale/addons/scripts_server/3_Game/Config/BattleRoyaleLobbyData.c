@@ -99,3 +99,4 @@ class BattleRoyaleLobbyData: BattleRoyaleDataBase
 		}
 	}
 };
+#endif

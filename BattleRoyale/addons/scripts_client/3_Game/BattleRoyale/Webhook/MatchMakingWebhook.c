@@ -85,3 +85,4 @@ class MM_PlayerInfo
         }
     };
 };
+#endif

@@ -192,3 +192,4 @@ class BattleRoyaleConfig
 		return BattleRoyaleZoneData.Cast( GetConfig("ZoneData") );
 	}
 };
+#endif

@@ -13,3 +13,4 @@ class ClosePopupButtonCallback extends PopupButtonCallback
 		m_MainMenu.ClosePopup();
 	}
 }
+#endif

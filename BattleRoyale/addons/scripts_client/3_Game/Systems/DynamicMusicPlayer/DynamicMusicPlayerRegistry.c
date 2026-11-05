@@ -12,3 +12,4 @@ modded class DynamicMusicPlayerRegistry
 		RegisterTrackMenu("Music_Menu_4_SoundSet");
 	}
 }
+#endif

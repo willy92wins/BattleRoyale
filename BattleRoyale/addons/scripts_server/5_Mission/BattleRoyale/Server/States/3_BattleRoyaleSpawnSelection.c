@@ -320,3 +320,4 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 		}
 	}
 }
+#endif

@@ -27,3 +27,15 @@ enum BattleRoyaleMatchMakingState
 	Failed,
 	Success
 }
+//! Match phase shown to clients by the SetMatchPhase RPC (see BattleRoyale_dev/contracts/rpc-1.0.md)
+enum EBRMatchPhase
+{
+	LOBBY = 0,
+	SPAWN_SELECTION,
+	PREPARE,
+	STARTING,
+	ROUND,
+	LAST_ROUND,
+	FINISHED,
+	RESTARTING
+}

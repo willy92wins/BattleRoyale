@@ -127,3 +127,4 @@ class BattleRoyaleWin: BattleRoyaleState
         Deactivate();
     }
 }
+#endif

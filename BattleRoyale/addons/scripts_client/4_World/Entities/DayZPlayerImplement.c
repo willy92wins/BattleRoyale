@@ -50,3 +50,5 @@ modded class DayZPlayerImplement
 		GetGame().GetMission().AbortMission();
 	}
 }
+#endif
+#endif
