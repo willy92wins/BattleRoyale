@@ -311,10 +311,24 @@ class BattleRoyaleServer: BattleRoyaleBase
 
     void Disconnect(PlayerIdentity identity)
     {
-        if (identity && m_LateJoinTimers)
-            m_LateJoinTimers.Remove(identity.GetPlainId());
+        // The map is the only strong ref to the Timer that is running this callback.
+        // Drop it on the next call-queue turn, after Timer.OnTimer finishes.
+        if (identity)
+            GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(this.RemoveLateJoinTimer, 0, false, identity.GetPlainId());
 
         GetGame().DisconnectPlayer( identity ); //can't directly call disconnectplayer with timer, so we use this method
+    }
+
+    void RemoveLateJoinTimer(string steamid)
+    {
+        if (!m_LateJoinTimers || !m_LateJoinTimers.Contains(steamid))
+            return;
+
+        Timer kickTimer = m_LateJoinTimers.Get(steamid);
+        if (kickTimer && kickTimer.IsRunning())
+            return;
+
+        m_LateJoinTimers.Remove(steamid);
     }
 
     protected void NotifyStatsWebhook(BattleRoyaleState state)

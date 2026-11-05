@@ -79,6 +79,13 @@ Verificado por lectura del diff.
 La exención de expulsión mantiene `admins_steamid64` y añade `BRAdminAuthorizer.IsOperator` (`BattleRoyaleServer.c:268`). `IsOperator` (`BRAdminAuthorizer.c:27`) es verdadero si COT o VPP conceden Next, Pause, Resume o SpawnAirdrop, y no escribe en el log. La lista de steamid del authorizer de RPC no cambia: sigue siendo el respaldo cuando no hay COT ni VPP.
 Verificado por lectura. No se conectó un admin COT ni VPP.
 
+## Ronda 2 de correcciones
+
+### D7
+`Disconnect` ya no hace `Remove` del `Timer` que está ejecutando el callback. `Timer.Tick` (`scripts\3_game\tools\tools.c:272`) llama a `OnTimer`, y `Timer.OnTimer` (`:604-614`) llama a `CallFunctionParams` y después asigna `m_params = NULL`. Borrar la única referencia fuerte dentro de `Disconnect` liberaría el objeto antes de esa escritura.
+`Disconnect` (`BattleRoyaleServer.c`) encola `RemoveLateJoinTimer(string steamid)` con `CallLater` a 0 ms en `CALL_CATEGORY_SYSTEM`. Ese método solo borra si el timer guardado ya no está en marcha, así un rearme del mismo steamid no se lo lleva por delante. Cancelar desde `ScheduleLateJoinKick` sigue haciendo `Stop` y `Remove` fuera del callback.
+Verificado por lectura de `tools.c:272-297` y `:604-614`, y del diff. No se ejecutó el timer en el juego.
+
 ## LO QUE NO PUDE VERIFICAR
 - Ningún RPC, permiso COT/VPP, kick ni webhook se ejecutó en DayZ.
 - Un perfil ya escrito con `autolock_url` apuntando a api.vigrid.ovh sigue enviando si `use_autolock` está activo; solo cambia el default de la clase.
