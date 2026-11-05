@@ -30,3 +30,7 @@ Guillermo dio permiso pleno para avanzar durante la noche. Todas se revierten co
 - Config rota: se anota con `Error` y se usa el valor por defecto; el servidor no se para.
 - `restart_loop.ps1` exige `-InstanceId` y solo toca `storage_<id>` de esa instancia: la aparta como `storage_<id>.prev-<fecha>`, guarda las 3 copias más nuevas (`-KeepPrevious`) y borra solo las más viejas de esa misma instancia.
 - Sin migración automática de los JSON de perfil de la 0.1.0: el README pide borrarlos.
+
+## Backlog v1.2
+
+- Zone ring on the ground (requested 2026-11-05): client-only local objects or particles every ~10 m along the zone edge, only within ~300 m of the player, moved as the zone shrinks; no server or network cost. Verify local objects and particles on 1.30 with a prototype first.
