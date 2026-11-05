@@ -1,18 +1,13 @@
 #ifdef SERVER
 modded class Weapon_Base
 {
-	override void EEInit()
+	override void EEOnCECreate()
 	{
-		super.EEInit();
+		super.EEOnCECreate();
 
-		// Chamber the weapon with a random bullet by default
+		// Chamber a round on economy spawn only. Do not attach a magazine:
+		// SpawnWithAmmoAndMagazine already creates the loose ones.
 		FillChamber( "", WeaponWithAmmoFlags.CHAMBER );
-
-		Magazine mag = GetMagazine(0);
-		if ( mag == NULL )  // Can't spawn a magazine if there's already one
-		{
-			SpawnAmmo();
-		}
 	}
 }
 #endif

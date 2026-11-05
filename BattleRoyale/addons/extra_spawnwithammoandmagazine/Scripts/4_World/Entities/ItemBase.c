@@ -60,31 +60,30 @@ modded class ItemBase
 					int maxMagCapacity = GetGame().ConfigGetInt("CfgMagazines " + magazineType + " count");
 					if(maxMagCapacity > 100)
 					{
-						Print("[SpawnWithAmmo] Skipping high capacity magazine: " + magazineType + " (" + maxMagCapacity + " rounds)");
 						continue; // Try another magazine type without counting it as spawned
 					}
 
-					// Valid magazine found, spawn it
-					Print("Magazine type: " + magazineType);
-					Print(GetGame().CreateObjectEx(magazineType, GetPosition(), ECE_CREATEPHYSICS|ECE_UPDATEPATHGRAPH));
-					validMagazinesSpawned++;
-				}
+					EntityAI spawnedMag = EntityAI.Cast(GetGame().CreateObjectEx(magazineType, GetPosition(), ECE_CREATEPHYSICS|ECE_UPDATEPATHGRAPH));
+					if (!spawnedMag)
+						continue;
 
-				if (validMagazinesSpawned < spawnCount)
-				{
-					Print("[SpawnWithAmmo] Could only spawn " + validMagazinesSpawned + " valid magazines after " + attempts + " attempts");
+					validMagazinesSpawned++;
 				}
 			}
 			else  // No compatible magazines, try to spawn chamberable ammo piles instead
 			{
-				for( int j = 0; j < Math.RandomIntInclusive(min_spawn, max_spawn); j++ )
+				int ammoSpawnCount = Math.RandomIntInclusive(min_spawn, max_spawn);
+				array<string> ammoTypes = new array<string>;
+				ConfigGetTextArray("chamberableFrom", ammoTypes);
+				if( ammoTypes.Count() > 0 )
 				{
-					array<string> ammoTypes = new array<string>;
-					ConfigGetTextArray("chamberableFrom", ammoTypes);
-					if( ammoTypes.Count() > 0 )
+					for( int j = 0; j < ammoSpawnCount; j++ )
 					{
 						string ammoType = ammoTypes.GetRandomElement();
 						EntityAI ammoPile = EntityAI.Cast(GetGame().CreateObjectEx( ammoType, GetPosition(), ECE_CREATEPHYSICS|ECE_UPDATEPATHGRAPH ));
+						if (!ammoPile)
+							continue;
+
 						if( ammoPile.GetEconomyProfile() == NULL || ammoPile.GetEconomyProfile().GetNominal() == 0 )
 						{
 							// Ammo pile has no economy profile, delete it

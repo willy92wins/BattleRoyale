@@ -5,17 +5,30 @@ modded class UnconsciousnessMdfr
 	const float UNCONSCIOUSNESS_MAX_TIME = 5.0; // in seconds
 	const float SHOCK_DAMAGE_AFTER_UNCONSCIOUSNESS = PlayerConstants.CONSCIOUS_THRESHOLD + 0.1; // Set health to conscious threshold
 
+	static bool s_DisableCached;
+	static bool s_DisableUnconsciousness;
+
 	override void Init()
 	{
 		BattleRoyaleUtils.Trace("UnconsciousnessMdfr::Init");
 		super.Init();
 	}
 
-	override bool ActivateCondition(PlayerBase player)
+	protected void CacheDisableFlag()
 	{
+		if (s_DisableCached)
+			return;
+
+		s_DisableCached = true;
 		bool config_disable_unconsciousness = GetGame().ServerConfigGetInt("BRDisableUnconsciousness") == 1;
 		bool cli_disable_unconsciousness = IsCLIParam("br-disable-unconsciousness");
-		if(!config_disable_unconsciousness && !cli_disable_unconsciousness)
+		s_DisableUnconsciousness = config_disable_unconsciousness || cli_disable_unconsciousness;
+	}
+
+	override bool ActivateCondition(PlayerBase player)
+	{
+		CacheDisableFlag();
+		if(!s_DisableUnconsciousness)
 		{
 			if(super.ActivateCondition(player))
 			{
