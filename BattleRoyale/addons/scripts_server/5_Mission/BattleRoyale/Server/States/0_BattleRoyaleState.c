@@ -8,12 +8,25 @@ class BattleRoyaleState: Timeable
 
 	// Track the number of players in the game when the game starts - shared between all states
     static int i_NumStartingPlayers = 0;
+    static ref map<string, string> s_MatchPlayerNames;
+
+    // Last SetMatchPhase broadcast (EBRMatchPhase, seconds or -1, mission time in ms), replayed to late connections
+    static int s_MatchPhase = 0;
+    static int s_MatchPhaseSeconds = -1;
+    static int s_MatchPhaseSentAt = 0;
 
     //static int i_StartingZone = 1; // Default zone is the biggest one
 
 #ifdef Carim
     bool hide_players_endgame = false;
+    int m_CachedGroupsCount = -1;
+    int m_CachedGroupsPlayers = -1;
+    float m_GroupsCountComputedAt = -1000;
 #endif
+
+    static ref array<string> s_BadTeleportSurfaces;
+    protected ref array<Object> m_TeleportExcluded;
+    protected ref array<Object> m_TeleportCollided;
 
     string GetName()
     {
@@ -28,9 +41,17 @@ class BattleRoyaleState: Timeable
         b_IsPaused = false;
         b_IsDebug = false;
 
+        if (!s_BadTeleportSurfaces)
+        {
+            s_BadTeleportSurfaces = new array<string>();
+            s_BadTeleportSurfaces.Insert("nam_seaice");
+            s_BadTeleportSurfaces.Insert("nam_lakeice_ext");
+        }
+        m_TeleportExcluded = new array<Object>();
+        m_TeleportCollided = new array<Object>();
+
 #ifdef Carim
-        // Only really useful when party are enabled
-        AddTimer(5.0, this, "OnPlayerCountChanged", NULL, true);
+        // Group count is sent from OnPlayerCountChanged, not on a timer
         BattleRoyaleGameData m_GameSettings = BattleRoyaleConfig.GetConfig().GetGameData();
         if(m_GameSettings)
         {
@@ -50,6 +71,45 @@ class BattleRoyaleState: Timeable
     	BattleRoyaleUtils.Debug(string.Format("BattleRoyaleState::Activate: %1", GetName()));
         //Note: this is called AFTER players are added
         b_IsActive = true;
+    }
+
+    protected void RememberMatchPlayers()
+    {
+        if (!s_MatchPlayerNames)
+            s_MatchPlayerNames = new map<string, string>();
+
+        for (int i = 0; i < m_Players.Count(); i++)
+        {
+            PlayerBase player = m_Players[i];
+            if (!player || !player.GetIdentity())
+                continue;
+            s_MatchPlayerNames.Set(player.GetIdentity().GetPlainId(), player.GetIdentity().GetName());
+        }
+    }
+
+    protected void BroadcastMatchPhase(int phase, int seconds)
+    {
+        s_MatchPhase = phase;
+        s_MatchPhaseSeconds = seconds;
+        s_MatchPhaseSentAt = GetGame().GetTime();
+        GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetMatchPhase", new Param2<int, int>(phase, seconds), true);
+    }
+
+    //! Sends the last broadcast phase to a client that connects after it, with the seconds left on its timer
+    static void SendMatchPhaseTo(PlayerIdentity identity)
+    {
+        if (!identity)
+            return;
+
+        int seconds = s_MatchPhaseSeconds;
+        if (seconds > 0)
+        {
+            seconds -= (GetGame().GetTime() - s_MatchPhaseSentAt) / 1000;
+            if (seconds < 0)
+                seconds = 0;
+        }
+
+        GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetMatchPhase", new Param2<int, int>(s_MatchPhase, seconds), true, identity);
     }
 
     void Deactivate()
@@ -110,6 +170,18 @@ class BattleRoyaleState: Timeable
 
     void RemovePlayer(PlayerBase player)
     {
+        if (b_IsDebug && player)
+        {
+            player.SetAllowDamage(true);
+            if (VitalsNeedHeal(player))
+                player.Heal();
+        }
+
+        // A killed or disconnected player is removed by the state, then again by BattleRoyaleServer:
+        // only the first removal changes the count and resends it to every client
+        if (!ContainsPlayer(player))
+            return;
+
     	BattleRoyaleUtils.Info(string.Format("BattleRoyaleState::RemovePlayer: %1", player.GetIdentityName()));
         m_Players.RemoveItem(player);
         OnPlayerCountChanged();
@@ -120,9 +192,33 @@ class BattleRoyaleState: Timeable
     	BattleRoyaleUtils.Debug(string.Format("BattleRoyaleState::RemoveAllPlayers: removed %1 players", m_Players.Count()));
         ref array<PlayerBase> result_array = new array<PlayerBase>();
         result_array.InsertAll(m_Players);
+        if (b_IsDebug)
+        {
+            foreach (PlayerBase leaving: result_array)
+            {
+                if (!leaving)
+                    continue;
+                leaving.SetAllowDamage(true);
+                if (VitalsNeedHeal(leaving))
+                    leaving.Heal();
+            }
+        }
         m_Players.Clear();
         OnPlayerCountChanged();
         return result_array;
+    }
+
+    protected bool VitalsNeedHeal(PlayerBase player)
+    {
+        if (!player)
+            return false;
+        if (player.GetHealth("", "Health") < player.GetMaxHealth("", "Health"))
+            return true;
+        if (player.GetHealth("", "Blood") < player.GetMaxHealth("", "Blood"))
+            return true;
+        if (player.GetHealth("", "Shock") < player.GetMaxHealth("", "Shock"))
+            return true;
+        return false;
     }
 
     bool ContainsPlayer(PlayerBase player)
@@ -235,7 +331,7 @@ class BattleRoyaleState: Timeable
 	    {
 	    	if(player.GetIdentity())
 	    	{
-	    		BattleRoyaleUtils.Info(string.Format("MessagePlayerUntranslated: %1 %2", player.GetIdentity().GetName(), message));
+	    		BattleRoyaleUtils.Info(string.Format("MessagePlayerUntranslated: %1 %2", player.GetIdentityName(), message));
 	    		GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "NotificationMessage", new Param7<string, float, string, string, string, string, string>( message, time, param1, param2, param3, param4, param5 ), true, player.GetIdentity());
 	    	}
 	    }
@@ -265,14 +361,9 @@ class BattleRoyaleState: Timeable
 //            return false;
 
 		// Avoid namalsk ice (and others)
-        ref array<string> bad_surface_types = {
-            "nam_seaice",
-            "nam_lakeice_ext"
-        };
-
         string surface_type;
         GetGame().SurfaceGetType(x, z, surface_type);
-        if(bad_surface_types.Find(surface_type) != -1)
+        if(s_BadTeleportSurfaces && s_BadTeleportSurfaces.Find(surface_type) != -1)
             return false;
 
 		// Avoid objects
@@ -296,29 +387,35 @@ class BattleRoyaleState: Timeable
             return false;
 
         // New Geometry check
-        array<Object> excludedObjects = new array<Object>();
-        array<Object> collidedObjects = new array<Object>();
+        if (!m_TeleportExcluded)
+            m_TeleportExcluded = new array<Object>();
+        if (!m_TeleportCollided)
+            m_TeleportCollided = new array<Object>();
+        m_TeleportExcluded.Clear();
+        m_TeleportCollided.Clear();
         vector box_position;
         box_position[0] = position[0];
         box_position[1] = position[1];
         box_position[2] = position[2];
-        if( GetGame().IsBoxCollidingGeometry(box_position, "0 0 0", "2 10 2", ObjIntersectFire, ObjIntersectGeom, excludedObjects, collidedObjects) )
+        if( GetGame().IsBoxCollidingGeometry(box_position, "0 0 0", "2 10 2", ObjIntersectFire, ObjIntersectGeom, m_TeleportExcluded, m_TeleportCollided) )
         {
-            if( collidedObjects.Count() > 0)
+            if( m_TeleportCollided.Count() > 0)
             {
                 BattleRoyaleUtils.Trace("New IsSafeForTeleport Geometry check is true !");
 #ifdef BR_TRACE_ENABLED
-                Print( collidedObjects );
-#endif
-                for (int i = 0; i < collidedObjects.Count(); ++i)
+                Print( m_TeleportCollided );
+                for (int i = 0; i < m_TeleportCollided.Count(); ++i)
                 {
-                    string objectClass = collidedObjects.Get(i).GetType();
+                    string objectClass = m_TeleportCollided.Get(i).GetType();
                     BattleRoyaleUtils.Trace( "objectClass: " + objectClass );
                 }
 
                 string text = "";
-                foreach (Object object: collidedObjects)
+                foreach (Object object: m_TeleportCollided)
                     text += " | " + Object.GetDebugName(object);
+                if (text != "")
+                    BattleRoyaleUtils.Trace(text);
+#endif
             }
 
 			return false;
@@ -339,11 +436,24 @@ class BattleRoyaleState: Timeable
 		if (m_Players.Count() == 0)
 			return 0;
 
+		// No cheap Carim membership event was found. While the state is active the
+		// count is recomputed at most once every 5 seconds. IsComplete polls this every 0.1s.
+		bool same_players = m_CachedGroupsPlayers == m_Players.Count() && m_CachedGroupsCount >= 0;
+		if (same_players && IsActive() && (GetGame().GetTickTime() - m_GroupsCountComputedAt) < 5.0)
+			return m_CachedGroupsCount;
+		if (same_players && !IsActive())
+			return m_CachedGroupsCount;
+
 		ref map<string, ref CarimSet> parties = MissionServer.Cast(GetGame().GetMission()).carimModelPartyParties.mutuals;
 
 		// If no parties exist, each player is a solo group
 		if (!parties || parties.Count() == 0)
-			return m_Players.Count();
+		{
+			m_CachedGroupsPlayers = m_Players.Count();
+			m_CachedGroupsCount = m_Players.Count();
+			m_GroupsCountComputedAt = GetGame().GetTickTime();
+			return m_CachedGroupsCount;
+		}
 
 		// Create player ID mapping and track processed players
 		ref set<PlayerBase> processed_players = new set<PlayerBase>();
@@ -390,7 +500,10 @@ class BattleRoyaleState: Timeable
 		int remaining_players = m_Players.Count() - processed_players.Count();
 		group_count += remaining_players;
 
-		return group_count;
+		m_CachedGroupsPlayers = m_Players.Count();
+		m_CachedGroupsCount = group_count;
+		m_GroupsCountComputedAt = GetGame().GetTickTime();
+		return m_CachedGroupsCount;
 	}
 
     ref array<ref set<PlayerBase>> GetGroups()
@@ -439,14 +552,14 @@ class BattleRoyaleState: Timeable
 				PlayerBase plr = PlayerBase.Cast(id_map.Get(registered_parties.GetKey(i)));  // Get party leader
 				if(plr && plr.GetIdentity())
 				{
-					BattleRoyaleUtils.Trace("Party leader is " + plr.GetIdentity().GetName());
+					BattleRoyaleUtils.Trace("Party leader is " + plr.GetIdentityName());
 					if(m_PlayerWaitList.Find(plr) != -1)// Test if party leader is still in waiting list
 					{
-						BattleRoyaleUtils.Trace(plr.GetIdentity().GetName() + " is in the wait list");
+						BattleRoyaleUtils.Trace(plr.GetIdentityName() + " is in the wait list");
 						m_PlayerWaitList.Remove(m_PlayerWaitList.Find(plr));
 						if (plr && plr.GetIdentity() && plr.IsAlive())
 						{
-							BattleRoyaleUtils.Trace("Add leader " + plr.GetIdentity().GetName() + " to the group");
+							BattleRoyaleUtils.Trace("Add leader " + plr.GetIdentityName() + " to the group");
 							group.Insert(plr);  // Insert guild leader into group
 							if (registered_parties.GetElement(i))
 							{
@@ -458,10 +571,10 @@ class BattleRoyaleState: Timeable
 									PlayerBase plrpart = id_map.Get(tmpPlayPart.Get(j));
 									if ( plrpart )
 									{
-										BattleRoyaleUtils.Trace("Try to add player " + plrpart.GetIdentity().GetName() + " to teleport group");
+										BattleRoyaleUtils.Trace("Try to add player " + plrpart.GetIdentityName() + " to teleport group");
 										if(m_PlayerWaitList.Find(plrpart) != -1)
 										{
-											BattleRoyaleUtils.Trace("Added player " + plrpart.GetIdentity().GetName() + " to teleport group");
+											BattleRoyaleUtils.Trace("Added player " + plrpart.GetIdentityName() + " to teleport group");
 											m_PlayerWaitList.Remove(m_PlayerWaitList.Find(plrpart));
 											group.Insert(plrpart);  // Insert party member into group
 										}
@@ -500,14 +613,14 @@ class BattleRoyaleState: Timeable
 
     set<PlayerBase> GetGroup(PlayerBase player)
 	{
-		BattleRoyaleUtils.Trace("GetGroup for player " + player.GetIdentity().GetName());
+		BattleRoyaleUtils.Trace("GetGroup for player " + player.GetIdentityName());
 		ref array<ref set<PlayerBase>> groups = GetGroups();
 		for (int i = 0; i < groups.Count(); i++)
 		{
 			BattleRoyaleUtils.Trace("Group " + i + " has " + groups.Get(i).Count() + " players");
 			if (groups.Get(i).Find(player) != -1)
 			{
-				BattleRoyaleUtils.Trace("Found group for player " + player.GetIdentity().GetName());
+				BattleRoyaleUtils.Trace("Found group for player " + player.GetIdentityName());
 				return groups.Get(i);
 			}
 		}
@@ -582,6 +695,8 @@ class BattleRoyaleState: Timeable
 		{
 			Error("Unknown player killed! Not in current state?");
 		}
+
+		BroadcastKillFeed(player, source);
 
 		if (!player || !source)
 		{
@@ -660,6 +775,71 @@ class BattleRoyaleState: Timeable
 			}
 		}
 	}
+
+	protected void BroadcastKillFeed(PlayerBase victim, Object source)
+	{
+		string killer_name = "";
+		string victim_name = "";
+		string weapon_name = "";
+		float distance_m = 0;
+
+		if (victim && victim.GetIdentity())
+			victim_name = victim.GetIdentity().GetName();
+
+		if (source && victim)
+		{
+			PlayerBase playerSource;
+			EntityAI source_ai = EntityAI.Cast(source);
+			if (source_ai)
+				playerSource = PlayerBase.Cast(source_ai.GetHierarchyParent());
+			if (!playerSource)
+				playerSource = PlayerBase.Cast(source);
+
+			if (playerSource && playerSource != victim && playerSource.GetIdentity())
+			{
+				killer_name = playerSource.GetIdentity().GetName();
+				distance_m = vector.Distance(victim.GetPosition(), playerSource.GetPosition());
+			}
+
+			string activator_id = "";
+			Grenade_Base grenade = Grenade_Base.Cast(source);
+			LandMineTrap mine = LandMineTrap.Cast(source);
+			if (grenade)
+				activator_id = grenade.GetActivatorId();
+			else if (mine)
+				activator_id = mine.GetActivatorId();
+
+			if (killer_name == "" && activator_id != "")
+			{
+				for (int i = 0; i < m_Players.Count(); i++)
+				{
+					PlayerBase activator = m_Players[i];
+					if (!activator || !activator.GetIdentity())
+						continue;
+					if (activator.GetIdentity().GetPlainId() != activator_id)
+						continue;
+					killer_name = activator.GetIdentity().GetName();
+					distance_m = vector.Distance(victim.GetPosition(), activator.GetPosition());
+					break;
+				}
+
+				if (killer_name == "" && s_MatchPlayerNames)
+				{
+					string stored_name = "";
+					if (s_MatchPlayerNames.Find(activator_id, stored_name) && stored_name != "")
+						killer_name = stored_name;
+				}
+			}
+
+			if (source_ai)
+			{
+				if (source.IsWeapon() || source.IsMeleeWeapon() || grenade || mine)
+					weapon_name = source_ai.GetDisplayName();
+			}
+		}
+
+		GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "KillFeedEvent", new Param4<string, string, string, float>(killer_name, victim_name, weapon_name, distance_m), true);
+	}
 }
 
 // Base state for the Debug Zone.
@@ -673,6 +853,7 @@ class BattleRoyaleDebugState: BattleRoyaleState
 
     void BattleRoyaleDebugState()
     {
+        b_IsDebug = true;
         BattleRoyaleSpawnsData m_SpawnsSettings = BattleRoyaleConfig.GetConfig().GetSpawnsData();
         BattleRoyaleGameData m_GameSettings = BattleRoyaleConfig.GetConfig().GetGameData();
 
@@ -711,39 +892,17 @@ class BattleRoyaleDebugState: BattleRoyaleState
         return "Unknown Debug State";
     }
 
-    /*
     override void AddPlayer(PlayerBase player)
     {
         if(player)
         {
             player.SetAllowDamage(false); //all players in this state are god mode
-            player.Heal();
+            if (VitalsNeedHeal(player))
+                player.Heal();
         }
 
         super.AddPlayer(player);
     }
-
-    override ref array<PlayerBase> RemoveAllPlayers()
-    {
-        ref array<PlayerBase> players = super.RemoveAllPlayers();
-        foreach(PlayerBase player: players)
-        {
-            player.SetAllowDamage(true); //leaving debug state = disable god mode
-            player.Heal();
-        }
-        return players;
-    }
-    
-    override void RemovePlayer(PlayerBase player)
-    {
-        if(player)
-        {
-            player.SetAllowDamage(true); //leaving debug state = disable god mode
-            player.Heal();
-        }
-        super.RemovePlayer(player);
-    }
-    */
 
     //--- debug states must lock players into the debug zone & heal them
     override void OnPlayerTick(PlayerBase player, float timeslice)
@@ -771,7 +930,8 @@ class BattleRoyaleDebugState: BattleRoyaleState
         if(player.time_until_heal <= 0)
         {
             player.time_until_heal = i_HealTickTime;
-            player.Heal();
+            if (VitalsNeedHeal(player))
+                player.Heal();
         }
         player.time_until_heal -= timeslice;
     }

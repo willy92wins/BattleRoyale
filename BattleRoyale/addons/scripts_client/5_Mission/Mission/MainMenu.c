@@ -2,9 +2,7 @@
 modded class MainMenu
 {
 	protected ImageWidget m_Logo;
-	protected ref array<ref ModInfo> modList = new array<ref ModInfo>();
 	protected TextWidget m_PlayButtonLabel;
-	protected bool b_MatchMakingAvailable;
 
 	protected Widget m_PopupMessage;
 	protected RichTextWidget m_PopupText;
@@ -12,10 +10,6 @@ modded class MainMenu
 	protected ButtonWidget m_PopupButton_2;
 	protected ref PopupButtonCallback popup_onClick;
 	protected ref PopupButtonCallback popup_onClick2;
-
-	protected BattleRoyaleMatchMakingState m_MatchMakingState;
-
-	protected int m_MatchMakingTryCount;
 
 	override Widget Init()
 	{
@@ -35,6 +29,8 @@ modded class MainMenu
 		m_NextCharacter				= layoutRoot.FindAnyWidget("next_character");
 
 		m_DlcFrame 					= layoutRoot.FindAnyWidget("dlc_Frame");
+		// Hidden parent for the vanilla news carousel, created by OnShow and CheckWidth since 1.30
+		m_NewsCarouselFrame			= layoutRoot.FindAnyWidget("carousel_Frame");
 		m_Version					= TextWidget.Cast(layoutRoot.FindAnyWidget("version"));
 		m_ModdedWarning				= TextWidget.Cast(layoutRoot.FindAnyWidget("ModdedWarning"));
 		m_CharacterRotationFrame	= layoutRoot.FindAnyWidget("character_rotation_frame");
@@ -84,9 +80,6 @@ modded class MainMenu
 
 		g_Game.SetLoadState(DayZLoadState.MAIN_MENU_CONTROLLER_SELECT);
 
-		// Get mod list
-		GetGame().GetModInfos(modList);
-
 		m_Logo = ImageWidget.Cast( layoutRoot.FindAnyWidget( "dayz_logo" ) );
 		if(!m_Logo.LoadImageFile( 0, BATTLEROYALE_LOGO_IMAGE ))
 			Error("Failed to load imageset image");
@@ -99,7 +92,6 @@ modded class MainMenu
 		ref array<string> funny_strings = {
 			"Bro, it's DayZ but with Battle Royale stuff!",
 			"Welcome to the wild world of DayZ Battle Royale, where the only certainty is uncertainty.",
-			"Thou whom read this message, S1Q.",
 			"Next time, try to aim better...",
 			"Just so you know, you're allergic to bullets.",
 			"You Miss 100% Of The Shots You Don't Take.",
@@ -149,19 +141,7 @@ modded class MainMenu
 
 		BR_OverrideUI();
 
-		m_MatchMakingState = BattleRoyaleMatchMakingState.None;
-		m_MatchMakingTryCount = 0;
-
-		if (IsMatchMakingAvailable())
-		{
-			m_PlayButtonLabel.SetText("#STR_BR_MM_MATCHMAKING");
-		}
-		else
-		{
-			//TODO: If there's parameters from the CLI, use them to connect to the server automatically
-			//TODO: Must test if it's the first time the main menu is loaded, to avoid an infinite loop
-			m_PlayButtonLabel.SetText("#main_menu_play");
-		}
+		m_PlayButtonLabel.SetText("#main_menu_play");
 
 		return layoutRoot;
 	}
@@ -177,37 +157,6 @@ modded class MainMenu
 			m_DisplayedDlcHandler.ShowInfoPanel(false);
 	}
 
-	private bool IsMatchMakingAvailable()
-	{
-		// Change the play button text
-		m_PlayButtonLabel.SetText("LOGIN...");
-
-		// MatchMaking Webhook
-		MatchMakingWebhook matchMakingWebhook = new MatchMakingWebhook();
-		// Check if the matchmaking is available by checking if the IP and port is part of Vigrid hive
-		// Get server host and port from CLI arguments
-		string m_ConnectAddress;
-		string m_ConnectPort;
-		GetCLIParam("connect", m_ConnectAddress);
-		GetCLIParam("port", m_ConnectPort);
-
-		if (m_ConnectAddress.Contains(":"))
-		{
-			array<string> connectParts = new array<string>;
-			m_ConnectAddress.Split(":", connectParts);
-			if (connectParts.Count() >= 2)
-			{
-				m_ConnectAddress = connectParts[0];
-				m_ConnectPort = connectParts[1];
-			}
-		}
-
-		b_MatchMakingAvailable = matchMakingWebhook.isMatchMakingAvailable( m_ConnectAddress, m_ConnectPort );
-		BattleRoyaleUtils.Trace("MatchMaking Available: " + b_MatchMakingAvailable);
-
-		return b_MatchMakingAvailable;
-	}
-
 	override void FilterDlcs(inout array<ref ModInfo> modArray)
 	{
 		BR_OverrideUI();
@@ -219,16 +168,14 @@ modded class MainMenu
 		super.ShowDlcFrame(false);
 	}
 
-	// Disable the play button
+	// As vanilla: joins the last server played with this character, or opens the server browser when
+	// there is none. A -connect target is joined once at startup by DayZGame.ConnectLaunch
 	override void Play()
 	{
-
-	}
-
-	// Disable the server browser button
-	override void OpenMenuServerBrowser()
-	{
-
+		if (m_ScenePC && m_ScenePC.GetIntroCharacter())
+			g_Game.GetCallQueue(CALL_CATEGORY_GUI).CallByName(this, "ConnectLastSession");
+		else
+			OpenMenuServerBrowser();
 	}
 
 	bool OnStart(bool force_restart = false)
@@ -329,26 +276,9 @@ modded class MainMenu
 		{
 			if (w == m_Play)
 			{
-				if ( b_MatchMakingAvailable )
-				{
-					m_LastFocusedButton = m_Play;
-//					ref ClosePopupButtonCallback closecallback = new ClosePopupButtonCallback( this );
-//					CreatePopup("Currently match making", "Close", closecallback, "", NULL);
-					StartMatchMaking();
-
-					return true;
-				} else {
-					string m_ConnectAddress;
-					string m_ConnectPort;
-					string m_ConnectPassword;
-					GetCLIParam("connect", m_ConnectAddress);
-					GetCLIParam("port", m_ConnectPort);
-					GetCLIParam("password", m_ConnectPassword);
-
-					g_Game.ConnectFromServerBrowser( m_ConnectAddress, m_ConnectPort.ToInt(), m_ConnectPassword );
-
-					return true;
-				}
+				m_LastFocusedButton = m_Play;
+				Play();
+				return true;
 			}
 			if(w == m_PopupButton)
 			{
@@ -380,101 +310,6 @@ modded class MainMenu
 		}
 
 		return super.OnMouseEnter(w, x, y);
-	}
-
-	void StartMatchMaking()
-	{
-		m_MatchMakingTryCount = m_MatchMakingTryCount + 1;
-
-		// Change the play button text
-		m_MatchMakingState = BattleRoyaleMatchMakingState.Searching;
-		m_PlayButtonLabel.SetText("#STR_BR_MM_SEARCHING");
-		m_Play.SetFlags(WidgetFlags.IGNOREPOINTER);
-		ColorDisable(m_Play);
-
-		// MatchMaking Webhook
-		MatchMakingWebhook matchMakingWebhook = new MatchMakingWebhook();
-		array<string> server_info = matchMakingWebhook.searchGame( modList );
-
-		// TODO: Enable when find a way to re-enable the button
-//		m_Play.SetFlags(WidgetFlags.IGNOREPOINTER);
-//		ColorDisable(m_Play);
-
-		// Connect to the server
-		if( server_info.Count() == 3 )
-		{
-			// Disable the button state
-			m_MatchMakingState = BattleRoyaleMatchMakingState.Connecting;
-			m_Play.SetFlags(WidgetFlags.IGNOREPOINTER);
-			ColorDisable(m_Play);
-
-			// Format : [IP, Port, Password]
-			string ip = server_info[0];
-			int port = server_info[1].ToInt();
-			string password = server_info[2];
-
-			// If password is null, set it to empty
-			if ( password == "null" )
-			{
-				password = "";
-			}
-
-			g_Game.ConnectFromServerBrowser( ip, port, password );
-
-			// Reset the button state
-			m_MatchMakingState = BattleRoyaleMatchMakingState.None;
-			m_Play.ClearFlags(WidgetFlags.IGNOREPOINTER);
-			ColorNormal(m_Play);
-
-			if (IsMatchMakingAvailable())
-			{
-				m_PlayButtonLabel.SetText("#STR_BR_MM_MATCHMAKING");
-			}
-			else
-			{
-				m_PlayButtonLabel.SetText("#main_menu_play");
-			}
-		}
-		else if ( server_info.Count() == 1 )
-		{
-			int sleep = server_info[0].ToInt();
-			if( sleep < 1000 )
-				sleep = 10000;  // If the sleep is anomalously low, set it to 10 seconds
-
-			// Sleep before retrying
-			BattleRoyaleUtils.Trace("Sleeping for " + sleep + " milliseconds before retrying");
-			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLaterByName(this, "StartMatchMaking", sleep, false);
-		}
-	}
-
-	override void Update(float timeslice)
-	{
-		super.Update(timeslice);
-
-		if (m_MatchMakingState == BattleRoyaleMatchMakingState.Searching)
-		{
-			m_PlayButtonLabel.SetText("#STR_BR_MM_SEARCHING " + m_MatchMakingTryCount);
-		}
-		else if (m_MatchMakingState == BattleRoyaleMatchMakingState.Connecting)
-		{
-			m_PlayButtonLabel.SetText("#STR_BR_MM_CONNECTING");
-		}
-	}
-
-	void ColorDisable(Widget w)
-	{
-		#ifdef PLATFORM_WINDOWS
-		SetFocus(null);
-		#endif
-
-		if (w)
-		{
-			ButtonWidget button = ButtonWidget.Cast(w);
-			if (button)
-			{
-				button.SetTextColor(ColorManager.COLOR_DISABLED_TEXT);
-			}
-		}
 	}
 
 	override void ColorNormal(Widget w)

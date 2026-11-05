@@ -1,0 +1,9 @@
+name = "DayZ-BattleRoyale VPP compatibility";					// name
+picture = "Vigrid-BattleRoyale/GUI/textures/Mod_Logo.paa";		// picture in expanded description
+logo = "Vigrid-BattleRoyale/GUI/textures/Mod_Logo.paa";			// below game menu
+logoSmall = "Vigrid-BattleRoyale/GUI/textures/Mod_Logo.paa";	// next to name when not expanded
+logoOver = "Vigrid-BattleRoyale/GUI/textures/Mod_Logo.paa";		// on mouse hover over logo
+tooltip = "DayZ Battle Royale menu for VPPAdminTools";			// tooltip on mouse hover
+overview = "Battle Royale menu in the VPPAdminTools toolbar";	// overview
+author = "Myst, KeganH, DayZ BR community, check credits";		// author
+version = "1.1.0";												// version

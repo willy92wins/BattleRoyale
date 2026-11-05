@@ -2,9 +2,35 @@
 
 <!-- LIVE-STATE -->
 - objetivo: 1.0 en 24 h (desde 2026-11-05 00:23Z): DayZ 1.30, Chernarus, 120 jugadores, carga mínima
-- plan: BattleRoyale_dev/plans/2026-11-05-plan-1.0.md (doc vivo: https://claude.ai/artifact/YU2C2QmggTzDR2sRpynFPe)
-- informe: BattleRoyale_dev/audit/2026-11-04-informe-auditoria.md
-- base de las lanes: commit "Close unterminated #ifdef blocks..." (ver git log)
-- lint base conocido: scripts_client 10 FAIL ES-LAYOUT-PATH-PBOPREFIX-MISMATCH (falsos positivos: los layouts viven en el PBO gui), scripts_server 2 FAIL ES-OVERRIDE-PARAM-NAME-MISMATCH (falsos positivos: BattleRoyaleState hereda de Timeable)
-- bloqueos: dayz-mcp y dayz-mcp-130 responden invalid_native_launcher_bundle__external_drift a dayz_test_run (2026-11-05 00:30Z)
+- estado (2026-11-05 04:10Z): la rama `integration` es la candidata 1.0 (ver `git log -1 integration`). Seis lanes fusionadas sin conflictos, cada una revisada por Codex con sus rondas de corrección. Revisión final de Codex de los arreglos del integrador y del contrato entre lanes: aprobar con cambios, 0 críticos, 0 mayores, 3 menores (2 corregidos en 1782df4; el tercero es un texto sin traducir en un panel oculto de `main_menu.layout:730`). Los arreglos posteriores (1782df4, f46fefc, 444b718) y el addon de prueba, aprobados sin defectos. Informes en `C:\Users\guill\Repos\br-runs\final-review\`, `final-review2\` y `final-review3\`. Build limpia de e0417e0 desplegada (scripts_server.pbo sha256 176af4a6…, scripts_client.pbo e4418d64…)
+- notas de versión y problemas conocidos: `CHANGELOG.md`
+- build: `python -I tools/build.py` → `build/@BattleRoyale`, firmada con `C:\Users\guill\Repos\br-keys\BattleRoyaleCommunity.biprivatekey` (la privada no entra en el repo). Despliegue de prueba en `C:\Users\guill\Repos\br-deploy\@BattleRoyale`, enlazado como `!Workshop\@BattleRoyale`
+- verificado: gate de lint = base; partida de 1 jugador en DayZDiag 1.30 con todos los estados y 0 excepciones en servidor y cliente (5ca2fec, run 81fe2664; repetida en 444b718, run f2a70cd1, con el desbloqueo al acabar antes de tiempo); dos partidas en solitario con rondas usando el addon de prueba `BattleRoyale_dev/tests/solo_match` (runs ec0d2ca1 y 0849ca6b, f46fefc): rondas 3-7, daño de zona, última ronda con cierre final, muerte, killfeed, victoria y reinicio, sin errores de script; `restart_loop.ps1` 20/20 en el arnés `br-wt\config-mission\build\rltest`
+- prueba en solitario: compilar con `python -I BattleRoyale_dev/tests/solo_match/build_solotest.py C:\Users\guill\Repos\br-deploy\@BR-SoloTest` (junction `!Workshop\@BR-SoloTest`), añadir `@BR-SoloTest` tras `@BattleRoyale` en `extra_mods` y acortar los tiempos del perfil de prueba como dice su README (copias `*.bak-solotest-20261105` con los valores normales)
+- pantallas de carga comprimidas (2026-11-05 05:20Z, fusión 6262dea de `opt/loading-screens`): `tools/compress_loading_screens.py` aplicado en el árbol principal; `gui.pbo` de 126 a 28 MB, la mod entera de 124 a 30 MB; ficheros idénticos byte a byte a los probados en el juego (DXT1 run e3fac05f, DXT5 run 57aa82b9) y prueba de humo con la build principal (run 7a01082b: pantalla de carga correcta, todos los estados, 0 excepciones). Originales de la 0.1.0 en `C:\Users\guill\Repos\br-assets-backup\loading_screens_0.1.0\` (verificados por sha256): para volver atrás, copiarlos a `BattleRoyale/addons/gui/textures/loading_screens/` y reconstruir. Informe y comparación en `BattleRoyale_dev/reports/loading-screens-dxt1.*`
+- 2026-11-05 11:30Z, decisiones de Guillermo (mensaje de las 11:15Z): `v1.1/admin-optional` fusionada (b4dd309); música «Apocalypse» retirada por falta de licencia (892b403; el .ogg está en `C:\Users\guill\Repos\br-assets-backup\music_0.1.0\`); versión 1.1.0; repo privado en GitHub aprobado; prueba con 20-40 jugadores. El clasificador de permisos bloqueó crear el repo con la aprobación llegada por relevo: repetir con el mensaje del dueño en el hilo, o que la lance él. La prueba de humo de 892b403 no se pudo hacer porque el cliente murió por falta de memoria del PC (DZSALauncher 85 GB y Steam 74 GB comprometidos); la 1.1 se probó en su rama y lo único nuevo desde entonces es quitar la música
+- rama 1.1, ya fusionada:
+  - `v1.1/admin-optional` (worktree `C:\Users\guill\Repos\br-wt\v11-admin`): COT opcional, menú de VPP en el mod aparte `@BattleRoyale-VPP`, gate de lint endurecida (`tools/gate_check.py`). Probado en DayZDiag sin herramienta de admin, con COT antes y después del mod, con VPP solo y con VPP + compat (builds en `br-deploy\@BattleRoyale-v11` y `@BattleRoyale-VPP`, junctions `@BR-v11` y `@BR-VPP`). Revisión de Codex aplicada (`br-runs\v11-admin\codex_review.md`). Falta pulsar el menú de VPP y el módulo de COT a mano
+- prueba F6: lista para prepararla y seguirla en https://claude.ai/artifact/RDDXc5MH81hgz9c2vDkZWC (servidor, comprobaciones por fase, medidas con umbral, qué guardar). La guía del servidor (`BattleRoyale_server/README.md`) tiene un inicio rápido y las reglas exactas de arranque del lobby
+- pendiente: F6 prueba con jugadores (20-40, luego 100+); repo privado en https://github.com/willy92wins/BattleRoyale (main = importación original, integration = candidata, PR #1 en borrador); prueba de humo de 892b403 cuando haya memoria libre; airdrop de Expansion sin probar
+- plan: `BattleRoyale_dev/plans/2026-11-05-plan-1.0.md` (doc vivo: https://claude.ai/artifact/YU2C2QmggTzDR2sRpynFPe)
+- informe: `BattleRoyale_dev/audit/2026-11-04-informe-auditoria.md`
+- lint base conocido: scripts_client 11 FAIL ES-LAYOUT-PATH-PBOPREFIX-MISMATCH (falsos positivos: los layouts viven en el PBO gui), scripts_server 2 FAIL ES-OVERRIDE-PARAM-NAME-MISMATCH (falsos positivos: `RemovePlayer` es del propio BattleRoyaleState, no de vanilla). `bash tools/gate.sh .` falla si se supera
+- entorno de prueba: dayz-mcp `dayz_test_run` proyecto DayZ_MCP con `extra_mods` @CF, @Dabs Framework, @BR-COT, @BR-Expansion-Core, @BR-Expansion, @BR-Expansion-Navigation, @BattleRoyale (junctions en `!Workshop`). Perfil `P:\DayZ_MCP_dev\_server\profiles\Vigrid-BattleRoyale\` con `minimum_players` 1; la copia del perfil 0.1.0 está en `Vigrid-BattleRoyale.bak-0.1.0-20261105`
+- bloqueos: ninguno
 <!-- /LIVE-STATE -->
+
+## Decisiones tomadas sin preguntar (noche del 2026-11-05)
+
+Guillermo dio permiso pleno para avanzar durante la noche. Todas se revierten con un cambio de config o un commit.
+
+- Infectados: 150 como máximo, sin animales (`BattleRoyale_server\mpmissions\...\db\globals.xml`).
+- UI de la 1.0: killfeed propio y fase en el HUD; el resto de mejoras de UI queda para una 1.0.x.
+- Zona final: las ciudades grandes de la costa no pueden serlo (`end_avoid_city`, 130 entradas, en `zone_settings.json`).
+- Config rota: se anota con `Error` y se usa el valor por defecto; el servidor no se para.
+- `restart_loop.ps1` exige `-InstanceId` y solo toca `storage_<id>` de esa instancia: la aparta como `storage_<id>.prev-<fecha>`, guarda las 3 copias más nuevas (`-KeepPrevious`) y borra solo las más viejas de esa misma instancia.
+- Sin migración automática de los JSON de perfil de la 0.1.0: el README pide borrarlos.
+
+## Backlog v1.2
+
+- Zone ring on the ground (requested 2026-11-05): client-only local objects or particles every ~10 m along the zone edge, only within ~300 m of the player, moved as the zone shrinks; no server or network cost. Verify local objects and particles on 1.30 with a prototype first.

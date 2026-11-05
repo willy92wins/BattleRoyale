@@ -129,12 +129,23 @@ class BattleRoyaleConfig
 							config.LoadMission();
 						}
 					}
+
+					// Profile and mission values are both in place: replace unusable ones before any state reads them
+					config.Validate();
 				}
 				else
 				{
 					Error("NULL CONFIG `" + key + "` IN CONFIG MAP");
 				}
 			}
+
+			// num_zones lives in general_settings.json, the tables it indexes in zone_settings.json
+			BattleRoyaleGameData game_data = BattleRoyaleGameData.Cast( m_Configs.Get("GameData") );
+			BattleRoyaleZoneData zone_data = BattleRoyaleZoneData.Cast( m_Configs.Get("ZoneData") );
+			if(game_data && zone_data)
+				zone_data.ValidateZoneTables(game_data);
+			else
+				Error("Zone settings not validated: GameData or ZoneData config missing");
 		}
 	}
 

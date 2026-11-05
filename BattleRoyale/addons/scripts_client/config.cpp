@@ -6,6 +6,10 @@ class CfgPatches
 		{
 			"DZ_Data",
 			"DZ_Scripts",
+			"JM_CF_Scripts",
+			"DF_Scripts",
+			"DayZExpansion_Core_Scripts",
+			"DayZExpansion_Navigation_Scripts",
 			"DayZExpansion_Scripts"
 		};
 	};

@@ -15,9 +15,11 @@ class BattleRoyaleRPC
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetTopPosition", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "ShowWinScreen", this );
-		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "ChatLog", this );
 
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "NotificationMessage", this );
+
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetMatchPhase", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "KillFeedEvent", this );
 
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
 	}
@@ -49,10 +51,14 @@ class BattleRoyaleRPC
 		countdown_seconds = 0;
 		current_play_area_center = "0 0 0";
 		current_play_area_radius = 0.0;
+		current_play_area_received = false;
 		future_play_area_center = "0 0 0";
 		future_play_area_radius = 0.0;
 		top_position = 0;
 		winner_screen = false;
+		match_phase = -1;
+		match_phase_end_time = -1;
+		kill_feed_serial = 0;
 	}
 
 	// Set the number of players and groups
@@ -70,7 +76,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("SetPlayerCount: %1 %2", data.param1, data.param2));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetPlayerCount: %1 %2", data.param1, data.param2));
 			nb_players = data.param1;
 			nb_groups = data.param2;
 		}
@@ -90,7 +97,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("SetFade: %1", data.param1));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetFade: %1", data.param1));
 			if ( data.param1 )
 			{
 				fade_state = true;
@@ -116,7 +124,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("SetInput: %1", data.param1));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetInput: %1", data.param1));
 			input_state = data.param1;
 		}
 	}
@@ -167,7 +176,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("SetCountdownSeconds: %1", data.param1));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetCountdownSeconds: %1", data.param1));
 			countdown_seconds = data.param1;
 		}
 	}
@@ -176,6 +186,7 @@ class BattleRoyaleRPC
 
 	vector current_play_area_center = "0 0 0";
 	float current_play_area_radius = 0.0;
+	bool current_play_area_received = false;
 
 	void UpdateCurrentPlayArea(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
@@ -187,9 +198,11 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("UpdateCurrentPlayArea: %1 %2", data.param1, data.param2));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("UpdateCurrentPlayArea: %1 %2", data.param1, data.param2));
 			current_play_area_center = data.param1;
 			current_play_area_radius = data.param2;
+			current_play_area_received = true;
 		}
 	}
 
@@ -209,7 +222,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("UpdateFuturePlayArea: %1 %2 %3", data.param1, data.param2, data.param3));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("UpdateFuturePlayArea: %1 %2 %3", data.param1, data.param2, data.param3));
 			future_play_area_center = data.param1;
 			future_play_area_radius = data.param2;
 			b_ArtillerySound = data.param3;
@@ -230,7 +244,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("SetTopPosition: %1", data.param1));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetTopPosition: %1", data.param1));
 			top_position = data.param1;
 		}
 	}
@@ -248,22 +263,6 @@ class BattleRoyaleRPC
 		}
 	}
 
-	void ChatLog(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
-	{
-		Param2<string, string> data;
-		if( !ctx.Read( data ) )
-		{
-			Error("FAILED TO READ CHATLOG RPC");
-			return;
-		}
-		if ( type == CallType.Client )
-		{
-			Print("[ChatLog] " + data.param1);
-
-			GetGame().Chat("S:" + data.param1, data.param2);
-		}
-	}
-
 	void NotificationMessage(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
 		Param7<string, float, string, string, string, string, string> data;
@@ -274,7 +273,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("NotificationMessage: %1 %2 %3 %4 %5 %6 %7", data.param1, data.param2, data.param3, data.param4, data.param5, data.param6, data.param7));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("NotificationMessage: %1 %2 %3 %4 %5 %6 %7", data.param1, data.param2, data.param3, data.param4, data.param5, data.param6, data.param7));
 			StringLocaliser message = new StringLocaliser(data.param1, data.param3, data.param4, data.param5, data.param6, data.param7);
 			string translated_message = message.Format();
 
@@ -291,6 +291,96 @@ class BattleRoyaleRPC
 
 			ExpansionNotification(DAYZBR_MSG_TITLE, translated_message, DAYZBR_MSG_IMAGE, COLOR_EXPANSION_NOTIFICATION_INFO, data.param2).Create();
 		}
+	}
+
+	// Set the match phase (EBRMatchPhase) and the time left in it
+
+	int match_phase = -1;
+	int match_phase_end_time = -1; //!< GetGame().GetTime() at which the phase timer reaches zero, -1 if the server sent no timer
+
+	void SetMatchPhase(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param2<int, int> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ SETMATCHPHASE RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+		{
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetMatchPhase: %1 %2", data.param1, data.param2));
+			match_phase = data.param1;
+			if ( data.param2 >= 0 )
+			{
+				match_phase_end_time = GetGame().GetTime() + ( data.param2 * 1000 );
+			}
+			else
+			{
+				match_phase_end_time = -1;
+			}
+		}
+	}
+
+	//! Seconds left in the current match phase, -1 if unknown
+	int GetMatchPhaseSecondsLeft()
+	{
+		if ( match_phase_end_time < 0 )
+			return -1;
+
+		float seconds_left = ( match_phase_end_time - GetGame().GetTime() ) / 1000.0;
+		if ( seconds_left <= 0 )
+			return 0;
+
+		return Math.Ceil( seconds_left );
+	}
+
+	// Kill feed, stored in a fixed ring buffer until the HUD reads it
+
+	static const int KILL_FEED_SIZE = 5;
+
+	int kill_feed_serial = 0; //!< number of KillFeedEvent received since Reset
+	protected string m_KillFeedKiller[KILL_FEED_SIZE];
+	protected string m_KillFeedVictim[KILL_FEED_SIZE];
+	protected string m_KillFeedWeapon[KILL_FEED_SIZE];
+	protected float m_KillFeedDistance[KILL_FEED_SIZE];
+	protected int m_KillFeedTime[KILL_FEED_SIZE];
+
+	void KillFeedEvent(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param4<string, string, string, float> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ KILLFEEDEVENT RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+		{
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("KillFeedEvent: %1 %2 %3 %4", data.param1, data.param2, data.param3, data.param4));
+			int slot = kill_feed_serial % KILL_FEED_SIZE;
+			m_KillFeedKiller[slot] = data.param1;
+			m_KillFeedVictim[slot] = data.param2;
+			m_KillFeedWeapon[slot] = data.param3;
+			m_KillFeedDistance[slot] = data.param4;
+			m_KillFeedTime[slot] = GetGame().GetTime();
+			kill_feed_serial++;
+		}
+	}
+
+	//! Reads the kill feed event number 'serial' (0 based); false if it was never received or was already overwritten
+	bool GetKillFeedEvent(int serial, out string killer, out string victim, out string weapon, out float distance, out int time)
+	{
+		if ( serial < 0 || serial >= kill_feed_serial || serial < kill_feed_serial - KILL_FEED_SIZE )
+			return false;
+
+		int slot = serial % KILL_FEED_SIZE;
+		killer = m_KillFeedKiller[slot];
+		victim = m_KillFeedVictim[slot];
+		weapon = m_KillFeedWeapon[slot];
+		distance = m_KillFeedDistance[slot];
+		time = m_KillFeedTime[slot];
+		return true;
 	}
 }
 #endif

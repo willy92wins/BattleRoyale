@@ -14,6 +14,13 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 
 	ref map<string, vector> spawnpoints;
 
+	protected vector m_FirstZoneCenter;
+	protected float m_FirstZoneRadius;
+	protected float m_ExtraSpawnRadius;
+	protected bool m_HeatMapDirty;
+	protected ref map<string, int> m_LastSpawnAcceptMs;
+	protected ref map<string, int> m_RateWarnMs;
+
     void BattleRoyaleSpawnSelection()
     {
     	m_Config = BattleRoyaleConfig.GetConfig();
@@ -47,6 +54,8 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 //		spawn_colors.Insert(ARGB(255, 0, 127, 255));  // Light Blue
 
 		spawnpoints = new map<string, vector>();
+		m_LastSpawnAcceptMs = new map<string, int>();
+		m_RateWarnMs = new map<string, int>();
     }
 
     override void Activate()
@@ -61,6 +70,13 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "ShowSpawnSelection", new Param4<int, float, vector, float>(i_SpawnSelectionDuration, f_SpawnSelectionRadius, v_FirstZoneCenter, f_FirstZoneRadius), true);
 
+        m_FirstZoneCenter = v_FirstZoneCenter;
+        m_FirstZoneRadius = f_FirstZoneRadius;
+        BattleRoyaleSpawnsData spawnsData = m_Config.GetSpawnsData();
+        if (spawnsData)
+            m_ExtraSpawnRadius = spawnsData.extra_spawn_radius;
+        m_HeatMapDirty = false;
+
         // Add timer to deactivate this state after a certain time
         m_SpawnSelectionTimer = AddTimer(i_SpawnSelectionDuration + i_ExtraScreenTime, this, "OnSpawnSelectionTimeout", NULL, false);
 
@@ -72,6 +88,11 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 
         // Listen to player spawn selection
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "OnPlayerSpawnSelected", this);
+
+        if (b_ShowHeatMap)
+            GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(this.BroadcastHeatMap, 1000, true);
+
+        BroadcastMatchPhase(EBRMatchPhase.SPAWN_SELECTION, i_SpawnSelectionDuration);
     }
 
     override void Deactivate()
@@ -84,6 +105,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 
 		// Remove the RPC listener
 		GetRPCManager().RemoveRPC( RPC_DAYZBRSERVER_NAMESPACE, "OnPlayerSpawnSelected" );
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(this.BroadcastHeatMap);
 
 		// Send RPC to all players to hide spawn selection UI
 		GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "HideSpawnSelection", NULL, true);
@@ -98,7 +120,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 		{
 			if( player.GetSpawnPos() == vector.Zero ) // Player didn't select a spawn point
 			{
-				BattleRoyaleUtils.Trace("Player " + player.GetIdentity().GetName() + " didn't select a spawn point, checking party members");
+				BattleRoyaleUtils.Trace("Player " + player.GetIdentityName() + " didn't select a spawn point, checking party members");
 #ifdef Carim
 				set<PlayerBase> groupMembers = GetGroup(player);
 				if(groupMembers)
@@ -107,7 +129,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 					{
 						if( member != player && member.GetSpawnPos() != vector.Zero ) // Found a party member who selected a spawn point
 						{
-							BattleRoyaleUtils.Trace("Assigning spawn point of " + member.GetIdentity().GetName() + " to " + player.GetIdentity().GetName());
+							BattleRoyaleUtils.Trace("Assigning spawn point of " + member.GetIdentityName() + " to " + player.GetIdentityName());
 							player.SetSpawnPos(member.GetSpawnPos());
 							break;
 						}
@@ -153,6 +175,71 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 		GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetInput", new Param1<bool>(true), true);
 	}
 
+	protected PlayerBase ResolveSpawnSender(PlayerIdentity sender, Object target)
+	{
+		if (!sender)
+		{
+			BattleRoyaleUtils.Warn("Spawn selection rejected: null sender");
+			return null;
+		}
+
+		string steamid = sender.GetPlainId();
+		PlayerBase player = PlayerBase.Cast(sender.GetPlayer());
+		if (!player)
+		{
+			BattleRoyaleUtils.Warn("Spawn selection rejected: sender has no player, steamid=" + steamid);
+			return null;
+		}
+
+		if (target != player)
+		{
+			BattleRoyaleUtils.Warn("Spawn selection rejected: target is not the sender, steamid=" + steamid);
+			return null;
+		}
+
+		return player;
+	}
+
+	protected bool IsSpawnInsideZone(vector pos)
+	{
+		int worldSize = GetGame().GetWorld().GetWorldSize();
+		if (pos[0] < 0 || pos[2] < 0 || pos[0] > worldSize || pos[2] > worldSize)
+			return false;
+
+		float dx = pos[0] - m_FirstZoneCenter[0];
+		float dz = pos[2] - m_FirstZoneCenter[2];
+		float limit = m_FirstZoneRadius + m_ExtraSpawnRadius;
+		return (dx * dx) + (dz * dz) <= (limit * limit);
+	}
+
+	protected void WarnSpawnRateLimit(string steamid)
+	{
+		int nowMs = GetGame().GetTime();
+		if (m_RateWarnMs.Contains(steamid))
+		{
+			int elapsed = nowMs - m_RateWarnMs.Get(steamid);
+			if (elapsed >= 0 && elapsed < 10000)
+				return;
+		}
+
+		m_RateWarnMs.Set(steamid, nowMs);
+		BattleRoyaleUtils.Warn("Spawn selection rate limited, steamid=" + steamid);
+	}
+
+	void BroadcastHeatMap()
+	{
+		if (!m_HeatMapDirty)
+			return;
+
+		m_HeatMapDirty = false;
+		array<vector> heatmap_points = new array<vector>;
+		foreach (string id, vector point : spawnpoints)
+		{
+			heatmap_points.Insert(point);
+		}
+		GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateHeatMap", new Param1<array<vector>>(heatmap_points), true );
+	}
+
     void OnSpawnSelectionTimeout()
 	{
 		// Deactivate this state and move to the next state
@@ -170,23 +257,34 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 		if ( type == CallType.Server )
 		{
 			BattleRoyaleUtils.Trace("Player selected spawn point: " + data.param1.ToString());
-			PlayerBase pbTarget = PlayerBase.Cast(target);
+			PlayerBase pbTarget = ResolveSpawnSender(sender, target);
 			if(pbTarget)
 			{
-				BattleRoyaleUtils.Trace("Player " + pbTarget.GetIdentity().GetName() + " selected spawn point: " + data.param1.ToString());
+				if (!ContainsPlayer(pbTarget))
+					return;
+
+				string steamid = sender.GetPlainId();
+				int nowMs = GetGame().GetTime();
+				if (m_LastSpawnAcceptMs.Contains(steamid) && (nowMs - m_LastSpawnAcceptMs.Get(steamid)) < 500)
+				{
+					WarnSpawnRateLimit(steamid);
+					return;
+				}
+
+				if (!IsSpawnInsideZone(data.param1))
+				{
+					BattleRoyaleUtils.Warn("Spawn selection rejected, steamid=" + steamid + " pos=" + data.param1.ToString());
+					return;
+				}
+
+				m_LastSpawnAcceptMs.Set(steamid, nowMs);
+				BattleRoyaleUtils.Trace("Player " + pbTarget.GetIdentityName() + " selected spawn point: " + data.param1.ToString());
 
 				if (b_ShowHeatMap)
 				{
 					// Add the spawn point to the player's spawnpoints map
 					spawnpoints.Set(pbTarget.GetIdentity().GetId(), data.param1);
-
-					// Update the heatmap for the players
-					array<vector> heatmap_points = new array<vector>;
-					foreach (string id, vector point : spawnpoints)
-					{
-						heatmap_points.Insert(point);
-					}
-					GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateHeatMap", new Param1<array<vector>>(heatmap_points), true );
+					m_HeatMapDirty = true;
 				}
 
 				pbTarget.SetSpawnPos(data.param1); // Set the spawn position for the player
@@ -204,12 +302,12 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 				BattleRoyaleUtils.Trace("Test if player is in a group");
 				if(GetGroup(pbTarget))
 				{
-					BattleRoyaleUtils.Trace("Player " + pbTarget.GetIdentity().GetName() + " is in a group, sharing spawn point with group");
+					BattleRoyaleUtils.Trace("Player " + pbTarget.GetIdentityName() + " is in a group, sharing spawn point with group");
 
 					set<PlayerBase> groupMembers = GetGroup(pbTarget);
 					foreach (PlayerBase member : groupMembers)
 					{
-						BattleRoyaleUtils.Trace("Sharing spawn point with " + member.GetIdentity().GetName());
+						BattleRoyaleUtils.Trace("Sharing spawn point with " + member.GetIdentityName());
 						if (member != pbTarget)
 						{
 							GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "ShowSpawnPoint", new Param3<PlayerBase, vector, int>(pbTarget, data.param1, GetSpawnColor(pbTarget.GetIdentity().GetId())), true, member.GetIdentity(), member);
@@ -218,7 +316,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 				}
 				else
 				{
-					BattleRoyaleUtils.Trace("Player " + pbTarget.GetIdentity().GetName() + " is not in a group, not sharing spawn point");
+					BattleRoyaleUtils.Trace("Player " + pbTarget.GetIdentityName() + " is not in a group, not sharing spawn point");
 				}
 #endif
 			}
@@ -302,7 +400,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 			// Get a random spawn point
 			vector random_spawn = heatmap_points.GetRandomElement();
 			// Assign it to the player
-			BattleRoyaleUtils.Trace("Assigning random spawn point to " + player.GetIdentity().GetName());
+			BattleRoyaleUtils.Trace("Assigning random spawn point to " + player.GetIdentityName());
 			player.SetSpawnPos(random_spawn);
 
 			// If in a group, assign to all group members who haven't selected a spawn
@@ -312,7 +410,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 				{
 					if( member != player && member.GetSpawnPos() == vector.Zero ) // Found a party member who didn't select a spawn point
 					{
-						BattleRoyaleUtils.Trace("Assigning random spawn point to " + member.GetIdentity().GetName());
+						BattleRoyaleUtils.Trace("Assigning random spawn point to " + member.GetIdentityName());
 						member.SetSpawnPos(random_spawn);
 					}
 				}

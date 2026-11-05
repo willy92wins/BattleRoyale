@@ -1193,5 +1193,21 @@ FrameWidgetClass main_menu_root {
    scriptclass ""
    style DayZDefaultPanel
   }
+  PanelWidgetClass carousel_Frame {
+   visible 0
+   clipchildren 0
+   color 0 0 0 0
+   position 0.0589 0.12
+   size 460 599.05298
+   valign bottom_ref
+   hexactpos 0
+   vexactpos 0
+   hexactsize 1
+   vexactsize 1
+   priority 5
+   draggable 0
+   scriptclass ""
+   style DayZDefaultPanel
+  }
  }
 }

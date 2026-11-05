@@ -7,6 +7,12 @@ class BattleRoyaleUtils: Managed
     static const int DEBUG = 3;
     static const int TRACE = 4;
 
+    //! Threshold that rejects every level: -br-none or a negative BRLogLevel
+    static const int LOG_DISABLED = -1;
+
+    protected static bool m_LogLevelResolved;
+    protected static int m_LogLevel;
+
     static void LogMessage(string message)
     {
         BattleRoyaleUtils.Trace("[DayZ-BattleRoyale] " + message);
@@ -30,26 +36,7 @@ class BattleRoyaleUtils: Managed
         		msg = hour.ToStringLen(2) + ":" + minute.ToStringLen(2) + ":" + second.ToStringLen(2) + " [DayZ-BattleRoyale][" + level + "] " + message;
 	        	PrintFormat("%1:%2:%3 [DayZ-BattleRoyale][%4] %5", hour.ToStringLen(2), minute.ToStringLen(2), second.ToStringLen(2), level, message);
             }
-
-			string chat_color = "default";
-			if (level == WARN) {
-				chat_color = "colorFriendly";
-			} else if (level == INFO) {
-				chat_color = "colorStatusChannel";
-			} else if (level == DEBUG) {
-				chat_color = "colorAction";
-			} else if (level == TRACE) {
-				chat_color = "colorImportant";
-			}
-
-#ifdef SERVER
-#ifdef DIAG
-			GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "ChatLog", new Param2<string, string>(msg, chat_color), true);
-#endif
-#else
-			if ( GetGame() )
-				GetGame().Chat("C:" + msg, chat_color);
-#endif
+            // Logs go to the script log only: they are not echoed to the in-game chat
         }
     }
 
@@ -90,31 +77,46 @@ class BattleRoyaleUtils: Managed
 
 	static bool CheckLogLevel(int level)
 	{
+		// Launch parameters and server config do not change at runtime: resolve the threshold once
+		if (!m_LogLevelResolved)
+		{
+			m_LogLevel = ResolveLogLevel();
+			m_LogLevelResolved = true;
+		}
+
+		if (m_LogLevel == LOG_DISABLED)
+			return false;
+
+		return (m_LogLevel >= level);
+	}
+
+	protected static int ResolveLogLevel()
+	{
 		// Check command line params
-		if (IsCLIParam("br-trace")) return (TRACE >= level);
-		if (IsCLIParam("br-debug")) return (DEBUG >= level);
-		if (IsCLIParam("br-info")) return (INFO >= level);
-		if (IsCLIParam("br-warn")) return (WARN >= level);
-		if (IsCLIParam("br-none")) return false;  // Disable all logging
+		if (IsCLIParam("br-trace")) return TRACE;
+		if (IsCLIParam("br-debug")) return DEBUG;
+		if (IsCLIParam("br-info")) return INFO;
+		if (IsCLIParam("br-warn")) return WARN;
+		if (IsCLIParam("br-none")) return LOG_DISABLED;  // Disable all logging
 
 #ifdef SERVER
 		// Check server config
 		int config_br_log_level = GetGame().ServerConfigGetInt("BRLogLevel");
 		if (config_br_log_level > 0)
 		{
-			return (config_br_log_level >= level);
+			return config_br_log_level;
 		}
 		// config_br_log_level == 0 can mean that the config value is not set
 		// In that case we use the default log level defined by BATTLEROYALE_LOG_LEVEL
 		// Check negative value to disable all logging
 		if (config_br_log_level < 0)
 		{
-			return false;  // Disable all logging
+			return LOG_DISABLED;  // Disable all logging
 		}
 #endif
 
 		// Default log level
-		return BATTLEROYALE_LOG_LEVEL >= level;
+		return BATTLEROYALE_LOG_LEVEL;
 	}
 
     static string GetDateTime(string dateTimeFormat = "%1.%2.%3 %4:%5:%6")

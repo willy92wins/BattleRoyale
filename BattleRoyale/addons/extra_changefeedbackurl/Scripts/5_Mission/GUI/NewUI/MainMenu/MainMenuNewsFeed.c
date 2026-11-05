@@ -2,6 +2,12 @@ modded class MainMenuNewsfeed
 {
 	override void OpenFeedback()
 	{
-		GetGame().OpenURL( GITHUB_URL );
+		if (BATTLEROYALE_FEEDBACK_URL == "")
+		{
+			super.OpenFeedback();
+			return;
+		}
+
+		GetGame().OpenURL( BATTLEROYALE_FEEDBACK_URL );
 	}
 }

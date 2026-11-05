@@ -41,7 +41,8 @@ modded class ExpansionMapMenu
             }
             center = current_playarea.GetCenter();
             radius = current_playarea.GetRadius();
-            m_CurrentZone.SetPosition(center);
+            if (m_CurrentZone.GetPosition() != center)
+                m_CurrentZone.SetPosition(center);
             m_CurrentZone.SetSize_A(radius);
             m_CurrentZone.SetSize_B(radius);
         }
@@ -59,7 +60,8 @@ modded class ExpansionMapMenu
             }
             center = next_playarea.GetCenter();
             radius = next_playarea.GetRadius();
-            m_NextZone.SetPosition(center);
+            if (m_NextZone.GetPosition() != center)
+                m_NextZone.SetPosition(center);
             m_NextZone.SetSize_A(radius);
             m_NextZone.SetSize_B(radius);
         }

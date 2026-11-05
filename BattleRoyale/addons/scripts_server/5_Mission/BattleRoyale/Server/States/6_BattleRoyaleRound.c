@@ -106,6 +106,7 @@ class BattleRoyaleRound: BattleRoyaleState
         int time_till_lock = time_till_end * 0.80; // Time before lock, changed from 0.75 to 0.80
         int time_between_lock_and_end = time_till_end - time_till_lock;
         BattleRoyaleUtils.Trace(GetName() + " Activate with a duration of " + i_RoundTimeInSeconds + " seconds with a lock at " + time_till_lock / 1000 + " seconds (so " + time_between_lock_and_end / 1000 + " seconds after lock before end) !");
+        BroadcastMatchPhase(EBRMatchPhase.ROUND, i_RoundTimeInSeconds);
 
         int i;
         int min;
@@ -176,10 +177,15 @@ class BattleRoyaleRound: BattleRoyaleState
 
 			//send play area to clients
 			ref BattleRoyalePlayArea m_PreviousArea = NULL;
-            m_PreviousArea = GetPreviousZone().GetArea();
+            BattleRoyaleZone previous_zone = GetPreviousZone();
+            if (previous_zone)
+                m_PreviousArea = previous_zone.GetArea();
 
 			//tell client the current play has not changed (note that if this is the first round, then the current area will be NULL )
-			GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( m_PreviousArea.GetCenter(), m_PreviousArea.GetRadius() ), true);
+            if (m_PreviousArea)
+			    GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( m_PreviousArea.GetCenter(), m_PreviousArea.GetRadius() ), true);
+            else
+                Error("Round has no previous zone; current play area was not sent");
         }
 
         ref BattleRoyalePlayArea m_ThisArea = NULL;
@@ -320,7 +326,6 @@ class BattleRoyaleRound: BattleRoyaleState
                 if(player.time_until_damage <= 0)
                 {
                     //DAMAGE
-                	MessagePlayerUntranslated(player, "STR_BR_TAKING_DAMAGE");
 				    player.GetSymptomManager().QueueUpPrimarySymptom(SymptomIDs.SYMPTOM_PAIN_LIGHT);
                     //TODO: determine if this last health tick will kill the player
                     player.DecreaseHealthCoef( f_Damage ); //TODO: delta this by the # of zones that have ticked (more zones = more damage)
@@ -397,6 +402,7 @@ class BattleRoyaleRound: BattleRoyaleState
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", new Param3<vector, float, bool>( m_ThisArea.GetCenter(), m_ThisArea.GetRadius(), b_ArtillerySound ), true);
         //tell the client how much time until the next zone appears
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetCountdownSeconds", new Param1<int>( seconds ) , true);
+        BroadcastMatchPhase(EBRMatchPhase.ROUND, seconds);
     }
 
     void OnRoundTimeUp()

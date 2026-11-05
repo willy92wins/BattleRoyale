@@ -55,6 +55,12 @@ modded class PlayerBase
 	{
 		super.EEHitBy(damageResult, damageType, source, component, dmgZone, ammo, modelPos, speedCoef);
 
+		if (!source)
+		{
+			last_unconscious_source = NULL;
+			return;
+		}
+
 		PlayerBase playerSource;
 
 		if ( source.IsPlayer() )  // Fists
@@ -68,7 +74,10 @@ modded class PlayerBase
 			last_unconscious_source = playerSource;
 		} else {
 			last_unconscious_source = NULL;
-			BattleRoyaleUtils.Info("Player " + GetIdentity().GetName() + " was hit by an unknown source.");
+			string victim_name = "unknown";
+			if (GetIdentity())
+				victim_name = GetIdentity().GetName();
+			BattleRoyaleUtils.Info("Player " + victim_name + " was hit by an unknown source.");
 		}
 	}
 

@@ -47,6 +47,8 @@ class BattleRoyaleStartMatch: BattleRoyaleState
     override void Activate()
     {
         super.Activate();
+        RememberMatchPlayers();
+        BroadcastMatchPhase(EBRMatchPhase.STARTING, i_TimeToUnlock);
 
         //send start match RPC (this will enable UI such as kill count)
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "StartMatch", new Param1<bool>(true), true); //don't need a param, but id rather keep it just so i know nothing wierd occurs (eventually find out if we can remove it)
@@ -72,7 +74,20 @@ class BattleRoyaleStartMatch: BattleRoyaleState
     {
         //deactivate all one-time timers
         if ( m_UnlockTimer && m_UnlockTimer.IsRunning() )
+        {
             m_UnlockTimer.Stop();
+
+            // The match ends before the unlock: the players left get their input back
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetInput", new Param1<bool>(false), true);
+            foreach (PlayerBase locked: m_Players)
+            {
+                if (locked)
+                    locked.DisableInput(false);
+            }
+        }
+
+        if ( m_ShowFirstZone && m_ShowFirstZone.IsRunning() )
+            m_ShowFirstZone.Stop();
 
         if ( m_ZoneStartTimer && m_ZoneStartTimer.IsRunning() )
             m_ZoneStartTimer.Stop();
@@ -138,14 +153,22 @@ class BattleRoyaleStartMatch: BattleRoyaleState
         for(int i = 0; i < a_PlayerList.Count(); i++)
         {
             PlayerBase player = a_PlayerList[i];
-            BattleRoyaleUtils.Trace("Unlock " + player.GetIdentity().GetName());
+            if (!player || !player.GetIdentity())
+                continue;
+
+            BattleRoyaleUtils.Trace("Unlock " + player.GetIdentityName());
 
             player.DisableInput(false); //This will re-enable input
 			//DayZPlayerSyncJunctures.SendPlayerUnconsciousness( player , false );
         }
 
         MessagePlayersUntranslated( "STR_BR_MATCH_STARTED" );
-        MessagePlayersUntranslatedTimed( "STR_BR_UNSTUCK_INFORMATION", 90 );
+        // Unstuck is only served during this state, so the hint stays up only while it works
+        int unstuck_window = i_FirstRoundDelay - i_TimeToUnlock;
+        if (unstuck_window > 90)
+            unstuck_window = 90;
+        if (BattleRoyaleConfig.GetConfig().GetGameData().enable_unstuck && unstuck_window > 0)
+            MessagePlayersUntranslatedTimed( "STR_BR_UNSTUCK_INFORMATION", unstuck_window );
 
         b_IsGameplay = true;
     }
@@ -161,7 +184,7 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 		{
 			player.wait_unstuck = true;
 			MessagePlayerUntranslated( player, "STR_BR_UNSTUCK_TELEPORTATION" );
-			BattleRoyaleUtils.Trace( player.GetIdentity().GetName() + " asked for an unstuck teleportation." );
+			BattleRoyaleUtils.Trace( player.GetIdentityName() + " asked for an unstuck teleportation." );
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLaterByName(this, "Unstuck", Math.RandomFloat(1, 3) * 1000 , false, new Param1<PlayerBase>( player ));
 		}
 		else
@@ -172,6 +195,9 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 
 	void Unstuck( PlayerBase player )
 	{
+        if (!player || !player.GetIdentity())
+            return;
+
 		bool unstuckSuccess = false;
 		for(int search_pos = 0; search_pos < 50; search_pos++)
 		{
@@ -204,7 +230,7 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 
 		if( !unstuckSuccess )
 		{
-			BattleRoyaleUtils.Warn( player.GetIdentity().GetName() + " unstuck failed at " + player.GetPosition() );
+			BattleRoyaleUtils.Warn( player.GetIdentityName() + " unstuck failed at " + player.GetPosition() );
 			player.wait_unstuck = false;
 		}
 	}

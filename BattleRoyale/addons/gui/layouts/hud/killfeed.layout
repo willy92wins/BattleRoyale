@@ -1,0 +1,107 @@
+FrameWidgetClass KillFeedRoot {
+ ignorepointer 1
+ position 0 0
+ size 1 1
+ hexactpos 1
+ vexactpos 1
+ hexactsize 0
+ vexactsize 0
+ {
+  FrameWidgetClass KillFeedPanel {
+   ignorepointer 1
+   position 0.05 0.05
+   size 700 148
+   hexactpos 0
+   vexactpos 0
+   hexactsize 1
+   vexactsize 1
+   {
+    TextWidgetClass KillFeedRow0 {
+     visible 0
+     ignorepointer 1
+     position 0 0
+     size 1 28
+     hexactpos 1
+     vexactpos 1
+     hexactsize 0
+     vexactsize 1
+     style Bold
+     font "gui/fonts/etelkatextpro"
+     "exact text" 0
+     "outline size" 1
+     "outline color" 0 0 0 1
+     "text halign" left
+     "text valign" center
+    }
+    TextWidgetClass KillFeedRow1 {
+     visible 0
+     ignorepointer 1
+     position 0 30
+     size 1 28
+     hexactpos 1
+     vexactpos 1
+     hexactsize 0
+     vexactsize 1
+     style Bold
+     font "gui/fonts/etelkatextpro"
+     "exact text" 0
+     "outline size" 1
+     "outline color" 0 0 0 1
+     "text halign" left
+     "text valign" center
+    }
+    TextWidgetClass KillFeedRow2 {
+     visible 0
+     ignorepointer 1
+     position 0 60
+     size 1 28
+     hexactpos 1
+     vexactpos 1
+     hexactsize 0
+     vexactsize 1
+     style Bold
+     font "gui/fonts/etelkatextpro"
+     "exact text" 0
+     "outline size" 1
+     "outline color" 0 0 0 1
+     "text halign" left
+     "text valign" center
+    }
+    TextWidgetClass KillFeedRow3 {
+     visible 0
+     ignorepointer 1
+     position 0 90
+     size 1 28
+     hexactpos 1
+     vexactpos 1
+     hexactsize 0
+     vexactsize 1
+     style Bold
+     font "gui/fonts/etelkatextpro"
+     "exact text" 0
+     "outline size" 1
+     "outline color" 0 0 0 1
+     "text halign" left
+     "text valign" center
+    }
+    TextWidgetClass KillFeedRow4 {
+     visible 0
+     ignorepointer 1
+     position 0 120
+     size 1 28
+     hexactpos 1
+     vexactpos 1
+     hexactsize 0
+     vexactsize 1
+     style Bold
+     font "gui/fonts/etelkatextpro"
+     "exact text" 0
+     "outline size" 1
+     "outline color" 0 0 0 1
+     "text halign" left
+     "text valign" center
+    }
+   }
+  }
+ }
+}
