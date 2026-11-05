@@ -204,8 +204,13 @@ class BattleRoyaleClient: BattleRoyaleBase
 			// Check if player is inside current play area and get distExt, distInt and angle
 			isInsideZone = GetZoneDistance(player, m_CurrentPlayArea, distExt, distInt, angle);
 
+			// Once the final zone is gone there is no safe area left to point at
+			if (IsZoneCollapsed(br_rpc))
+			{
+				gameplay.HideDistance();
+			}
 			// If outside current play area, show distance to it
-			if (!isInsideZone)
+			else if (!isInsideZone)
 			{
 				gameplay.UpdateZoneDistance(isInsideZone, distExt, distInt, angle);
 			}
