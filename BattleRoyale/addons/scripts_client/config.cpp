@@ -10,7 +10,6 @@ class CfgPatches
 			"DF_Scripts",
 			"DayZExpansion_Core_Scripts",
 			"DayZExpansion_Navigation_Scripts",
-			"JM_COT_Scripts",
 			"DayZExpansion_Scripts"
 		};
 	};
