@@ -17,7 +17,8 @@ class BattleRoyaleWin: BattleRoyaleState
 	override void Activate()
 	{
 		super.Activate();
-	
+        BroadcastMatchPhase(EBRMatchPhase.FINISHED, -1);
+
 		string winner_name = "<NO:WINNER>";
 		if(GetPlayers().Count() > 0)
 		{
@@ -64,6 +65,12 @@ class BattleRoyaleWin: BattleRoyaleState
 
     void HandleWinner(PlayerBase player_winner)
     {
+        if (!player_winner || !player_winner.GetIdentity())
+        {
+            Error("HandleWinner called without a winner");
+            return;
+        }
+
         BattleRoyaleConfig m_Config = BattleRoyaleConfig.GetConfig();
         BattleRoyaleServerData m_ServerData = m_Config.GetServerData();
 
@@ -101,6 +108,8 @@ class BattleRoyaleWin: BattleRoyaleState
 			position[1] = GetGame().SurfaceY(position[0], position[2]);
 
 			EntityAI chicken = EntityAI.Cast(GetGame().CreateObject( chickens.GetRandomElement(), position, false, true ));
+            if (!chicken)
+                continue;
 
 			float dir = Math.RandomFloat(0, 360);
 			vector chickenDir = vector.YawToVector(dir);
@@ -110,17 +119,14 @@ class BattleRoyaleWin: BattleRoyaleState
 
     void KickWinner()
     {
-		if(GetPlayers().Count() > 0)
+		for ( int k = GetPlayers().Count() - 1; k >= 0; k-- )
 		{
-			for ( int k = 0; k < GetPlayers().Count(); k++ )
+			PlayerBase winner = GetPlayers()[k];
+			if(winner && winner.GetIdentity() )
 			{
-				PlayerBase winner = GetPlayers()[k];
-				if(winner && winner.GetIdentity() )
-				{
-					RemovePlayer(winner); //disconnect does not trigger RemovePlayer !
-					GetGame().DisconnectPlayer( winner.GetIdentity() );
-				}
-
+				PlayerIdentity identity = winner.GetIdentity();
+				RemovePlayer(winner); //disconnect does not trigger RemovePlayer !
+				GetGame().DisconnectPlayer( identity );
 			}
 		}
 

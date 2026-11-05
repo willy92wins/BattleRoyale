@@ -216,9 +216,10 @@ class BattleRoyaleZone
 			for(int i = 0; i < i_NumRounds; i++)
 			{
 				BattleRoyaleUtils.Trace("Generate Area " + i);
-				if(i > a_StaticSizes.Count())
+				if(!a_StaticSizes || i >= a_StaticSizes.Count())
 				{
-					BattleRoyaleUtils.Error("Not enough static sizes for static zone sizes! (want " + i + " have " + a_StaticSizes.Count() + ")");
+					Error("Zone generation stopped: static_sizes has too few entries for zone index " + i);
+					break;
 				}
 				BattleRoyalePlayArea playArea = new BattleRoyalePlayArea(Vector(0,0,0), 0.0);
 				float radius = a_StaticSizes[i];
@@ -359,13 +360,19 @@ class BattleRoyaleZone
 		}
 
 		BattleRoyaleUtils.Trace("Return zone number: " + zone_number);
+		if (!m_PlayAreas || zone_number < 0 || zone_number >= m_PlayAreas.Count())
+		{
+			Error("Play area index " + zone_number + " is outside the generated zones");
+			return new BattleRoyalePlayArea(Vector(0, 0, 0), 0.0);
+		}
 		return m_PlayAreas[zone_number];
 	}
 
     vector GetValidPositionSquare(float min_x, float max_x, float min_z, float max_z)
     {
         vector new_center = "0 0 0";
-        while(true)
+        bool found = false;
+        for (int attempt = 0; attempt < 64; attempt++)
         {
             new_center[0] = Math.RandomFloat(min_x, max_x);
             new_center[2] = Math.RandomFloat(min_z, max_z);
@@ -373,11 +380,18 @@ class BattleRoyaleZone
             if(!IsSafeZoneCenter(new_center[0], new_center[2]))
                 continue;
 
-            new_center[1] = GetGame().SurfaceY(new_center[0], new_center[2]);
-
+            found = true;
             break;
         }
 
+        if (!found)
+        {
+            new_center[0] = (min_x + max_x) * 0.5;
+            new_center[2] = (min_z + max_z) * 0.5;
+            Error("GetValidPositionSquare exhausted 64 attempts; using midpoint " + new_center.ToString());
+        }
+
+        new_center[1] = GetGame().SurfaceY(new_center[0], new_center[2]);
         return new_center;
     }
 
@@ -390,7 +404,7 @@ class BattleRoyaleZone
         float oldZ = circle_center[2];
         int max_try = 500;
 
-        while(true)
+        while(max_try > 0)
         {
             max_try--;
 
@@ -414,43 +428,6 @@ class BattleRoyaleZone
             if(new_center[0] < new_radius || new_center[2] < new_radius || (new_center[0] + new_radius) > world_size || (new_center[2] + new_radius) > world_size)
             {
                 BattleRoyaleUtils.Trace("not inside the world " + new_center[0] + " " + new_center[2] + " " + world_size + " " + new_radius);
-
-                if(max_try <= 0)
-                {
-                    if ( potentialpos != "0 0 0" )
-                        return potentialpos;
-
-                    if(new_center[0] < new_radius)
-                        new_center[0] = new_radius;
-
-                    if(new_center[2] < new_radius)
-                        new_center[2] = new_radius;
-
-                    if((new_center[0] + new_radius) > world_size)
-                        new_center[0] = world_size - new_radius;
-
-                    if((new_center[2] + new_radius) > world_size)
-                        new_center[2] = world_size - new_radius;
-
-					if ( (new_radius - old_radius) < vector.Distance( Vector( new_center[0], 0, new_center[2] ), Vector( circle_center[0], 0, circle_center[2] ) ) )
-					{
-						BattleRoyaleUtils.Trace("try to find the maximum distance we can use to have circle inside one another");
-						distance = new_radius - old_radius; // We take the maximum distance we should have
-						moveDir = Math.Atan2( (world_size / 2) - circle_center[0], (world_size / 2) - circle_center[2] ); // We got the direction to the center of the map, we can improve this
-
-						dX = distance * Math.Sin(moveDir);
-						dZ = distance * Math.Cos(moveDir);
-
-						new_center[0] = oldX + dX;
-						new_center[2] = oldZ + dZ;
-					}
-
-                    BattleRoyaleUtils.Trace("max_try for finding new_center, sad...");
-                    // TODO: crash the server if no good zone found?
-                    GetGame().RequestExit(0);
-                    break;
-                }
-
                 continue;
             }
 
@@ -486,6 +463,45 @@ class BattleRoyaleZone
 
                 break;
             }
+        }
+
+        if (max_try <= 0)
+        {
+            if (potentialpos != "0 0 0")
+                new_center = potentialpos;
+            else
+            {
+                if(new_center[0] < new_radius)
+                    new_center[0] = new_radius;
+                if(new_center[2] < new_radius)
+                    new_center[2] = new_radius;
+                if((new_center[0] + new_radius) > world_size)
+                    new_center[0] = world_size - new_radius;
+                if((new_center[2] + new_radius) > world_size)
+                    new_center[2] = world_size - new_radius;
+
+                if ( (new_radius - old_radius) < vector.Distance( Vector( new_center[0], 0, new_center[2] ), Vector( circle_center[0], 0, circle_center[2] ) ) )
+                {
+                    float fallback_distance = new_radius - old_radius;
+                    float fallback_dir = Math.Atan2( (world_size / 2) - circle_center[0], (world_size / 2) - circle_center[2] );
+                    new_center[0] = oldX + fallback_distance * Math.Sin(fallback_dir);
+                    new_center[2] = oldZ + fallback_distance * Math.Cos(fallback_dir);
+                    if(new_center[0] < new_radius)
+                        new_center[0] = new_radius;
+                    if(new_center[2] < new_radius)
+                        new_center[2] = new_radius;
+                    if((new_center[0] + new_radius) > world_size)
+                        new_center[0] = world_size - new_radius;
+                    if((new_center[2] + new_radius) > world_size)
+                        new_center[2] = world_size - new_radius;
+                }
+            }
+
+            bool inside_map = new_center[0] >= new_radius && new_center[2] >= new_radius && (new_center[0] + new_radius) <= world_size && (new_center[2] + new_radius) <= world_size;
+            if (!inside_map)
+                BattleRoyaleUtils.Warn("Zone fallback center is outside the map: " + new_center.ToString());
+            else
+                BattleRoyaleUtils.Warn("Zone search exhausted, using fallback center: " + new_center.ToString());
         }
 
 		new_center[1] = GetGame().SurfaceY(new_center[0], new_center[2]);
@@ -547,9 +563,23 @@ class BattleRoyaleZone
 		BattleRoyaleUtils.Trace(cfg);
 
 		float radius, theta, x, z;
-		while(true)
+		if (!s_POI || s_POI.Count() == 0)
+		{
+			int empty_world = GetGame().GetWorld().GetWorldSize();
+			vector empty_fallback = "0 0 0";
+			empty_fallback[0] = empty_world * 0.5;
+			empty_fallback[2] = empty_world * 0.5;
+			empty_fallback[1] = GetGame().SurfaceY(empty_fallback[0], empty_fallback[2]);
+			Error("GetRandomPOI has no POIs; using map center " + empty_fallback.ToString());
+			return empty_fallback;
+		}
+
+		bool found_poi = false;
+		for (int poi_attempt = 0; poi_attempt < 40; poi_attempt++)
 		{
 			ref array<float> poi = s_POI.Get(Math.RandomInt(0, s_POI.Count()));
+			if (!poi || poi.Count() < 2)
+				continue;
 
 			radius = 10 * Math.Sqrt( Math.RandomFloat(0, 1) );
 			theta = Math.RandomFloat(0, 1) * Math.PI2;
@@ -559,7 +589,25 @@ class BattleRoyaleZone
 			if(!IsSafeZoneCenter(x, z))
 				continue;
 
+			found_poi = true;
 			break;
+		}
+
+		if (!found_poi)
+		{
+			ref array<float> reserve_poi = s_POI.Get(0);
+			if (!reserve_poi || reserve_poi.Count() < 2)
+			{
+				int reserve_world = GetGame().GetWorld().GetWorldSize();
+				x = reserve_world * 0.5;
+				z = reserve_world * 0.5;
+			}
+			else
+			{
+				x = reserve_poi[0];
+				z = reserve_poi[1];
+			}
+			Error("GetRandomPOI exhausted 40 attempts; using fallback POI");
 		}
 
 		vector poi_position = "0 0 0";

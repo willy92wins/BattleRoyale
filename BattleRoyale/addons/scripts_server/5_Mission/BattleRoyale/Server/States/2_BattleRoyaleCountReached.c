@@ -19,6 +19,7 @@ class BattleRoyaleCountReached: BattleRoyaleDebugState
     {
     	BattleRoyaleUtils.Debug(string.Format("BattleRoyaleCountReached: Activating with time to start: %1 seconds", i_TimeToStart));
         super.Activate();
+        BroadcastMatchPhase(EBRMatchPhase.LOBBY, i_TimeToStart);
 
     	BattleRoyaleConfig m_Config = BattleRoyaleConfig.GetConfig();
         BattleRoyaleServerData m_ServerData = m_Config.GetServerData();
