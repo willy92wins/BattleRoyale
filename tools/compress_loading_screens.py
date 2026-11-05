@@ -2,10 +2,11 @@
 
 The 0.1.0 files are uncompressed 1920x1080 EDDS textures of 7-11 MB each, with an 11-level mip
 chain stored as COPY or LZ4 chunks. They are written again with the same names, size and mip
-chain as DXT1 (8 bits per pixel), or as DXT5 (16 bits per pixel, alpha kept) when some pixel
+chain as DXT1 (4 bits per pixel), or as DXT5 (8 bits per pixel, alpha kept) when some pixel
 has an alpha below --alpha-threshold. The 0.1.0 screens carry a soft watermark in the bottom
-right corner; an alpha of 230 or more on black differs from opaque by less than DXT1 noise. The layout is the one vanilla 1.30 uses: the ENF1 marker, a COPY
-chunk table from the smallest mip to mip 0, then the chunks in the same order.
+right corner; an alpha of 230 or more on black differs from opaque by less than DXT1 noise.
+The layout is the one vanilla 1.30 uses: the ENF1 marker, a COPY chunk table from the smallest
+mip to mip 0, then the chunks in the same order.
 
 Each new file is decoded again and compared with the original (PSNR of mip 0 over RGBA) before
 anything is written. A file below --min-psnr stops the run. Files are written to a temporary
@@ -57,17 +58,23 @@ def read_chunks(data):
 
 
 def lz4_chunk(body):
-    """LZ4 chunk: uint32 decoded size, then blocks of <uint24 size, uint8 flags, data>. Each block
-    decodes to at most 64 KB and uses the previous 64 KB of output as dictionary."""
+    """LZ4 chunk: uint32 decoded size, then blocks of <uint24 size, uint8 flags, data>. The flags
+    are 0 on every block but the last, which has 0x80. Each block decodes to at most 64 KB and uses
+    the previous 64 KB of output as dictionary."""
     if len(body) < 4:
         raise ValueError("LZ4 chunk shorter than its size field")
     target = struct.unpack_from("<I", body, 0)[0]
     out = bytearray()
     pos = 4
-    while len(out) < target:
+    last = False
+    while not last:
         if pos + 4 > len(body):
             raise ValueError("LZ4 chunk ends inside a block header")
         size = body[pos] | (body[pos + 1] << 8) | (body[pos + 2] << 16)
+        flags = body[pos + 3]
+        if flags not in (0x00, 0x80):
+            raise ValueError(f"unknown LZ4 block flags 0x{flags:02x}")
+        last = flags == 0x80
         pos += 4
         if size == 0 or pos + size > len(body):
             raise ValueError(f"LZ4 block of {size} bytes does not fit the chunk")
@@ -77,6 +84,8 @@ def lz4_chunk(body):
             raise ValueError("empty LZ4 block")
         out += part
         pos += size
+        if len(out) > target:
+            raise ValueError(f"LZ4 chunk decodes past its size of {target} bytes")
     if len(out) != target or pos != len(body):
         raise ValueError(f"LZ4 chunk decoded {len(out)} of {target} bytes, consumed {pos} of {len(body)}")
     return bytes(out)
@@ -201,6 +210,17 @@ def main():
     a = ap.parse_args()
     if bool(a.out) == bool(a.backup):
         raise SystemExit("give either --out <folder> or --backup <folder>")
+    if not math.isfinite(a.min_psnr):
+        raise SystemExit("--min-psnr must be a finite number")
+    source = os.path.normcase(os.path.realpath(a.folder))
+    for name, folder in (("--out", a.out), ("--backup", a.backup)):
+        if not folder:
+            continue
+        same = os.path.normcase(os.path.realpath(folder)) == source
+        if os.path.isdir(folder):
+            same = same or os.path.samefile(folder, a.folder)  # also catches subst drives and links
+        if same:
+            raise SystemExit(f"{name} must not be the source folder; use --backup to replace in place")
     out_dir = a.out or a.folder
 
     # Encode and check everything first: nothing is written if one file fails
