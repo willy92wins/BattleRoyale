@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.1.0 (unreleased)
+
+The admin tool is optional: the mod runs with no admin tool, with Community Online Tools or with
+VPPAdminTools.
+
+Requires DayZ 1.30, CF, Dabs Framework, DayZ-Expansion-Core, DayZ-Expansion and
+DayZ-Expansion-Navigation. Load order and admin permissions: `BattleRoyale_server/README.md`.
+
+### Changed
+- Community Online Tools is no longer required. With COT loaded, the `[BR] State Machine` module
+  works as in 1.0; without it, that code is not compiled.
+- The VPPAdminTools menu moved to a separate mod, `@BattleRoyale-VPP`, which requires VPPAdminTools
+  and BattleRoyale so that it compiles after both. Load it after `@VPPAdminTools` and
+  `@BattleRoyale`, and only with VPP. The menu still has only Next State.
+- The build also packs and signs `@BattleRoyale-VPP` with the same key. The lint gate lints into an
+  empty folder and allows each known false positive only by rule and file.
+
+### Verified
+- DayZDiag 1.30, server and client, with no admin tool, with COT loaded before or after
+  `@BattleRoyale`, with VPPAdminTools alone and with VPPAdminTools plus `@BattleRoyale-VPP`: every
+  setup compiles with no script error and the match starts.
+- VPPAdminTools sets its `VPPADMINTOOLS` define in a script file, not in its config. Loaded before
+  `@BattleRoyale`, the define reaches both sides: the VPP log registers `MenuBattleRoyaleManager` and
+  the four `BattleRoyale:` permissions, and the client compiles the two classes of
+  `@BattleRoyale-VPP` (1154 classes in the mission module with it, 1152 without).
+
+### Known issues
+- The VPP menu button and the COT module were not clicked in game: the VPP toolbar opens through an
+  input the test tools cannot press. Admin actions with and without permission still need a check by
+  hand.
+- With VPPAdminTools loaded after `@BattleRoyale` (not tested), the server side of the VPP
+  integration is not expected to see the define: no `BattleRoyale:` permission would be registered and
+  every VPP admin action would be denied. Keep `@VPPAdminTools` before `@BattleRoyale`.
+
 ## 1.0.0 (2026-11-05, release candidate)
 
 DayZ-BattleRoyale 0.1.0-Vigrid (Myst, KeganH and contributors, DSPL-SA) brought to DayZ 1.30 and

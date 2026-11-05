@@ -36,36 +36,74 @@ a match.
 
 ## 1. Mods and load order
 
-Load order for `-mod=` (client mods, every player needs them):
+Load order for `-mod=` (client mods, every player needs them). The admin tool is optional: Community
+Online Tools (COT), VPPAdminTools or none.
 
-| # | Folder | Steam Workshop id | Key in its `keys` folder |
-|---|---|---|---|
-| 1 | `@CF` | 1559212036 | `Jacob_Mango_V3.bikey` |
-| 2 | `@Dabs Framework` | 2545327648 | `dab.bikey` |
-| 3 | `@DayZ-Expansion-Core` | 2291785308 | `Expansion.bikey` |
-| 4 | `@DayZ-Expansion` | 2116151222 | `Expansion.bikey` |
-| 5 | `@DayZ-Expansion-Navigation` | 2792984722 | `Expansion.bikey` |
-| 6 | `@Community-Online-Tools` | 1564026768 | `Jacob_Mango_V3.bikey` |
-| 7 | `@BattleRoyale` | (1.0 build) | the key shipped in `@BattleRoyale\keys` |
+| # | Folder | Steam Workshop id | Key in its `keys` folder | Load it |
+|---|---|---|---|---|
+| 1 | `@CF` | 1559212036 | `Jacob_Mango_V3.bikey` | always |
+| 2 | `@Dabs Framework` | 2545327648 | `dab.bikey` | always |
+| 3 | `@DayZ-Expansion-Core` | 2291785308 | `Expansion.bikey` | always |
+| 4 | `@DayZ-Expansion` | 2116151222 | `Expansion.bikey` | always |
+| 5 | `@DayZ-Expansion-Navigation` | 2792984722 | `Expansion.bikey` | always |
+| 6 | `@Community-Online-Tools` | 1564026768 | `Jacob_Mango_V3.bikey` | optional, admin tool |
+| 7 | `@VPPAdminTools` | 1828439124 | `VPP.bikey` | optional, admin tool |
+| 8 | `@BattleRoyale` | (this build) | the key shipped in `@BattleRoyale\keys` | always |
+| 9 | `@BattleRoyale-VPP` | (this build) | the same key as `@BattleRoyale` | only with `@VPPAdminTools` |
+
+Without an admin tool:
+
+```
+-mod=@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@BattleRoyale
+```
+
+With COT, nothing else is needed:
 
 ```
 -mod=@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@Community-Online-Tools;@BattleRoyale
 ```
 
+With VPPAdminTools, `@VPPAdminTools` goes before `@BattleRoyale` (VPP sets its `VPPADMINTOOLS` define
+in a script, which only reaches the mods compiled after it; without it the BattleRoyale permissions
+are not registered and every VPP admin action is denied), and `@BattleRoyale-VPP` goes after both:
+
+```
+-mod=@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@VPPAdminTools;@BattleRoyale;@BattleRoyale-VPP
+```
+
 `@BattleRoyale` holds both the client and the server script PBOs, so nothing is needed in
-`-serverMod=`. Use it only for server-only mods you add yourself.
+`-serverMod=`. Use it only for server-only mods you add yourself. `@BattleRoyale-VPP` only adds the
+BattleRoyale menu to the VPP toolbar; it requires VPPAdminTools, so load it only with VPP.
 
 Copy every mod folder into the server folder (next to `DayZServer_x64.exe`) with exactly these names;
 a name with spaces (`@Dabs Framework`) is fine, the restart script quotes it.
+
+### Admin tools
+
+The admin actions (next state, pause, resume, airdrop) are checked on the server and denied by
+default.
+
+- COT: the `[BR] State Machine` module shows with `BattleRoyale.StateMachine.View`; its actions need
+  `BattleRoyale.StateMachine.Update`.
+- VPPAdminTools with `@BattleRoyale-VPP`: the BattleRoyale button of the VPP toolbar needs
+  `MenuBattleRoyaleManager`, and its Next State button needs `BattleRoyale:Next`. Grant them to a group
+  in the VPP Permission Editor: VPP does not add new permissions to existing groups. The menu has no
+  pause, resume or airdrop button; `BattleRoyale:Pause`, `BattleRoyale:Resume` and
+  `BattleRoyale:SpawnAirdrop` are registered but have no VPP button yet.
+- No admin tool: nobody can skip, pause or resume a match.
+
+Players listed in `admins_steamid64` (`general_settings.json`) can join while a match runs, and so can
+players with an action permission (`BattleRoyale.StateMachine.Update` in COT, `BattleRoyale:Next`,
+`:Pause`, `:Resume` or `:SpawnAirdrop` in VPP). The list itself gives no admin action.
 
 ## 2. Signature keys
 
 The stock config uses `verifySignatures = 2`: the server only accepts PBOs signed with a key found in
 `<server>\keys\`. Copy into that folder the `.bikey` of every mod (table above; `Expansion.bikey` and
-`Jacob_Mango_V3.bikey` are shared, one copy is enough) and the key of the BattleRoyale 1.0 build. The
-1.0 PBOs are re-signed with the project's own key (audit EXT-18), so the key of 0.1.0 does not
-apply. The key names above are those of the current Workshop versions: check each mod's
-`keys` folder after an update.
+`Jacob_Mango_V3.bikey` are shared, one copy is enough) and the key of the BattleRoyale build, which
+also signs `@BattleRoyale-VPP`. The 1.0 PBOs are re-signed with the project's own key (audit EXT-18),
+so the key of 0.1.0 does not apply. The key names above are those of the current Workshop versions:
+check each mod's `keys` folder after an update.
 
 ## 3. Mission files
 
@@ -131,6 +169,7 @@ cd D:\DayZServer\BattleRoyale_server\tools
 .\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@Community-Online-Tools;@BattleRoyale'
 ```
 
+This example uses the COT list; pass the `-mod=` list of section 1 that matches your admin tool.
 Add `-WhatIf` to see what one pass would rename, delete and start without doing it. Other parameters:
 `-Mission`, `-Config`, `-Profiles` (default `<server>\profiles`), `-ServerMod`, `-Port`,
 `-RestartDelaySeconds`, `-KeepPrevious`, `-ExtraArgs` (`Get-Help .\restart_loop.ps1 -Full`). If Windows
