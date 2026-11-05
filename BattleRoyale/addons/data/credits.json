@@ -4,6 +4,12 @@
       "DepartmentName": "Vigrid Battle Royale",
       "Sections": [
         {
+          "SectionName": "1.0 refurbish",
+          "SectionLines": [
+            "DayZ BR community"
+          ]
+        },
+        {
           "SectionName": "Project Lead",
           "SectionLines": [
             "Myst (Bender B. Rodriguez)"

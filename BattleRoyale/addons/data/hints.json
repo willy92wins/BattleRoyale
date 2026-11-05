@@ -1,5 +1,20 @@
 [
     {
+        "m_Headline": "Ready up!",
+        "m_ImagePath": "",
+        "m_Description": "In the lobby, press 'F1' (default key) when you are ready to play!"
+    },
+    {
+        "m_Headline": "Stuck at the start?",
+        "m_ImagePath": "",
+        "m_Description": "If you spawn stuck in a building, press 'F2' (default key) once at the start of the match to be teleported. Do not abuse it!"
+    },
+    {
+        "m_Headline": "Stay in the zone!",
+        "m_ImagePath": "",
+        "m_Description": "Outside the play area you take damage. Check the map for the next zone!"
+    },
+    {
         "m_Headline": "Hide or show 3D marker!",
         "m_ImagePath": "",
         "m_Description": "Press 'K' to hide or show the 3D marker!"

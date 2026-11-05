@@ -5,7 +5,7 @@
  * TODO: move these constants into something a bit easier for modders to work with, that way any 3rd party can launch their own BR off my framework
  */
 
-static const string BATTLEROYALE_VERSION = "0.1.0-Vigrid";
+static const string BATTLEROYALE_VERSION = "1.0.0";
 
 #ifdef DIAG
 #define BR_TRACE_ENABLED
@@ -20,12 +20,12 @@ static const string BATTLEROYALE_VERSION = "0.1.0-Vigrid";
 #endif
 
 
-//--- GitHub repository
-static const string GITHUB_URL = "https://github.com/LeMyst/Vigrid-BattleRoyale";
+//--- Feedback link opened by the buttons that extra_changefeedbackurl redirects; empty hides the pause menu button
+static const string BATTLEROYALE_FEEDBACK_URL = "";
 
 
-//--- API endpoint
-static const string BATTLEROYALE_API_ENDPOINT = "https://api.vigrid.ovh/";
+//--- Match backend base URL, only read by the server webhooks behind enable_vigrid_api; empty, no default backend
+static const string BATTLEROYALE_API_ENDPOINT = "";
 
 
 //--- settings files

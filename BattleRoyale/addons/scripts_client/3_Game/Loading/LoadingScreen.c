@@ -14,13 +14,16 @@ modded class LoadingScreen
         m_ImageLogoMid.Show( false );  // Hide the DayZ logo
         m_ImageLogoCorner.Show( false );  // Hide the Bohemia Interactive logo
         m_ModdedWarning.Show( false );  // Hide the modded warning
+
+		// Remove the reveal mask of loading.layout once; LoadMaskTexture("") logs a resource error each time it runs
+		if (m_ImageBackground)
+			m_ImageBackground.LoadMaskTexture("");
     }
 
     override void Show()
     {
         super.Show();
 
-        m_ImageBackground.LoadMaskTexture("");  // Hide the mask texture
         m_ImageLogoMid.Show( false );  // Hide the DayZ logo
         m_ImageLogoCorner.Show( false );  // Hide the Bohemia Interactive logo
         
@@ -29,6 +32,10 @@ modded class LoadingScreen
 
 	void UpdateLoadingBackground()
 	{
+		// The first Show runs inside the DayZGame constructor, before g_Game is set: only m_DayZGame is valid
+		if (!m_DayZGame || !m_ImageBackground)
+			return;
+
 		float loadingTime = f_LoadingTime;
 		float tickTime = m_DayZGame.GetTickTime();
 
@@ -49,30 +56,34 @@ modded class LoadingScreen
 
 		f_LoadingTime = 0;
 
-		// Get current world name
+		// Get current world name; an unknown or empty name falls back to the default entry
 		LoadingScreenBackground backgrounds = null;
 		LoadingScreenBackground defaultBackgrounds = null;
 
-		string worldNameLower = GetGame().GetWorldName();
+		string worldNameLower;
+		m_DayZGame.GetWorldName(worldNameLower);
 		worldNameLower.ToLower();
 
 		// Find background for current map or default
-		for (int i = 0; i < m_Backgrounds.Count(); i++)
+		if (m_Backgrounds)
 		{
-			LoadingScreenBackground current = m_Backgrounds[i];
-			if (current)
+			for (int i = 0; i < m_Backgrounds.Count(); i++)
 			{
-				string mapNameLower = current.MapName;
-				mapNameLower.ToLower();
-				if (mapNameLower == worldNameLower)
+				LoadingScreenBackground current = m_Backgrounds[i];
+				if (current)
 				{
-					backgrounds = current;
-					break;
-				}
+					string mapNameLower = current.MapName;
+					mapNameLower.ToLower();
+					if (mapNameLower == worldNameLower)
+					{
+						backgrounds = current;
+						break;
+					}
 
-				if (mapNameLower == "default")
-				{
-					defaultBackgrounds = current;
+					if (mapNameLower == "default")
+					{
+						defaultBackgrounds = current;
+					}
 				}
 			}
 		}
@@ -83,10 +94,15 @@ modded class LoadingScreen
 			backgrounds = defaultBackgrounds;
 		}
 
-		if (backgrounds)
-			m_ImageBackground.LoadImageFile(0, backgrounds.GetRandomPath());
-		else
-			m_ImageBackground.LoadImageFile(0, "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_1.edds");
+		string backgroundPath;
+		if (backgrounds && backgrounds.Path && backgrounds.Path.Count() > 0)
+			backgroundPath = backgrounds.GetRandomPath();
+
+		// No list, an empty list or an empty entry: use the first BR background
+		if (backgroundPath == "")
+			backgroundPath = "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_1.edds";
+
+		m_ImageBackground.LoadImageFile(0, backgroundPath);
 	}
 
     override void OnUpdate(float timeslice)
