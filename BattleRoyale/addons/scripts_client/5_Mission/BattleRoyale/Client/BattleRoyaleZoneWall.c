@@ -1,25 +1,28 @@
 #ifndef SERVER
-//! Client-only wall of particles along the edge of the current play area.
-//! Only the stretch of the edge near the camera is emitted, so the cost does not grow with the zone size.
+//! Client-only wall along the edge of a play area, built from local translucent panels.
+//! Only the stretch of the edge near the camera exists, so the cost does not grow with the zone size,
+//! and nothing goes over the network.
 class BattleRoyaleZoneWall
 {
-	static const float SPACING = 20;  //!< metres between two emitters along the edge
-	static const float VIEW_RANGE = 300;  //!< emitters further than this from the camera are not created
+	static const string PANEL_MODEL = "Vigrid-BattleRoyale/Models/Shapes/zonewall.p3d";
+	static const float PANEL_WIDTH = 20;  //!< width of zonewall.p3d
+	static const float SPACING = 19;  //!< metres between two panels along the edge, a little under the width so curves leave no gap
+	static const float SINK = 2;  //!< panels go this far below the lowest ground under them, so slopes leave no gap
+	static const float VIEW_RANGE = 500;  //!< panels further than this from the camera are not created
 	static const float REFRESH_SECONDS = 0.5;
 
-	protected int m_ParticleId;
 	protected vector m_Center;
 	protected float m_Radius;
-	protected int m_Count;  //!< number of emitter slots around the whole edge
+	protected int m_Count;  //!< number of panel slots around the whole edge
 	protected float m_Elapsed;
+	protected bool m_ModelMissing;
 
-	//! emitter slot index -> particle
-	protected ref map<int, ParticleSource> m_Particles;
+	//! panel slot index -> local object
+	protected ref map<int, Object> m_Panels;
 
 	void BattleRoyaleZoneWall()
 	{
-		m_ParticleId = ParticleList.CONTAMINATED_AREA_GAS_AROUND;
-		m_Particles = new map<int, ParticleSource>;
+		m_Panels = new map<int, Object>;
 		m_Elapsed = REFRESH_SECONDS;
 	}
 
@@ -36,7 +39,7 @@ class BattleRoyaleZoneWall
 			return;
 		m_Elapsed = 0;
 
-		if (!area || area.GetRadius() <= 0)
+		if (!area || area.GetRadius() <= 0 || m_ModelMissing)
 		{
 			Clear();
 			return;
@@ -55,12 +58,7 @@ class BattleRoyaleZoneWall
 
 	void Clear()
 	{
-		foreach (int index, ParticleSource particle : m_Particles)
-		{
-			if (particle)
-				particle.Stop();
-		}
-		m_Particles.Clear();
+		RemoveAllBut(null);
 		m_Radius = 0;
 		m_Count = 0;
 	}
@@ -71,7 +69,7 @@ class BattleRoyaleZoneWall
 		float dz = camera_pos[2] - m_Center[2];
 		float distance = Math.Sqrt(dx * dx + dz * dz);
 
-		// The camera is too far from the edge for any emitter to be in range
+		// The camera is too far from the edge for any panel to be in range
 		if (Math.AbsFloat(distance - m_Radius) > VIEW_RANGE)
 		{
 			RemoveAllBut(null);
@@ -87,7 +85,7 @@ class BattleRoyaleZoneWall
 
 		int first = Math.Round(bearing / step);
 		float range_sq = VIEW_RANGE * VIEW_RANGE;
-		ref set<int> wanted = new set<int>;
+		set<int> wanted = new set<int>;
 
 		for (int i = -half_span; i <= half_span; i++)
 		{
@@ -95,49 +93,68 @@ class BattleRoyaleZoneWall
 			if (index < 0)
 				index += m_Count;
 
-			vector pos = SlotPosition(index, step);
-			float px = pos[0] - camera_pos[0];
-			float pz = pos[2] - camera_pos[2];
+			float angle = index * step;
+			float x = m_Center[0] + m_Radius * Math.Cos(angle);
+			float z = m_Center[2] + m_Radius * Math.Sin(angle);
+			float px = x - camera_pos[0];
+			float pz = z - camera_pos[2];
 			if (px * px + pz * pz > range_sq)
 				continue;
 
 			wanted.Insert(index);
-			if (!m_Particles.Contains(index))
+			if (!m_Panels.Contains(index))
 			{
-				ParticleSource particle = ParticleManager.GetInstance().PlayInWorld(m_ParticleId, pos);
-				if (particle)
-					m_Particles.Insert(index, particle);
+				Object panel = CreatePanel(angle, x, z);
+				if (!panel)
+					return;
+				m_Panels.Insert(index, panel);
 			}
 		}
 
 		RemoveAllBut(wanted);
 	}
 
-	protected vector SlotPosition(int index, float step)
+	protected Object CreatePanel(float angle, float x, float z)
 	{
-		float angle = index * step;
-		float x = m_Center[0] + m_Radius * Math.Cos(angle);
-		float z = m_Center[2] + m_Radius * Math.Sin(angle);
-		return Vector(x, GetGame().SurfaceRoadY(x, z), z);
+		// The panel spans its local X axis, so it faces the center to lie along the edge
+		vector radial = Vector(Math.Cos(angle), 0, Math.Sin(angle));
+		vector tangent = Vector(-radial[2], 0, radial[0]);
+		float half = PANEL_WIDTH * 0.5;
+		float y = GetGame().SurfaceY(x, z);
+		y = Math.Min(y, GetGame().SurfaceY(x + tangent[0] * half, z + tangent[2] * half));
+		y = Math.Min(y, GetGame().SurfaceY(x - tangent[0] * half, z - tangent[2] * half));
+		vector pos = Vector(x, y - SINK, z);
+
+		Object panel = GetGame().CreateStaticObjectUsingP3D(PANEL_MODEL, pos, "0 0 0", 1.0, true);
+		if (!panel)
+		{
+			BattleRoyaleUtils.Warn("ZoneWall: cannot create " + PANEL_MODEL);
+			m_ModelMissing = true;
+			return null;
+		}
+
+		panel.SetDirection(radial);
+		panel.SetPosition(pos);
+		return panel;
 	}
 
-	//! Stops every emitter whose slot is not in keep (all of them when keep is null)
+	//! Deletes every panel whose slot is not in keep (all of them when keep is null)
 	protected void RemoveAllBut(set<int> keep)
 	{
 		array<int> stale = new array<int>;
-		foreach (int index, ParticleSource particle : m_Particles)
+		foreach (int index, Object panel : m_Panels)
 		{
 			if (!keep || keep.Find(index) == -1)
 			{
-				if (particle)
-					particle.Stop();
+				if (panel)
+					GetGame().ObjectDelete(panel);
 				stale.Insert(index);
 			}
 		}
 
 		foreach (int key : stale)
 		{
-			m_Particles.Remove(key);
+			m_Panels.Remove(key);
 		}
 	}
 }
