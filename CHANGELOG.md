@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0 (unreleased)
+## 1.1.0 (2026-11-05, release candidate for the first player test)
 
 The admin tool is optional: the mod runs with no admin tool, with Community Online Tools or with
 VPPAdminTools.
@@ -14,6 +14,8 @@ DayZ-Expansion-Navigation. Load order and admin permissions: `BattleRoyale_serve
 - The VPPAdminTools menu moved to a separate mod, `@BattleRoyale-VPP`, which requires VPPAdminTools
   and BattleRoyale so that it compiles after both. Load it after `@VPPAdminTools` and
   `@BattleRoyale`, and only with VPP. The menu still has only Next State.
+- The menu music "Apocalypse" (credited to Desolation Redux, no licence found) is removed with its
+  sounds PBO; the main menu plays the vanilla tracks.
 - The build also packs and signs `@BattleRoyale-VPP` with the same key. The lint gate lints into an
   empty folder and allows each known false positive only by rule and file.
 
