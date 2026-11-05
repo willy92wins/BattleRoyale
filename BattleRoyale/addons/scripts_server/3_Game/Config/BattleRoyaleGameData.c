@@ -8,8 +8,8 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 		"123456789123456789" // Dummy SteamID64
 	};
 
-    int num_zones = 6;  // number of zones
-    int round_duration_minutes = 5;  // round length in minutes
+    int num_zones = 7;  // number of zones, static_sizes/static_timers/min_players in zone_settings.json need at least this many entries
+    int round_duration_minutes = 5;  // round length in minutes, also sets the delay before the first zone: (60 * round_duration_minutes) / 2 seconds
 
 	bool enable_spawn_selection_menu = true;  // show spawn selection menu (0 = no, 1 = yes)
 	int spawn_selection_duration = 30;  // spawn selection duration in seconds
@@ -17,7 +17,7 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 	float spawn_selection_radius = 50;  // radius where the player can spawn
 	bool show_spawn_heatmap = true;  // show spawn heatmap (0 = no, 1 = yes)
 
-    int time_until_teleport_unlock = 10;  // seconds before unlock after teleporting & preparing
+    int time_until_teleport_unlock = 10;  // seconds before unlock after teleporting & preparing, must stay below the first zone delay
 
     ref array<int> zone_notification_minutes = { 1, 2 };  // minutes when notification about the zone shrinking will be displayed
     ref array<int> zone_notification_seconds = { 30, 10 };  // seconds when notification about the zone shrinking will be displayed, when under the minute
@@ -109,10 +109,65 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 		if (version == 1)
 		{
 			// Set default shortcut for the first item (HuntingKnife) if not set
-			player_starting_items_shortcut.Insert(0);
+			// A version 1 file has no shortcut list, so the declared default may already be there
+			if (!player_starting_items_shortcut)
+				player_starting_items_shortcut = new array<int>;
+
+			if (player_starting_items_shortcut.Count() == 0)
+				player_starting_items_shortcut.Insert(0);
 
 			version = 2;
 			Save();  // Save the upgraded config
+		}
+	}
+
+	// num_zones is checked together with the zone tables in BattleRoyaleZoneData.ValidateZoneTables
+	override void Validate()
+	{
+		BattleRoyaleGameData defaults = new BattleRoyaleGameData;
+
+		if (time_until_teleport_unlock < 0)
+		{
+			LogInvalidSetting("general_settings.json", "time_until_teleport_unlock", time_until_teleport_unlock.ToString(), "must not be negative");
+			time_until_teleport_unlock = defaults.time_until_teleport_unlock;
+		}
+
+		// The first zone starts (60 * round_duration_minutes) / 2 seconds after the start match state, which then stops the unlock timer
+		if (round_duration_minutes < 1 || (60 * round_duration_minutes) / 2 <= time_until_teleport_unlock)
+		{
+			LogInvalidSetting("general_settings.json", "round_duration_minutes / time_until_teleport_unlock", round_duration_minutes.ToString() + " / " + time_until_teleport_unlock.ToString(), "round_duration_minutes >= 1 and (60 * round_duration_minutes) / 2 > time_until_teleport_unlock");
+			round_duration_minutes = defaults.round_duration_minutes;
+			time_until_teleport_unlock = defaults.time_until_teleport_unlock;
+		}
+
+		if (spawn_selection_duration < 1)
+		{
+			LogInvalidSetting("general_settings.json", "spawn_selection_duration", spawn_selection_duration.ToString(), "must be positive");
+			spawn_selection_duration = defaults.spawn_selection_duration;
+		}
+
+		if (spawn_selection_extra_time < 0)
+		{
+			LogInvalidSetting("general_settings.json", "spawn_selection_extra_time", spawn_selection_extra_time.ToString(), "must not be negative");
+			spawn_selection_extra_time = defaults.spawn_selection_extra_time;
+		}
+
+		if (spawn_selection_radius <= 0)
+		{
+			LogInvalidSetting("general_settings.json", "spawn_selection_radius", spawn_selection_radius.ToString(), "must be positive");
+			spawn_selection_radius = defaults.spawn_selection_radius;
+		}
+
+		if (debug_heal_tick_seconds < 1)
+		{
+			LogInvalidSetting("general_settings.json", "debug_heal_tick_seconds", debug_heal_tick_seconds.ToString(), "must be positive");
+			debug_heal_tick_seconds = defaults.debug_heal_tick_seconds;
+		}
+
+		if (zone_damage_tick_seconds < 1)
+		{
+			LogInvalidSetting("general_settings.json", "zone_damage_tick_seconds", zone_damage_tick_seconds.ToString(), "must be positive");
+			zone_damage_tick_seconds = defaults.zone_damage_tick_seconds;
 		}
 	}
 };
