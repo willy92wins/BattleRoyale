@@ -25,8 +25,9 @@ BattleRoyale_server\
    `hostname`, `password` and `passwordAdmin` (section 4).
 4. Start the server with `tools\restart_loop.ps1` (section 5). The first start writes the mod settings
    to `<profiles>\Vigrid-BattleRoyale\` (section 6).
-5. Players load the same mods in the same order. Until `@BattleRoyale` is on the Steam Workshop, give
-   them the same `@BattleRoyale` folder as the server: client and server must run the same build.
+5. Players load the same mods in the same order, `@BattleRoyale` from the Steam Workshop
+   (https://steamcommunity.com/sharedfiles/filedetails/?id=3834219016). The server must run the same
+   version as the Workshop item.
 
 A match starts once the server has been up for `min_waiting_time` (300 s) with at least two players,
 in one of two ways (`lobby_settings.json`): more than `minimum_players` (10) are in the lobby and 80 % of
@@ -48,7 +49,7 @@ Online Tools (COT), VPPAdminTools or none.
 | 5 | `@DayZ-Expansion-Navigation` | 2792984722 | `Expansion.bikey` | always |
 | 6 | `@Community-Online-Tools` | 1564026768 | `Jacob_Mango_V3.bikey` | optional, admin tool |
 | 7 | `@VPPAdminTools` | 1828439124 | `VPP.bikey` | optional, admin tool |
-| 8 | `@BattleRoyale` | (this build) | the key shipped in `@BattleRoyale\keys` | always |
+| 8 | `@BattleRoyale` | 3834219016 | the key shipped in `@BattleRoyale\keys` | always |
 | 9 | `@BattleRoyale-VPP` | (this build) | the same key as `@BattleRoyale` | only with `@VPPAdminTools` |
 
 Without an admin tool:
