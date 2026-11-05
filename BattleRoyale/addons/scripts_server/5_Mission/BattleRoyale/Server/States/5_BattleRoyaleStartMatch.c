@@ -76,6 +76,9 @@ class BattleRoyaleStartMatch: BattleRoyaleState
         if ( m_UnlockTimer && m_UnlockTimer.IsRunning() )
             m_UnlockTimer.Stop();
 
+        if ( m_ShowFirstZone && m_ShowFirstZone.IsRunning() )
+            m_ShowFirstZone.Stop();
+
         if ( m_ZoneStartTimer && m_ZoneStartTimer.IsRunning() )
             m_ZoneStartTimer.Stop();
 

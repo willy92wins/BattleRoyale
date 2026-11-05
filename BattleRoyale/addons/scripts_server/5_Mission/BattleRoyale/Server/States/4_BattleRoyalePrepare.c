@@ -143,9 +143,15 @@ class BattleRoyalePrepare: BattleRoyaleState
         if ( process_player == NULL )
             return false;
 
-        if (process_player.GetInventory().CountInventory() > 0)
+        // Only top-level attachments are destroyed: their cargo and attachments are deleted with them.
+        // PlayerBase.RemoveAllItems also visits those children after their parent is gone and logs
+        // "LocalDestroyEntity: No inventory location" once per player.
+        GameInventory inventory = process_player.GetInventory();
+        for (int i = inventory.AttachmentCount() - 1; i >= 0; i--)
         {
-            process_player.RemoveAllItems();
+            ItemBase attachment = ItemBase.Cast(inventory.GetAttachmentFromIndex(i));
+            if (attachment)
+                inventory.LocalDestroyEntity(attachment);
         }
 
         return true;
