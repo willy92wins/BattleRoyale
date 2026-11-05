@@ -6,7 +6,7 @@ class BattleRoyaleLobbyData: BattleRoyaleDataBase
 	// Lobby spawn location are in the spawns settings located in the mission folder.
 
     int minimum_players = 10;  // Minimum players to start the match
-    int use_ready_up = 1;  // Use ready up system (F2 by default)
+    int use_ready_up = 1;  // Use ready up system (F1 by default, UADayZBRReadyUp in Data/Inputs.xml)
     float ready_up_percent = 0.8;  // Percentage of players needed to ready up to automatically start the match
     float min_waiting_time = 300.0;  // Minimum waiting time before the match can start
     int time_to_start_match_seconds = 30;  // Time to start the match after the minimum waiting time

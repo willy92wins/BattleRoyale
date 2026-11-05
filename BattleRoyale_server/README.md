@@ -17,6 +17,23 @@ BattleRoyale_server\
   README.md
 ```
 
+## Quick start
+
+1. Install DayZ Server 1.30 and the mods of section 1, each with its key in `<server>\keys` (section 2).
+2. Copy `@BattleRoyale` (this build) next to `DayZServer_x64.exe` and its key into `<server>\keys`.
+3. Copy the mission files (section 3) and `serverDZ.cfg.example` as `serverDZ.cfg`, then set
+   `hostname`, `password` and `passwordAdmin` (section 4).
+4. Start the server with `tools\restart_loop.ps1` (section 5). The first start writes the mod settings
+   to `<profiles>\Vigrid-BattleRoyale\` (section 6).
+5. Players load the same mods in the same order. Until `@BattleRoyale` is on the Steam Workshop, give
+   them the same `@BattleRoyale` folder as the server: client and server must run the same build.
+
+A match starts once the server has been up for `min_waiting_time` (300 s) with at least two players,
+in one of two ways (`lobby_settings.json`): more than `minimum_players` (10) are in the lobby and 80 % of
+them are ready (F1), or by autostart, where the number of ready players needed falls from `maxPlayers`
+to 2 over `autostart_delay` (750 s) after the first player joined. F2 is the unstuck key at the start of
+a match.
+
 ## 1. Mods and load order
 
 Load order for `-mod=` (client mods, every player needs them). The admin tool is optional: Community
@@ -235,12 +252,12 @@ python tools\zone_table_check.py --world-config "P:\DZ\worlds\chernarusplus\worl
 
 The `zone_settings.json` the mod writes is enough; the mod sources are only needed without it
 (`--zone-data`). The tool needs the unpacked game data (`P:\DZ\...`), Python 3, numpy and Pillow, and
-replays the zone generator offline: how often it would give up (the server then stops at boot), how
-much of the first zone falls on the sea, and which places cause it.
+replays the zone generator offline: how often it would give up (the server then logs a warning and uses
+a fallback position instead of stopping, as 0.1.0 did), how much of the first zone falls on the sea, and
+which places cause it.
 
 ## 7. Not in this package
 
 - `types.xml`, events and vehicles of the vanilla mission are unchanged (loot volume and vehicles still
   to be reviewed for 120 players).
-- The `extra_preventweaponraise` PBO still has to be removed from the mod build for mode 2 to take
-  effect: its script replaces the vanilla lift check.
+- Load figures with 100 or more players: the 1.0 was only played with one player so far.
