@@ -4,4 +4,9 @@ modded class SandstormExposureStaticMdfr
 	{
 		return false;
 	}
+
+	// Direct requests skip ActivateCondition (DisableActivateCheck).
+	override void ActivateRequest(EActivationType trigger)
+	{
+	}
 }

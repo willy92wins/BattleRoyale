@@ -113,6 +113,23 @@ La base de `common.md` es scripts_client 10 errores (ES-LAYOUT-PATH-PBOPREFIX-MI
 - Que el estático de inconsciencia se lea después de que `serverDZ.cfg` esté disponible. Se lee en el primer `ActivateCondition`, no en el arranque del módulo.
 - Los 12 errores concretos del resumen de lint de scripts_client/server más allá del conteo y de la base escrita en `common.md`.
 
+## Ronda 1 de correcciones
+
+### D1 SandstormExposureStatic y Flies
+
+`ActivateCondition` no corta la activacion directa. `SandstormExposureStaticMdfr.Init` llama a `DisableActivateCheck()` (`sandstormexposure.c:62`) y `FliesMdfr.Init` igual (`flies.c:16`). `ModifiersManager.ActivateModifier` llama a `ActivateRequest` (`modifiersmanager.c:227-229`). `ModifierBase.Tick` ejecuta `Activate()` cuando `m_ShouldBeActive` es true sin mirar `ActivateCondition` (`modifierbase.c:93-94`). `Activate()` pone `m_IsActive` (`modifierbase.c:193-201`).
+
+Firma bloqueada: `void ActivateRequest(EActivationType trigger)` (`modifierbase.c:211`). Override vacio en:
+
+- `extra_preventplayermodifiers\Scripts\4_World\Classes\PlayerModifiers\Modifiers\Conditions\SandstormExposureStatic.c`
+- `...\Modifiers\Flies.c`
+
+`m_ShouldBeActive` solo pasa a true en `ActivateRequest` (`modifierbase.c:213`), asi que la peticion no deja el modificador pendiente ni activo. Se mantiene `ActivateCondition` en false. No se vacio `OnActivate`: el `OnTick` de la tormenta (`sandstormexposure.c:76`) seguiria transmitiendo agentes si `Activate()` llegara a correr.
+
+### D2 extra_changefeedbackurl
+
+`extra_changefeedbackurl\config.cpp:8` anade `BattleRoyale_Scripts_Client` junto a `DZ_Scripts`. Los scripts de esa carpeta no se tocaron. `GITHUB_URL` sigue en `scripts_client\2_GameLib\BattleRoyaleConstants.c`.
+
 ## Ficheros
 
 Creados:
