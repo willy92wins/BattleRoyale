@@ -1,6 +1,7 @@
 # Informe de la lane client-hud (BattleRoyale 1.0)
 
-Rama `lane/client-hud`, worktree `C:\Users\guill\Repos\br-wt\client-hud`. Commit: el que contiene este fichero
+Rama `lane/client-hud`, worktree `C:\Users\guill\Repos\br-wt\client-hud`. Commits: `5ef057d` (entrega inicial) y
+el que contiene la sección «Ronda 1 de correcciones» de este fichero
 (`git log -1 -- BattleRoyale_dev/reports/client-hud.md`). Rutas de código relativas a `BattleRoyale/addons/`.
 Vanilla citado = `C:\Users\guill\OneDrive\Documentos\DayZ Projects\scripts\` (1.30); dependencias = `C:\Users\guill\Repos\br-ref\`.
 
@@ -113,7 +114,7 @@ probado en el juego.
     | Fase | Etiqueta y temporizador |
     |---|---|
     | LOBBY / SPAWN_SELECTION / PREPARE / RESTARTING | Nombre de la fase y su temporizador, si lo hay |
-    | STARTING | «LA PARTIDA EMPIEZA EN» con el temporizador de fase; después, «PRIMERA ZONA EN» con la cuenta atrás de zona |
+    | STARTING | «LA PARTIDA EMPIEZA EN» con el temporizador de fase; después, «PRIMERA ZONA EN» con la cuenta atrás de zona. Ronda 1: con tiempo desconocido, «LA PARTIDA EMPIEZA» sin temporizador |
     | ROUND | «ZONA SE CIERRA» antes del bloqueo y «FIN DE RONDA EN» después, los dos con la cuenta atrás de zona (`SetCountdownSeconds`, la misma del reloj). El bloqueo se detecta cuando la zona actual es igual a la futura (`IsZoneLocked`, `:278-284`). Si no ha llegado la cuenta atrás (reconexión), «FIN DE RONDA EN» con el temporizador de fase |
     | LAST_ROUND | «LA ZONA DESAPARECE EN» con la cuenta atrás, «SIN ZONA SEGURA» tras el colapso y «ZONA FINAL» sin datos |
     | FINISHED | «PARTIDA TERMINADA» |
@@ -138,7 +139,8 @@ probado en el juego.
   - `Update` (`:49-61`) solo trabaja si llegó un evento o caducó la fila más antigua. `Refresh` (`:63-102`) rellena
     las filas reutilizadas, la más nueva arriba, y oculta cada una a los 6 s (`ROW_LIFETIME_MS`, `:6`). Sin
     asignaciones por frame.
-  - Asesino vacío: se muestra «La zona» / «The zone» (`STR_BR_KILLFEED_ZONE`, `:107-108`).
+  - Asesino vacío: en la entrega inicial salía «La zona» / «The zone». La ronda 1 lo sustituye por una frase neutra,
+    «Ana ha muerto» (ver «Ronda 1 de correcciones», D4).
   - Formato: «%1 eliminó a %2» más `[arma, N m]` cuando hay datos (`:105-125`). Si el arma llega como clave `#STR`,
     se traduce en el cliente (`:110-112`).
   - Se crea en `MissionGameplay.InitBRhud` (`scripts_client/5_Mission/Mission/MissionGameplay.c:106`) y se actualiza
@@ -180,8 +182,102 @@ probado en el juego.
   `1_core/proto/enstring.c:526` (`string.Format`).
 - **Sin verificar:** en el juego. La expulsión a los 15 s (`LeaveServer`) sigue como estaba, fuera de alcance.
 
+## Ronda 1 de correcciones
+
+Corrige los defectos de la revisión de Codex (`C:\Users\guill\Repos\br-runs\client-hud\review\codex_review.md`) y los
+encargos extra del coordinador. Commit nuevo sobre `5ef057d`, con los mismos ficheros propios.
+`scripts_client/5_Mission/GUI/Hints/UiHintPanel.c` ya era de esta lane (`5_Mission/GUI/**`).
+
+1. **D1 (MAJOR): el aviso de daño salía fuera de las fases con daño.**
+   - **Cambio:** `BattleRoyaleClient.c:244` solo evalúa el aviso si `IsZoneDamagePhase` (`:286-290`) devuelve
+     `ROUND` o `LAST_ROUND`. Ya no sale tras ganar (FINISHED, aunque la zona siga colapsada), ni en lobby, selección de
+     spawn, Prepare, STARTING o RESTARTING.
+   - **Efecto lateral:** si el servidor nunca envía `SetMatchPhase` (fase -1), el aviso no sale nunca.
+   - **Limitación, sin arreglar como pidió el coordinador:** con `enable_zone_damage = false` en el servidor, el aviso
+     sigue saliendo fuera de zona durante las rondas. El contrato 1.0 no transmite ese dato.
+2. **D2 (MINOR): el colapso dependía de haber recibido una zona antes.**
+   - **Cambio:** `IsZoneCollapsed(br_rpc)` (`BattleRoyaleClient.c:292-300`) ya no depende de `m_CurrentPlayArea`. En
+     `LAST_ROUND`, una zona actual vacía (`"0 0 0"`, radio 0) cuenta como colapsada aunque el cliente acabe de
+     conectar. Fuera de `LAST_ROUND` nunca hay colapso.
+   - **Consecuencia aceptada:** un cliente que conecte en `LAST_ROUND` antes del bloqueo final y no reciba la zona
+     actual verá «SIN ZONA SEGURA» y el aviso hasta que llegue una zona. Hoy el servidor no la reenvía al conectar
+     (NET-21).
+3. **D3 (MINOR): STARTING con tiempo desconocido mostraba «PRIMERA ZONA EN 00:00».**
+   - **Cambio:** con `SetMatchPhase(STARTING, -1)`, `BattleRoyaleClient.c:326-343` muestra la etiqueta de STARTING sin
+     temporizador: «LA PARTIDA EMPIEZA» / «MATCH STARTING».
+     - Etiqueta nueva: `PHASE_LABEL_STARTING` (`BattleRoyaleHud.c:18` y `:344-345`).
+     - Clave nueva: `STR_BR_PHASE_STARTING` (`stringtable.csv:76`).
+   - «PRIMERA ZONA EN» solo sale cuando el temporizador de fase ha llegado a 0 (el desbloqueo) y la cuenta atrás de
+     zona es mayor que 0 (`:333`). Ya no puede salir «PRIMERA ZONA EN 00:00».
+4. **D4 (MINOR): el asesino vacío se mostraba siempre como la zona.**
+   - **Cambio:** sin asesino, `BattleRoyaleKillFeed.c:104-108` escribe una fila neutra, «Ana ha muerto» / «Ana died»
+     (`STR_BR_KILLFEED_DIED`, `stringtable.csv:77`), sin arma ni distancia.
+   - Se retira la clave `STR_BR_KILLFEED_ZONE`, ya sin uso: un grep en `addons` no da referencias.
+5. **Hints (heredado de la revisión de client-menu).**
+   - **Cambio:** `scripts_client/5_Mission/GUI/Hints/UiHintPanel.c:1-19` reactiva el override con la firma de vanilla
+     1.30, `override protected void LoadContentList()` (vanilla `3_game/gui/hints/uihintpanel.c:85-90`). Hay que
+     sobrescribir el cargador porque `m_DataPath` es `protected const` (`:14`).
+   - Carga `Vigrid-BattleRoyale/Data/hints.json`; `data/$PBOPREFIX$` es `Vigrid-BattleRoyale\Data`. Usa
+     `JsonFileLoader<array<ref HintPage>>.LoadFile` (`3_game/tools/jsonfileloader.c:7`), el mismo cargador y el mismo
+     estilo de ruta con que el mod ya lee `LoadingScreens.json` (`scripts_client/3_Game/Loading/LoadingScreenBackground.c:33`).
+   - Si falla o la lista sale vacía, llama a `ErrorEx` y vuelve a los hints de vanilla (`super.LoadContentList()`).
+   - **Verificado:** `hints.json` casa con `HintPage` (`m_Headline`, `m_Description` y `m_ImagePath`;
+     `3_game/gui/hints/hintpage.c:7-9`): es JSON válido con 3 entradas (comprobado con Python). Con `m_ImagePath` vacío,
+     vanilla oculta la imagen (`uihintpanel.c:140-156`).
+6. **Logs construidos antes del filtro.**
+   - **Cambio en `BattleRoyaleHud.c:168`:** antes iba bajo `#ifdef BR_TRACE_ENABLED`; ahora va tras
+     `CheckLogLevel(DEBUG)`. Así se mantiene el log de depuración en release cuando el nivel lo pide, que era el
+     comportamiento original.
+   - **Cambio en `BattleRoyaleRPC.c`:** las 10 llamadas `Trace(string.Format(...))` de los handlers quedan tras
+     `if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE))`, en `:79`, `:100`, `:127`, `:179`, `:200`, `:223`,
+     `:245`, `:290` (la de `NotificationMessage`, antes `:277`), `:325` y `:373`.
+   - **Coste:** en esta rama `CheckLogLevel` (`scripts_client/3_Game/BattleRoyaleUtils.c:91`) aún no está cacheado y
+     cuesta hasta 5 `IsCLIParam` por llamada. Tras integrar con client-menu queda cacheado.
+
+Verificado en esta ronda:
+- **D1-D3:** un port en Python de `UpdateMatchPhase` y de la condición del aviso pasa los escenarios de la revisión:
+  - FINISHED tras el colapso: sin aviso y «PARTIDA TERMINADA».
+  - Lobby, selección de spawn, Prepare, STARTING y RESTARTING fuera de una zona conocida: sin aviso.
+  - `LAST_ROUND` recién conectado con zona vacía: aviso y «SIN ZONA SEGURA».
+  - STARTING con -1: «LA PARTIDA EMPIEZA» sin tiempo.
+  - STARTING con 0 y cuenta atrás 90: «PRIMERA ZONA EN 01:30».
+
+  Comprueba la lógica, no que el Enforce compile.
+- **`ui_reconcile`:** sobre `addons`, 0 FAIL y los mismos 5 WARN de base (`keys` 76, `strRefs` 42); sobre `gui`,
+  0 FAIL y 1 WARN.
+- **Gate:** `git show main:tools/gate.sh > build/gate.sh` y `bash build/gate.sh .`:
+
+```
+extra_changefeedbackurl PASS errors 0 warnings 0
+extra_defaultfullauto PASS errors 0 warnings 0
+extra_limitunconscioustime PASS errors 0 warnings 0
+extra_preventplayermodifiers PASS errors 0 warnings 0
+extra_preventweaponraise PASS errors 0 warnings 0
+extra_spawncarfull PASS errors 0 warnings 0
+extra_spawnweaponchambered PASS errors 0 warnings 0
+extra_spawnwithammoandmagazine PASS errors 0 warnings 0
+extra_spawnwithbattery PASS errors 0 warnings 0
+extra_vehicle3ppdefaultfix PASS errors 0 warnings 0
+scripts_client FAIL errors 11 warnings 3
+scripts_server FAIL errors 2 warnings 12
+GATE RED: scripts_client: 11 errors > baseline 10
+```
+
+  Salida 1 (RED), como anunció el coordinador: la base del gate para `scripts_client` es 10. Leí el `rule_id` de
+  los 11 errores en `build/lint/scripts_client.json`: los 11 son `ES-LAYOUT-PATH-PBOPREFIX-MISMATCH` (el gate tampoco
+  informa de reglas inesperadas). El de más es `5_Mission\GUI\HUD\BattleRoyaleKillFeed.c` línea 22
+  (`killfeed.layout`). Los 2 de `scripts_server` son `ES-OVERRIDE-PARAM-NAME-MISMATCH`, los de base.
+
+Sin verificar en esta ronda:
+- El panel de hints en el juego.
+- Si el override, declarado en 5_Mission, llega también a `UiHintPanelLoading`, la subclase que declara 3_Game y que
+  usan las pantallas de carga (`3_game/dayzgame.c:130`, `:287` y `:841`). El menú de pausa sí crea `UiHintPanel`
+  desde 5_Mission (`5_mission/gui/ingamemenu.c:49`).
+- El contenido de `hints.json` (teclas K, Z y P de Expansion), que no es de esta lane.
+
 ## Localización
-- Hay 28 claves nuevas en `languagecore/stringtable.csv:49-76`, en el mismo formato: 15 columnas entre comillas, CRLF
+- Hay 29 claves nuevas en `languagecore/stringtable.csv:49-77` (28 en la entrega inicial; la ronda 1 quita
+  `STR_BR_KILLFEED_ZONE` y añade `STR_BR_PHASE_STARTING` y `STR_BR_KILLFEED_DIED`), en el mismo formato: 15 columnas entre comillas, CRLF
   y sin salto final.
 - Inglés y español están traducidos. `original` y las otras 12 columnas copian el inglés (pendiente de traducción).
 - Comprobación de lectura tras escribir: 75 filas, todas de 15 columnas.
@@ -241,8 +337,14 @@ nada (`build/lint-base/`):
      en una RPC futura, porque el contrato 1.0 no lo tiene.
 3. **Quien gestione la base del lint:** el falso positivo del `win_screen` cambia de fichero
    (`BattleRoyaleClient.c:197` → `MissionGameplay.c:196`) y hay uno más (`BattleRoyaleKillFeed.c:22`).
-4. **Localización:** las 28 claves nuevas tienen el texto inglés en checo, alemán, ruso, polaco, húngaro, italiano,
+4. **Localización:** las 29 claves nuevas tienen el texto inglés en checo, alemán, ruso, polaco, húngaro, italiano,
    francés, chino, japonés, portugués y chino simplificado.
+
+5. **Dueño del PBO `data` (ronda 1):** `data/hints.json` se carga ahora en el menú de pausa. Sus tres textos
+   hablan de las teclas K, Z y P de Expansion. Hay que revisar si se quieren hints propios del BR (F1 listo, F2
+   desatascarse, zona), y en qué idioma: el JSON no se localiza.
+6. **Lanes del servidor (ronda 1):** el aviso de daño y la etiqueta de ronda dependen de que se envíe
+   `SetMatchPhase` en ROUND y LAST_ROUND (contrato 1.0). Sin esa RPC, el aviso no sale.
 
 ## LO QUE NO PUDE VERIFICAR
 - Nada se probó en el juego: compilación real del motor, aspecto de los paneles nuevos (posición, tamaño de letra,

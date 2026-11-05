@@ -76,7 +76,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("SetPlayerCount: %1 %2", data.param1, data.param2));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetPlayerCount: %1 %2", data.param1, data.param2));
 			nb_players = data.param1;
 			nb_groups = data.param2;
 		}
@@ -96,7 +97,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("SetFade: %1", data.param1));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetFade: %1", data.param1));
 			if ( data.param1 )
 			{
 				fade_state = true;
@@ -122,7 +124,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("SetInput: %1", data.param1));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetInput: %1", data.param1));
 			input_state = data.param1;
 		}
 	}
@@ -173,7 +176,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("SetCountdownSeconds: %1", data.param1));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetCountdownSeconds: %1", data.param1));
 			countdown_seconds = data.param1;
 		}
 	}
@@ -193,7 +197,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("UpdateCurrentPlayArea: %1 %2", data.param1, data.param2));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("UpdateCurrentPlayArea: %1 %2", data.param1, data.param2));
 			current_play_area_center = data.param1;
 			current_play_area_radius = data.param2;
 		}
@@ -215,7 +220,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("UpdateFuturePlayArea: %1 %2 %3", data.param1, data.param2, data.param3));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("UpdateFuturePlayArea: %1 %2 %3", data.param1, data.param2, data.param3));
 			future_play_area_center = data.param1;
 			future_play_area_radius = data.param2;
 			b_ArtillerySound = data.param3;
@@ -236,7 +242,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("SetTopPosition: %1", data.param1));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetTopPosition: %1", data.param1));
 			top_position = data.param1;
 		}
 	}
@@ -280,7 +287,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("NotificationMessage: %1 %2 %3 %4 %5 %6 %7", data.param1, data.param2, data.param3, data.param4, data.param5, data.param6, data.param7));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("NotificationMessage: %1 %2 %3 %4 %5 %6 %7", data.param1, data.param2, data.param3, data.param4, data.param5, data.param6, data.param7));
 			StringLocaliser message = new StringLocaliser(data.param1, data.param3, data.param4, data.param5, data.param6, data.param7);
 			string translated_message = message.Format();
 
@@ -314,7 +322,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("SetMatchPhase: %1 %2", data.param1, data.param2));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetMatchPhase: %1 %2", data.param1, data.param2));
 			match_phase = data.param1;
 			if ( data.param2 >= 0 )
 			{
@@ -361,7 +370,8 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
-			BattleRoyaleUtils.Trace(string.Format("KillFeedEvent: %1 %2 %3 %4", data.param1, data.param2, data.param3, data.param4));
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("KillFeedEvent: %1 %2 %3 %4", data.param1, data.param2, data.param3, data.param4));
 			int slot = kill_feed_serial % KILL_FEED_SIZE;
 			m_KillFeedKiller[slot] = data.param1;
 			m_KillFeedVictim[slot] = data.param2;

@@ -101,11 +101,11 @@ class BattleRoyaleKillFeed
         }
     }
 
-    //! "<killer> killed <victim> [<weapon>, <distance> m]"; an empty killer is the zone
+    //! "<killer> killed <victim> [<weapon>, <distance> m]"; without a killer (zone, fall, environment) "<victim> died"
     protected string BuildRowText( string killer, string victim, string weapon, float distance )
     {
         if ( killer == "" )
-            killer = Widget.TranslateString( "#STR_BR_KILLFEED_ZONE" );
+            return string.Format( Widget.TranslateString( "#STR_BR_KILLFEED_DIED" ), victim );
 
         // The server may send a localization key as weapon name
         if ( weapon.IndexOf( "#" ) == 0 )

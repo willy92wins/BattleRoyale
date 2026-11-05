@@ -184,11 +184,11 @@ class BattleRoyaleClient: BattleRoyaleBase
 		// Set top position
 		player.position_top = br_rpc.top_position;
 
-		UpdateZoneHud( gameplay, player );
+		UpdateZoneHud( gameplay, player, br_rpc );
     }
 
     //! Distance to the zone, outside zone visual effect and zone damage indicator
-    protected void UpdateZoneHud(MissionGameplay gameplay, PlayerBase player)
+    protected void UpdateZoneHud(MissionGameplay gameplay, PlayerBase player, BattleRoyaleRPC br_rpc)
     {
 		float distExt;
 		float distInt;
@@ -239,11 +239,11 @@ class BattleRoyaleClient: BattleRoyaleBase
 			UpdateOutsideZoneEffect( player, outside_effect );
 		}
 
-		// The server damages players outside the current zone, and every player once the final zone is gone
+		// During the rounds the server damages players outside the current zone, and every player once the final zone is gone
 		bool taking_damage = false;
-		if ( alive )
+		if ( alive && IsZoneDamagePhase( br_rpc ) )
 		{
-			if ( IsZoneCollapsed() )
+			if ( IsZoneCollapsed( br_rpc ) )
 				taking_damage = true;
 			else if ( m_CurrentPlayArea && !isInsideZone )
 				taking_damage = true;
@@ -283,13 +283,19 @@ class BattleRoyaleClient: BattleRoyaleBase
 		return m_CurrentPlayArea.GetCenter() == m_FuturePlayArea.GetCenter() && m_CurrentPlayArea.GetRadius() == m_FuturePlayArea.GetRadius();
     }
 
-    //! The last round clears the current area when the final zone locks; from then on every player takes damage
-    protected bool IsZoneCollapsed()
+    //! Zone damage only exists while a round runs
+    protected bool IsZoneDamagePhase(BattleRoyaleRPC br_rpc)
     {
-		if ( !m_CurrentPlayArea )
+		return br_rpc.match_phase == EBRMatchPhase.ROUND || br_rpc.match_phase == EBRMatchPhase.LAST_ROUND;
+    }
+
+    //! The last round clears the current area when the final zone locks; from then on every player takes damage.
+    //! An empty current area in the last round counts as collapsed even without an earlier area (late connection)
+    protected bool IsZoneCollapsed(BattleRoyaleRPC br_rpc)
+    {
+		if ( br_rpc.match_phase != EBRMatchPhase.LAST_ROUND )
 			return false;
 
-		BattleRoyaleRPC br_rpc = BattleRoyaleRPC.GetInstance();
 		return br_rpc.current_play_area_center == "0 0 0" && br_rpc.current_play_area_radius == 0.0;
     }
 
@@ -324,10 +330,15 @@ class BattleRoyaleClient: BattleRoyaleBase
 					label = BattleRoyaleHud.PHASE_LABEL_MATCH_STARTS_IN;
 					seconds = phase_seconds;
 				}
-				else
+				else if ( phase_seconds == 0 && i_SecondsRemaining > 0 )
 				{
 					label = BattleRoyaleHud.PHASE_LABEL_FIRST_ZONE_IN;
 					seconds = i_SecondsRemaining;
+				}
+				else
+				{
+					// Unknown time (-1), or no countdown to show yet
+					label = BattleRoyaleHud.PHASE_LABEL_STARTING;
 				}
 				break;
 
@@ -355,7 +366,7 @@ class BattleRoyaleClient: BattleRoyaleBase
 				break;
 
 			case EBRMatchPhase.LAST_ROUND:
-				if ( IsZoneCollapsed() )
+				if ( IsZoneCollapsed( br_rpc ) )
 				{
 					label = BattleRoyaleHud.PHASE_LABEL_NO_SAFE_ZONE;
 				}

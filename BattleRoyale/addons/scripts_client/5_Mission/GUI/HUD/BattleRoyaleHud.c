@@ -15,6 +15,7 @@ class BattleRoyaleHud
     static const int PHASE_LABEL_FINAL_ZONE = 10;
     static const int PHASE_LABEL_MATCH_OVER = 11;
     static const int PHASE_LABEL_RESTARTING = 12;
+    static const int PHASE_LABEL_STARTING = 13;
 
     //! Color states of the distance and countdown widgets
     protected static const int DISTANCE_INSIDE = 0;
@@ -164,9 +165,8 @@ class BattleRoyaleHud
 				speedNeededToReachZone = 99999; // Infinite speed needed if no time
 			}
 
-#ifdef BR_TRACE_ENABLED
-			BattleRoyaleUtils.Debug(string.Format("SetDistance: distExt=%1 timeRemaining=%2 speedNeededToReachZone=%3", distExt, timeRemaining, speedNeededToReachZone));
-#endif
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.DEBUG ) )
+				BattleRoyaleUtils.Debug(string.Format("SetDistance: distExt=%1 timeRemaining=%2 speedNeededToReachZone=%3", distExt, timeRemaining, speedNeededToReachZone));
 
 			// Convert m/min thresholds to m/s for comparison (divide by 60)
 			float fastThreshold = 400.0 / 60.0;    // 6.67 m/s
@@ -341,6 +341,8 @@ class BattleRoyaleHud
                 return "#STR_BR_PHASE_MATCH_OVER";
             case PHASE_LABEL_RESTARTING:
                 return "#STR_BR_PHASE_RESTARTING";
+            case PHASE_LABEL_STARTING:
+                return "#STR_BR_PHASE_STARTING";
         }
 
         return "";
