@@ -10,6 +10,11 @@ class BattleRoyaleState: Timeable
     static int i_NumStartingPlayers = 0;
     static ref map<string, string> s_MatchPlayerNames;
 
+    // Last SetMatchPhase broadcast (EBRMatchPhase, seconds or -1, mission time in ms), replayed to late connections
+    static int s_MatchPhase = 0;
+    static int s_MatchPhaseSeconds = -1;
+    static int s_MatchPhaseSentAt = 0;
+
     //static int i_StartingZone = 1; // Default zone is the biggest one
 
 #ifdef Carim
@@ -84,7 +89,27 @@ class BattleRoyaleState: Timeable
 
     protected void BroadcastMatchPhase(int phase, int seconds)
     {
+        s_MatchPhase = phase;
+        s_MatchPhaseSeconds = seconds;
+        s_MatchPhaseSentAt = GetGame().GetTime();
         GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetMatchPhase", new Param2<int, int>(phase, seconds), true);
+    }
+
+    //! Sends the last broadcast phase to a client that connects after it, with the seconds left on its timer
+    static void SendMatchPhaseTo(PlayerIdentity identity)
+    {
+        if (!identity)
+            return;
+
+        int seconds = s_MatchPhaseSeconds;
+        if (seconds > 0)
+        {
+            seconds -= (GetGame().GetTime() - s_MatchPhaseSentAt) / 1000;
+            if (seconds < 0)
+                seconds = 0;
+        }
+
+        GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetMatchPhase", new Param2<int, int>(s_MatchPhase, seconds), true, identity);
     }
 
     void Deactivate()

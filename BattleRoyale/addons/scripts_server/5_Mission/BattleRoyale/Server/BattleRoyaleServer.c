@@ -17,7 +17,6 @@ class BattleRoyaleServer: BattleRoyaleBase
     {
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "PlayerReadyUp", this);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "PlayerUnstuck", this);
-        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "RequestEntityHealthUpdate", this);
 #ifdef VPPADMINTOOLS
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "NextState", this, SingleplayerExecutionType.Server);
 #endif
@@ -268,6 +267,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 			if ( listedAdmin || BRAdminAuthorizer.IsOperator( player.GetIdentity() ) )
 			{
 				BattleRoyaleUtils.Info("Admin " + player.GetIdentity().GetName() + " has connected during non-debug state, allowing connection.");
+				BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
 				return; //allow admins to connect during non-debug state
 			}
 
@@ -283,8 +283,8 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         GetCurrentState().AddPlayer(player);
 
-        if (player.GetIdentity())
-            GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetMatchPhase", new Param2<int, int>(EBRMatchPhase.LOBBY, -1), true, player.GetIdentity());
+        // Lobby or lobby countdown, with the seconds left when the countdown already runs
+        BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
 
         if( match_uuid == "" )
         	GetCurrentState().MessagePlayerUntranslated( player, "STR_BR_MM_ERROR_REGISTERING_MATCH");

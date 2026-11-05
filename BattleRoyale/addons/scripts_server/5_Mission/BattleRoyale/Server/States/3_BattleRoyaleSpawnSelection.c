@@ -92,7 +92,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
         if (b_ShowHeatMap)
             GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(this.BroadcastHeatMap, 1000, true);
 
-        GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetMatchPhase", new Param2<int, int>(EBRMatchPhase.SPAWN_SELECTION, i_SpawnSelectionDuration), true);
+        BroadcastMatchPhase(EBRMatchPhase.SPAWN_SELECTION, i_SpawnSelectionDuration);
     }
 
     override void Deactivate()
