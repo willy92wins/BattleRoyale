@@ -87,7 +87,7 @@ extra_vehicle3ppdefaultfix PASS errors 0 warnings 0
 scripts_client FAIL errors 10 warnings 3
 scripts_server FAIL errors 2 warnings 12
 ```
-The two server errors are the known `RemovePlayer` / `UID` false positives (`1_BattleRoyaleDebug.c:169`, `4_BattleRoyalePrepare.c:892` after this round). No new error. The second lint run of this round printed the same 12 lines, still `scripts_server FAIL errors 2 warnings 12`.
+The two server errors are the known `RemovePlayer` / `UID` false positives (`1_BattleRoyaleDebug.c:169`, `4_BattleRoyalePrepare.c:968` after round 2). No new error. The second lint run of this round printed the same 12 lines, still `scripts_server FAIL errors 2 warnings 12`.
 
 ## CROSS-LANE REQUESTS
 - Spawn selection `Activate` must send `SetMatchPhase` (`EBRMatchPhase.SPAWN_SELECTION`). File `3_BattleRoyaleSpawnSelection.c` is not this lane.
@@ -131,6 +131,26 @@ Verificado por lectura. No verificado con Carim cargado.
 
 ### LastRound
 Los segundos de `SetMatchPhase` son `i_RoundTimeInSeconds / 2`: el tiempo hasta que la zona final se bloquea, el mismo plazo que `SetCountdownSeconds` y `m_FinalZoneLockTimer`. No es la duración entera de la ronda. División entera.
+
+## Ronda 2 de correcciones
+
+Sobre `49c5bd1`. Ultima ronda antes de la prueba en juego.
+
+### N1
+`ResolveFinalSpawn` ya no devuelve cero cuando existe la primera zona. Despues de la reserva con colision, `GetLastResortSpawn` recorre anillos crecientes (hasta el 95 % del radio, 8 angulos, `SurfaceY`). Si ninguno pasa `IsAcceptedSpawn`, devuelve el primer punto que este en el mapa y dentro del circulo. `TeleportPlayer` envia la juncture en ese caso y loguea `Error` con el steamid. Si no hay ningun punto de zona en el mapa, `Teleport` loguea `Error` con el steamid y no mueve a ese jugador: no hay coordenada valida que no sea el lobby.
+Verificado por lectura. No verificado en el motor.
+
+### D5
+`TeleportGroup` llama a `SleepPlayerBatch` al terminar cada miembro, no despues del grupo. El solo del mismo bucle Carim duerme una vez por ese jugador.
+Verificado por lectura. Lint no define `Carim`.
+
+### D4
+`s_MatchPlayerNames` (`0_BattleRoyaleState.c`) guarda steamid y nombre. `RememberMatchPlayers` se llama en `Prepare.Activate` y `StartMatch.Activate`. `BroadcastKillFeed` usa `map.Find` (`enscript.c:877`) si el activador ya no esta en `m_Players`. La distancia queda en 0 porque el cuerpo puede no existir.
+Verificado por lectura de `Set` (`enscript.c:902`) y `Find`. No verificado con una mina tras la muerte del colocador.
+
+### town_entry
+`GetRandomVillage` comparaba `town_entry.Name`, el texto visible (`NamedLocation.c:21-22`, atributo `name`). `avoid_city_spawn` usa el nombre de clase. Ahora compara `town_entry.GetName()`, que es `ConfigObject.m_Name`, el ultimo tramo de la ruta de config (`ConfigObject.c:12` y `:94-97`). El mismo metodo ya se usa en `GetOverrodePosition(village.GetName())`.
+Verificado por lectura de Dabs. No verificado contra `spawns_settings.json`.
 
 ## LO QUE NO PUDE VERIFICAR
 - No DayZ, DayZServer or DayZDiag process, and no dayz-mcp.

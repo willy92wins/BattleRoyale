@@ -8,6 +8,7 @@ class BattleRoyaleState: Timeable
 
 	// Track the number of players in the game when the game starts - shared between all states
     static int i_NumStartingPlayers = 0;
+    static ref map<string, string> s_MatchPlayerNames;
 
     //static int i_StartingZone = 1; // Default zone is the biggest one
 
@@ -65,6 +66,20 @@ class BattleRoyaleState: Timeable
     	BattleRoyaleUtils.Debug(string.Format("BattleRoyaleState::Activate: %1", GetName()));
         //Note: this is called AFTER players are added
         b_IsActive = true;
+    }
+
+    protected void RememberMatchPlayers()
+    {
+        if (!s_MatchPlayerNames)
+            s_MatchPlayerNames = new map<string, string>();
+
+        for (int i = 0; i < m_Players.Count(); i++)
+        {
+            PlayerBase player = m_Players[i];
+            if (!player || !player.GetIdentity())
+                continue;
+            s_MatchPlayerNames.Set(player.GetIdentity().GetPlainId(), player.GetIdentity().GetName());
+        }
     }
 
     protected void BroadcastMatchPhase(int phase, int seconds)
@@ -775,6 +790,13 @@ class BattleRoyaleState: Timeable
 					killer_name = activator.GetIdentity().GetName();
 					distance_m = vector.Distance(victim.GetPosition(), activator.GetPosition());
 					break;
+				}
+
+				if (killer_name == "" && s_MatchPlayerNames)
+				{
+					string stored_name = "";
+					if (s_MatchPlayerNames.Find(activator_id, stored_name) && stored_name != "")
+						killer_name = stored_name;
 				}
 			}
 

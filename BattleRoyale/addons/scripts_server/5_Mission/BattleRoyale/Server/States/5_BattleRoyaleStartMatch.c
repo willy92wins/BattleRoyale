@@ -47,6 +47,7 @@ class BattleRoyaleStartMatch: BattleRoyaleState
     override void Activate()
     {
         super.Activate();
+        RememberMatchPlayers();
         BroadcastMatchPhase(EBRMatchPhase.STARTING, i_TimeToUnlock);
 
         //send start match RPC (this will enable UI such as kill count)
