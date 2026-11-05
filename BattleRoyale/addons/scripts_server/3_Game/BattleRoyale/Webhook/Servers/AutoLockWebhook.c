@@ -21,6 +21,12 @@ class AutoLockWebhook
 	{
 		BattleRoyaleUtils.Trace("AutoLockWebhook().LockServer()");
 
+		if (s_ServerURL == "")
+		{
+			BattleRoyaleUtils.Trace("AutoLockWebhook: URL empty, not sending");
+			return;
+		}
+
 		if( i_TryLeft <= 0 )
 		{
 			BattleRoyaleUtils.Trace("AutoLockWebhook: Too much try, giving up.");
@@ -37,7 +43,17 @@ class AutoLockWebhook
 		RestApi restApi = GetRestApi();
 		RestContext ctx = restApi.GetRestContext(s_ServerURL);
 		ctx.SetHeader("application/json");
-		ctx.POST(new AutoLockCallback( s_ServerURL, s_ServerIP, i_ServerPort, s_ServerRconPassword, i_TryLeft ), arguments.ToQuery(string.Format("autolock/%1/%2", s_ServerIP, i_ServerPort)), "{\"rcon_password\":\"" + s_ServerRconPassword + "\"}");
+		BRAutoLockBody body = new BRAutoLockBody();
+		body.rcon_password = s_ServerRconPassword;
+		string payload;
+		string payloadError;
+		if (!JsonFileLoader<BRAutoLockBody>.MakeData(body, payload, payloadError))
+		{
+			BattleRoyaleUtils.Warn("AutoLockWebhook: JSON failed: " + payloadError);
+			return;
+		}
+
+		ctx.POST(new AutoLockCallback( s_ServerURL, s_ServerIP, i_ServerPort, s_ServerRconPassword, i_TryLeft ), arguments.ToQuery(string.Format("autolock/%1/%2", s_ServerIP, i_ServerPort)), payload);
 	};
 
 	void SetTryLeft(int try_left)
@@ -45,6 +61,11 @@ class AutoLockWebhook
 		i_TryLeft = try_left;
 	};
 };
+
+class BRAutoLockBody
+{
+	string rcon_password;
+}
 
 class AutoLockCallback: RestCallback
 {
