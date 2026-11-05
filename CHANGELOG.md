@@ -1,0 +1,90 @@
+# Changelog
+
+## 1.0.0 (2026-11-05, release candidate)
+
+DayZ-BattleRoyale 0.1.0-Vigrid (Myst, KeganH and contributors, DSPL-SA) brought to DayZ 1.30 and
+Chernarus for servers of 100-120 players, with the lowest server and client load we could get.
+The server no longer trusts the client and the original author's backend is gone.
+
+Requires DayZ 1.30, CF, Dabs Framework, DayZ-Expansion-Core, DayZ-Expansion,
+DayZ-Expansion-Navigation and Community Online Tools. Load order, keys and server setup:
+`BattleRoyale_server/README.md`.
+
+### Removed
+- The original backend (`api.vigrid.ovh`): matchmaking, remote lock and the match UUID check. Play in
+  the main menu opens the server browser, and `-connect` works again through the vanilla
+  `ConnectFromCLI` / `ConnectLaunch`.
+- The obfuscated `nulledkillfeed` PBO, replaced by a killfeed of our own.
+- `extra_preventweaponraise`, which replaced `CheckLiftWeapon` without calling `super`. Weapon
+  obstruction now comes from `cfggameplay.json` (mode 2).
+- The per-tick "taking damage" notification RPC, replaced by a client-side indicator.
+
+### Security
+- Ready-up, unstuck and spawn selection resolve the player from the sender identity and ignore
+  requests made for anyone else.
+- A selected spawn must be inside the world and inside the first circle plus `extra_spawn_radius`;
+  one accepted selection per player every 500 ms.
+- Admin actions (next state, pause, resume, airdrop) go through one authorizer that denies by
+  default. With COT, the server checks `BattleRoyale.StateMachine.Update`; with VPPAdminTools loaded,
+  the `BattleRoyale:*` permissions are registered and checked.
+- No password in the logs. The autolock URL and the stats webhook URL are empty by default. The
+  optional stats webhook (match start, winner) never blocks the server.
+- Late joiners get one kick timer each instead of a single shared timer.
+
+### Stability
+- Every search loop is bounded (spawn villages, zone square, POI, next circle) and falls back to a
+  valid position instead of hanging the server or calling `RequestExit`.
+- Prepare has a 120 s watchdog. Players and identities that disappear during logout are skipped.
+- Configuration is validated on load: an invalid value is logged and replaced by its default, and the
+  server keeps running.
+- The lobby no longer duplicates its objects on upgrade, POI overrides read `{ x, z }`, and the
+  first-circle timer stops with the start state.
+- Start items are removed by top-level attachment, without the VM exception per player that
+  `PlayerBase.RemoveAllItems` logged at Prepare.
+
+### Performance
+- Prepare handles players in batches of 8 with a short sleep between batches. The teleport safety
+  check reuses its arrays and caches validated village points.
+- Spawn heatmap broadcast at most once per second, only when it changed.
+- Lobby godmode instead of periodic healing; the group count is cached instead of polled every 5 s.
+- Client: player tags raycast every 0.15 s instead of every frame, heatmap and map circle rebuilt
+  only on change, no per-frame allocations, log level read once and logs behind it.
+- `extra_cardamage` scales the vanilla contact damage (0.5) instead of replacing it;
+  `extra_preventplayermodifiers` disables 15 more modifiers, the sandstorm and flies ones included.
+
+### Chernarus and mission
+- Defaults for Chernarus: lobby, POIs and cities. Seven zones from 2500 m to 50 m radius, about
+  32 minutes at most per match.
+- The large cities of the coast cannot be the final zone (`end_avoid_city`, 130 entries). In a
+  simulation of the zone generator (8000 matches) no first circle had more than 10 % of its area on
+  the sea, against 19.5 % of matches with the 0.1.0 values. Edit `zone_settings.json` to change it.
+- Server package in `BattleRoyale_server/`: example `serverDZ.cfg` for 120 players, 150 infected and
+  no animals, `restart_loop.ps1` (moves the world storage of one instance aside and restarts after
+  every match; `-InstanceId` is required) and `zone_table_check.py`.
+- Loading screens and hints for Chernarus.
+
+### Interface
+- Own killfeed (five rows).
+- Match phase and countdown in the HUD: lobby, spawn selection, prepare, start, round, last round,
+  finished and restart.
+- Zone damage indicator while outside the zone in a round.
+- Localized death messages, win screen fixes, 1.30 news carousel hidden, credits and version 1.0.0.
+
+### Verified
+- Offline script validator: no errors beyond the known false positives (client 11, server 2).
+- DayZDiag 1.30, server and client, one player: lobby, count reached, spawn selection, prepare,
+  start, win and restart, with no script errors on either side (build of commit 5ca2fec).
+- `restart_loop.ps1`: 20 of 20 cases in a test harness, including links, a quoted `instanceId` and a
+  clock rollback.
+
+### Known issues
+- Not played yet with more than one player. Rounds, zone damage, kills, killfeed and kicks are only
+  checked by reading the code. A test with 20-40 players and then 100 or more is pending.
+- With `enable_zone_damage` set to false the client still shows the zone damage indicator.
+- `gui.pbo` is 126 MB because of uncompressed textures inherited from 0.1.0.
+- The Expansion airdrop has not been tested.
+- If every player but one leaves during the start countdown, the winner stays frozen until the win
+  screen kicks them.
+- Some non-fatal fallbacks inherited from 0.1.0 log with `Error()` and show up as script errors.
+- The music "Apocalypse" is credited to Desolation Redux without a verified licence; check it before
+  publishing.
