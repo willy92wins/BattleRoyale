@@ -1,0 +1,9 @@
+name = "DayZ-BattleRoyale";										// name
+picture = "Vigrid-BattleRoyale/GUI/textures/Mod_Logo.paa";		// picture in expanded description
+logo = "Vigrid-BattleRoyale/GUI/textures/Mod_Logo.paa";			// below game menu
+logoSmall = "Vigrid-BattleRoyale/GUI/textures/Mod_Logo.paa";	// next to name when not expanded
+logoOver = "Vigrid-BattleRoyale/GUI/textures/Mod_Logo.paa";		// on mouse hover over logo
+tooltip = "DayZ Battle Royale";									// tooltip on mouse hover
+overview = "DayZ Battle Royale Mod";							// overview
+author = "Myst, KeganH, check credits";							// author
+version = "0.1.0-Vigrid";										// version

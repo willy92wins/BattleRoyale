@@ -1,0 +1,90 @@
+{
+  "Departments": [
+    {
+      "DepartmentName": "Vigrid Battle Royale",
+      "Sections": [
+        {
+          "SectionName": "Project Lead",
+          "SectionLines": [
+            "Myst (Bender B. Rodriguez)"
+          ]
+        },
+        {
+          "SectionName": "Developers",
+          "SectionLines": [
+            "LieutenantMaster",
+            "Myst",
+            "And original mod developers"
+          ]
+        },
+        {
+          "SectionName": "Music By",
+          "SectionLines": [
+            "Christmas - Scott Holmes Music",
+            "Apocalypse - Desolation Redux"
+          ]
+        },
+        {
+          "SectionName": "Contributors",
+          "SectionLines": [
+            "ikoneec"
+          ]
+        },
+        {
+          "SectionName": "Alpha Testers",
+          "SectionLines": [
+            "Pastou33",
+            "Pow-Lette",
+            "La Tanière"
+          ]
+        },
+        {
+          "SectionName": "Legacy Project Lead (DayZ Battle Royale)",
+          "SectionLines": [
+            "Kegan Hollern (Lystic)"
+          ]
+        },
+        {
+          "SectionName": "Legacy Contributors (DayZ Battle Royale)",
+          "SectionLines": [
+            "B.A.D.",
+            "BigBen",
+            "Clarky",
+            "MysticalCortex",
+            "Jacob_Mango",
+            "Legodev",
+            "Not A Banana",
+            "Razer",
+            "S0l1d",
+            "DaOne",
+            "Azeh",
+            "DrDeSync",
+            "Fini"
+          ]
+        },
+        {
+          "SectionName": "Thanks to (DayZ Battle Royale)",
+          "SectionLines": [
+            "GravityWolf",
+            "Wardog",
+            "Zedmag",
+            "Thurston"
+          ]
+        },
+        {
+          "SectionName": "Legacy Alpha Testers (DayZ Battle Royale)",
+          "SectionLines": [
+            "Bender_Rodriguez",
+            "FreakingHoudini",
+            "Graf Godelsberg",
+            "IG3TB4NN3D",
+            "Locqstonk",
+            "onlyabot",
+            "undead3030",
+            "Zoku"
+          ]
+        }
+      ]
+    }
+  ]
+}

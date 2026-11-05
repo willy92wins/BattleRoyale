@@ -1,0 +1,11 @@
+# Binary assets live in the working tree but are not versioned (copied from the v0.1.0 extraction).
+*.edds
+*.paa
+*.ogg
+*.wss
+*.p3d
+# Build output and signing keys
+/build/
+*.biprivatekey
+*.pbo
+*.bisign
