@@ -111,7 +111,7 @@ The mod shuts the server down when a match ends (`9_BattleRoyaleRestart.c`). Sta
 
 ```powershell
 cd D:\DayZServer\BattleRoyale_server\tools
-.\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -Mod '@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@Community-Online-Tools;@BattleRoyale'
+.\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@Community-Online-Tools;@BattleRoyale'
 ```
 
 Add `-WhatIf` to see what one pass would rename, delete and start without doing it. Other parameters:
@@ -123,8 +123,12 @@ Before renaming or deleting anything the script checks, and stops without touchi
 starting the server when a check fails:
 
 - the mission folder exists and has `init.c`;
-- the server config has exactly one active `template=` and one active `instanceId=` (lines inside `//`
-  and `/* */` comments do not count), `template=` names the same mission and `instanceId` is an integer;
+- the world storage to move is the one of `-InstanceId` (mandatory); the server config must have exactly
+  one active `template=` naming the same mission and exactly one `instanceId = <n>;` at the start of a
+  line equal to `-InstanceId` (lines inside `//` and `/* */` comments, and text inside quoted values, do
+  not count);
+- every `storage_<instanceId>.prev-*` folder is checked for links before anything is deleted, and the
+  copy made by the current restart is never deleted, even if the clock went back;
 - no `DayZServer_x64.exe` from this folder is running, and no `DayZServer_x64.exe` whose executable
   path cannot be read is running (a server of another account counts as unknown: start the loop from
   that account);
