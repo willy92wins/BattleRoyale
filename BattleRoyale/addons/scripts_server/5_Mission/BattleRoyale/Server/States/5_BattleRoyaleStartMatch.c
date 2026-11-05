@@ -163,8 +163,12 @@ class BattleRoyaleStartMatch: BattleRoyaleState
         }
 
         MessagePlayersUntranslated( "STR_BR_MATCH_STARTED" );
-        if (BattleRoyaleConfig.GetConfig().GetGameData().enable_unstuck)
-            MessagePlayersUntranslatedTimed( "STR_BR_UNSTUCK_INFORMATION", 90 );
+        // Unstuck is only served during this state, so the hint stays up only while it works
+        int unstuck_window = i_FirstRoundDelay - i_TimeToUnlock;
+        if (unstuck_window > 90)
+            unstuck_window = 90;
+        if (BattleRoyaleConfig.GetConfig().GetGameData().enable_unstuck && unstuck_window > 0)
+            MessagePlayersUntranslatedTimed( "STR_BR_UNSTUCK_INFORMATION", unstuck_window );
 
         b_IsGameplay = true;
     }
