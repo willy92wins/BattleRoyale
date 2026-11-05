@@ -3,6 +3,8 @@
 Rama `lane/config-mission`, worktree `C:\Users\guill\Repos\br-wt\config-mission`.
 Commit con todos los cambios: **`5c821bd`** (`5c821bd3441829a258d23091375fc86c4d6deb99`, "Chernarus zone defaults, config validation and server package"). Este informe va en el commit siguiente, sin más cambios de código.
 
+**Ronda 1 de correcciones** (revisión de Codex, RECHAZAR por el script de reinicio): sección al final. Va en el commit que añade esa sección.
+
 ## Resumen
 
 - Tablas de zona para Chernarus y 100-120 jugadores: 7 zonas, de 2500 m a 50 m de radio, unos 32 minutos por partida completa. Con los valores del autor, el **22 % de los arranques del servidor acaba en `RequestExit`** al generar los círculos y el 19,5 % de las partidas tiene más del 10 % del primer círculo en el mar. Con los nuevos: 0,025 % y 0 %. Son medidas de una simulación del generador, no del motor (ítem 2).
@@ -232,3 +234,151 @@ XML OK   BattleRoyale_server/mpmissions/dayzOffline.chernarusplus/db/globals.xml
   - Que las claves `.bikey` y los ids de Workshop sigan iguales en el servidor de destino: los saqué de las copias locales.
 - **`restart_loop.ps1`.** No se ha ejecutado; solo parseado. La convención `storage_<instanceId>` sale del comentario del cfg de stock y de los nombres de carpeta, no de documentación del motor. `-port` y `-mod` no aparecen como cadenas aisladas en el binario; están documentados en `DAYZ_INFRA.md`.
 - **Valores legacy de cfggameplay.json** con el fichero desactivado: los leí en el script, pero no los he medido en un servidor.
+
+---
+
+## Ronda 1 de correcciones (revisión de Codex)
+
+La revisión es `br-runs/config-mission/review/codex_review.md`, con veredicto RECHAZAR por tres MAJOR en `restart_loop.ps1` y un MINOR en `zone_table_check.py`. Esta ronda no toca ningún `.c` ni `BattleRoyaleZone.c`; el fallo previo `{x, 0, z}` frente a `[x, z]` de `:530/:557` lo corrige el coordinador en la integración.
+
+### MAJOR 1 — `instanceId` se leía también dentro de comentarios
+
+**Cambio**
+- `Remove-CfgComments` (`BattleRoyale_server/tools/restart_loop.ps1:164-230`) quita los comentarios `//` y `/* */` del cfg y conserva intactas las cadenas entre comillas. Con un `/*` sin cerrar, el script para (`:212`).
+- Sobre ese texto, `template=` (`:295`) e `instanceId=` (`:305`) se buscan en cualquier posición, sin distinguir mayúsculas y como clave completa.
+- Hace falta exactamente **una** asignación activa de cada una. Con 0 o con más de 1, el script para sin tocar nada (`:296-299` y `:306-309`). `instanceId` tiene que ser un entero (`:311-314`).
+
+**Verificación** (arnés `build/rltest/run_tests.ps1`, carpetas de servidor simuladas, `-WhatIf`)
+- T2: con `instanceId = 9` comentado y `instanceId = 1` activo, opera sobre `storage_1`.
+- T3: con dos activas, para: "has 2 active instanceId".
+- T4: con ninguna activa, para: "has 0".
+- T5: con dos `template=` activos, para.
+- T8: con `instanceId = "1"`, para: "not an integer".
+- T9: con un `/*` sin cerrar, para.
+- U1: un `//` dentro de una cadena se conserva.
+
+### MAJOR 2 — la guarda de proceso dejaba pasar una ruta desconocida
+
+**Cambio** (`restart_loop.ps1:336-362`)
+- Si hay un candidato `DayZServer_x64` cuya ruta es nula o cuya lectura lanza una excepción, el script para: "its executable path cannot be read".
+- Ahora compara rutas **físicas**, con `GetFinalPathNameByHandleW` (`:93-133`). Así un servidor arrancado a través de un junction de la carpeta también cuenta como el mismo ejecutable.
+
+**Verificación** (funciones cargadas del AST con `Get-Process` simulado)
+- W1, ruta nula: para.
+- W2, la propiedad lanza "Access is denied": para.
+- W3, el mismo ejecutable: para, "already running".
+- W4, otro ejecutable con ruta legible: pasa.
+
+### MAJOR 3 — no se miraban enlaces en los ancestros
+
+**Cambio**
+- `Assert-MissionLocation` (`restart_loop.ps1:365-374`) exige que ni `mpmissions` ni la carpeta de la misión sean junction o symlink (`Assert-NotLink`, `:232-243`).
+- Además, la ruta física resuelta de cada una tiene que ser exactamente `<servidor físico>\mpmissions\<misión>` (`Assert-PhysicalLocation`, `:255-262`).
+- Las mismas comprobaciones, más "sin enlaces dentro" (`:245-252`), se aplican a `storage_<id>` antes de renombrarla y a cada `.prev-*` antes de borrarla.
+- Todo esto se repite en cada vuelta del bucle (`:452-455`).
+
+**Verificación**
+- T6, misión como junction a una misión externa: para, y el `storage_1` externo sigue intacto.
+- T7, `mpmissions` como junction: para.
+- T10, junction dentro de `storage_1`: para, y el fichero del otro lado sobrevive.
+- T11, un `.prev-*` que hay que borrar es un junction: para.
+
+### Borrado reversible
+
+**Cambio**
+- `Move-WorldStorage` (`restart_loop.ps1:376-402`) ya no borra: renombra `storage_<id>` a `storage_<id>.prev-<yyyyMMdd-HHmmss>`, con un sufijo `-2`, `-3`… si coinciden en el mismo segundo.
+- `Remove-OldWorldStorage` (`:404-440`) borra solo los `.prev-*` de esa misma instancia que quedan detrás de los 3 más recientes. El orden sale de la fecha del nombre, no de las fechas del sistema de ficheros. El número se ajusta con `-KeepPrevious` (por defecto 3, `:84`), y las guardas son las mismas.
+
+**Verificación**
+- T1 (`-WhatIf`, con 5 `.prev`): renombraría `storage_1` y borraría solo los 2 más antiguos. `storage_9`, de otra instancia, no aparece.
+- W5, con operaciones reales sobre la carpeta simulada: `storage_1` pasa a `.prev-<ahora>` con su contenido, quedan exactamente los 3 `.prev` más recientes y `storage_9` no se toca.
+- W6: una segunda pasada sin `storage_1` no mueve nada y sigue habiendo 3.
+
+### Control negativo
+
+`build/rltest/negative_control.ps1` pasa los tres escenarios de Codex contra el script de `5c821bd` y contra el nuevo:
+```
+N1 old script targets storage_9 (bug reproduced): True
+N1 new script targets storage_1 and not storage_9: True
+N2 old script would delete the storage behind the junction (bug reproduced): True
+N2 new script stops at the junction: True
+N3 old function lets an unreadable process through (bug reproduced): True
+N3 new function stops on an unreadable process: True
+```
+N1 es el caso exacto de Codex: `instanceId = 9;` en su propia línea dentro de un `/* */` multilínea. El T2 de la primera versión del arnés no lo discriminaba, porque usaba el comentario en una sola línea.
+
+Salida del arnés (18 comprobaciones):
+```
+PASS T1-happy-whatif code=0 rename=True deletes=2 oldest2=True keepNewest=True start=True storage9Untouched=True
+PASS T2-commented-instanceId code=0
+PASS T3-two-instanceId code=1
+PASS T4-no-instanceId code=1
+PASS T5-two-template code=1
+PASS T6-mission-junction code=1
+PASS T7-mpmissions-junction code=1
+PASS T8-instanceId-not-integer code=1
+PASS T9-unterminated-comment code=1
+PASS T10-link-inside-storage code=1
+PASS T11-prev-junction code=1
+PASS W1-process-path-null ok
+PASS W2-process-path-throws ok
+PASS W3-same-exe-running ok
+PASS W4-other-exe-allowed no exception
+PASS W5-rename-and-keep-3 left: storage_1.prev-20261104-000000, storage_1.prev-20261104-000000-2, storage_1.prev-20261105-031819, storage_9
+PASS W6-second-pass-stable prev count 3
+PASS U1-comment-stripper a = "x // not a comment";  | b = 1;  |  c = 2;
+```
+Un fallo del arnés que corregí por el camino: la salida de `-WhatIf` sale en español ("en el destino") y una comprobación buscaba `Target`, así que pasaba sin comprobar nada. Ahora se cuentan las líneas de borrado.
+
+Cómo se probó: todo en `build/rltest/` (ignorado por git), contra carpetas de servidor simuladas con un `DayZServer_x64.exe` vacío. En caja negra siempre con `-WhatIf`, que corta antes de `Start-Process`. No se arrancó ningún proceso salvo `powershell.exe` y `cmd /c mklink`/`rmdir`, y antes comprobé que no había ningún `DayZServer_x64` en marcha. Los junctions de prueba se quitaron con `cmd /c rmdir` antes de borrar las carpetas (LL-393). El parser de PowerShell 5.1 da 0 errores.
+
+### MINOR 4 — `zone_table_check.py` exigía las fuentes del repositorio
+
+**Cambio** (`BattleRoyale_server/tools/zone_table_check.py:183-200`)
+- Con `--zone-json` lee solo el JSON.
+- Las fuentes (`--zone-data`, por defecto la copia del repositorio si existe) solo hacen falta sin JSON, o para completar un JSON parcial. En ese caso lo dice.
+- Si faltan las dos cosas, da un error claro.
+
+**Verificación** (copia sola de la herramienta en `build/tmp/pkgonly`, sin el repositorio al lado)
+- Con el `zone_settings.json` completo funciona: 3000 generaciones, 0 abandonos y 158 POI.
+- Sin JSON, o con un JSON sin `end_avoid_city`, sale con código 2 y nombra lo que falta.
+- La copia del repositorio sin JSON reproduce las cifras de la ronda anterior (8000 generaciones: 2 abandonos, mar >5 % en 0,23 %).
+
+### Política de configuración rota
+
+Lo decide el coordinador y queda escrito en `BattleRoyale_server/README.md:152-155`: una configuración inválida nunca para el servidor. Se registra un Error con fichero, campo y valor, y se usan los valores por defecto de ese campo o del bloque de zona entero. El fichero no se reescribe, así que el Error vuelve a salir en cada arranque. Es lo que ya hacía el código (ítem 3).
+
+### README
+
+`BattleRoyale_server/README.md`:
+- `:96-138`: renombrado en vez de borrado, 3 copias, `-KeepPrevious`, la lista de guardas y cómo restaurar un mundo anterior.
+- `:89-91`: una sola asignación activa de `template=` y de `instanceId`.
+- `:58-59` y la línea del árbol del paquete: el texto de la misión ya no habla de borrar.
+- `:193-196`: la herramienta funciona solo con el JSON.
+
+### Gate de esta ronda
+
+`git show main:tools/gate.sh > build/gate.sh` y `bash build/gate.sh .`:
+```
+extra_changefeedbackurl PASS errors 0 warnings 0
+extra_defaultfullauto PASS errors 0 warnings 0
+extra_limitunconscioustime PASS errors 0 warnings 0
+extra_preventplayermodifiers PASS errors 0 warnings 0
+extra_preventweaponraise PASS errors 0 warnings 0
+extra_spawncarfull PASS errors 0 warnings 0
+extra_spawnweaponchambered PASS errors 0 warnings 0
+extra_spawnwithammoandmagazine PASS errors 0 warnings 0
+extra_spawnwithbattery PASS errors 0 warnings 0
+extra_vehicle3ppdefaultfix PASS errors 0 warnings 0
+scripts_client FAIL errors 10 warnings 3
+scripts_server FAIL errors 2 warnings 12
+GATE GREEN
+```
+
+### Sigue sin verificar
+
+- Ninguna ejecución del bucle contra un servidor real.
+- El renombrado con un servidor real recién parado; por ejemplo, ficheros que el motor tarde en soltar. Si `Rename-Item` falla, el script para con error.
+- La detección de un servidor de otra cuenta en una máquina real: la ruta ilegible solo la simulé.
+- `GetFinalPathNameByHandleW` sobre rutas de red (UNC): el código las normaliza, pero no lo probé.
+- La compilación de Enforce, como en la primera ronda; esta ronda no cambia `.c`.

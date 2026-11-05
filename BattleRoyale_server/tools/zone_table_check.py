@@ -14,10 +14,14 @@ loot buildings of mpmissions/dayzOffline.chernarusplus/mapgrouppos.xml, the coas
 points and the Marine names of the world config). It is approximate (about 200 m) and counts the
 Skalisty and Storozh (prison) islands as sea. Ponds and lakes are ignored.
 
+The tables come from a zone_settings.json (--zone-json, enough on its own: the file the mod writes
+in the profile folder has every field) or, without it, from the BattleRoyaleZoneData.c defaults of the
+repository (--zone-data).
+
 Usage:
-  python zone_table_check.py --world-config "P:\\DZ\\worlds\\chernarusplus\\world\\config.cpp"
-  python zone_table_check.py --world-config ... --zone-json "<profiles>\\Vigrid-BattleRoyale\\zone_settings.json" --num-zones 7
-  python zone_table_check.py --world-config ... --per-poi 200
+  python zone_table_check.py --world-config "P:\\DZ\\worlds\\chernarusplus\\world\\config.cpp" --zone-json "<profiles>\\Vigrid-BattleRoyale\\zone_settings.json" --num-zones 7
+  python zone_table_check.py --world-config ... --zone-data "<repo>\\BattleRoyale\\addons\\scripts_server\\3_Game\\Config\\BattleRoyaleZoneData.c"
+  python zone_table_check.py --world-config ... --zone-json ... --per-poi 200
 Requires numpy and Pillow.
 """
 import argparse
@@ -167,8 +171,8 @@ def main():
     here = os.path.dirname(os.path.abspath(__file__))
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--world-config", required=True, help="DZ\\worlds\\chernarusplus\\world\\config.cpp (unpacked game data)")
-    ap.add_argument("--zone-data", default=os.path.join(here, "..", "..", "BattleRoyale", "addons", "scripts_server", "3_Game", "Config", "BattleRoyaleZoneData.c"), help="BattleRoyaleZoneData.c to read the defaults from")
-    ap.add_argument("--zone-json", help="zone_settings.json to check instead of the code defaults")
+    ap.add_argument("--zone-json", help="zone_settings.json to check (enough on its own)")
+    ap.add_argument("--zone-data", help="BattleRoyaleZoneData.c to read the defaults from, and the fields a partial --zone-json lacks (default: the repository copy next to this package, when present)")
     ap.add_argument("--num-zones", type=int, help="num_zones from general_settings.json (default: length of static_sizes)")
     ap.add_argument("--first-zone-delay", type=int, default=150, help="(60 * round_duration_minutes) / 2, seconds")
     ap.add_argument("--runs", type=int, default=8000)
@@ -176,9 +180,24 @@ def main():
     ap.add_argument("--seed", type=int, default=4242)
     args = ap.parse_args()
 
-    cfg = read_c_defaults(args.zone_data)
+    fields = ("static_sizes", "static_timers", "end_avoid_city", "end_avoid_type")
+    zone_data = args.zone_data or os.path.join(here, "..", "..", "BattleRoyale", "addons", "scripts_server", "3_Game", "Config", "BattleRoyaleZoneData.c")
     if args.zone_json:
-        cfg.update({k: v for k, v in json.load(open(args.zone_json, encoding="utf-8")).items() if k in cfg})
+        loaded = json.load(open(args.zone_json, encoding="utf-8"))
+        cfg = {k: loaded[k] for k in fields if k in loaded}
+        missing = [k for k in fields if k not in cfg]
+        if missing:
+            if not os.path.isfile(zone_data):
+                ap.error("%s has no %s; add them, or pass --zone-data with BattleRoyaleZoneData.c" % (args.zone_json, ", ".join(missing)))
+            defaults = read_c_defaults(zone_data)
+            cfg.update({k: defaults[k] for k in missing})
+            print("fields not in %s, taken from %s: %s" % (args.zone_json, zone_data, ", ".join(missing)))
+    else:
+        if not os.path.isfile(zone_data):
+            ap.error("%s not found; pass --zone-json with a zone_settings.json, or --zone-data with BattleRoyaleZoneData.c" % zone_data)
+        cfg = read_c_defaults(zone_data)
+    cfg["static_sizes"] = [float(v) for v in cfg["static_sizes"]]
+    cfg["static_timers"] = [int(v) for v in cfg["static_timers"]]
     n = args.num_zones or len(cfg["static_sizes"])
     sizes, timers = cfg["static_sizes"][:n], cfg["static_timers"][:n]
 
