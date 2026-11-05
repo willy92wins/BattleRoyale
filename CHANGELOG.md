@@ -38,7 +38,8 @@ DayZ-Expansion-Navigation and Community Online Tools. Load order, keys and serve
 - Configuration is validated on load: an invalid value is logged and replaced by its default, and the
   server keeps running.
 - The lobby no longer duplicates its objects on upgrade, POI overrides read `{ x, z }`, and the
-  first-circle timer stops with the start state.
+  first-circle timer stops with the start state. A match that ends before the unlock gives the
+  winner their input back.
 - Start items are removed by top-level attachment, without the VM exception per player that
   `PlayerBase.RemoveAllItems` logged at Prepare.
 
@@ -47,6 +48,7 @@ DayZ-Expansion-Navigation and Community Online Tools. Load order, keys and serve
   check reuses its arrays and caches validated village points.
 - Spawn heatmap broadcast at most once per second, only when it changed.
 - Lobby godmode instead of periodic healing; the group count is cached instead of polled every 5 s.
+- A death or a disconnection sends the player count and the positions once instead of twice.
 - Client: player tags raycast every 0.15 s instead of every frame, heatmap and map circle rebuilt
   only on change, no per-frame allocations, log level read once and logs behind it.
 - `extra_cardamage` scales the vanilla contact damage (0.5) instead of replacing it;
@@ -66,25 +68,31 @@ DayZ-Expansion-Navigation and Community Online Tools. Load order, keys and serve
 ### Interface
 - Own killfeed (five rows).
 - Match phase and countdown in the HUD: lobby, spawn selection, prepare, start, round, last round,
-  finished and restart.
+  finished and restart. A player who connects during the lobby countdown, or an admin let in during
+  a match, gets the current phase with the time left.
 - Zone damage indicator while outside the zone in a round.
 - Localized death messages, win screen fixes, 1.30 news carousel hidden, credits and version 1.0.0.
 
 ### Verified
 - Offline script validator: no errors beyond the known false positives (client 11, server 2).
 - DayZDiag 1.30, server and client, one player: lobby, count reached, spawn selection, prepare,
-  start, win and restart, with no script errors on either side (build of commit 5ca2fec).
+  start, win and restart, with no script errors on either side (commits 5ca2fec and 444b718).
+- The same with the test addon `BattleRoyale_dev/tests/solo_match`, which lets one player play the
+  rounds, in two matches: rounds 3 to 7 with their timers and zones (1200 m down to 50 m), zone
+  damage with its HUD indicator, the last round and its final lock, a death by the zone with its
+  killfeed event, then win and restart. The client received every phase in order and there were no
+  script errors (commit f46fefc).
 - `restart_loop.ps1`: 20 of 20 cases in a test harness, including links, a quoted `instanceId` and a
   clock rollback.
 
 ### Known issues
-- Not played yet with more than one player. Rounds, zone damage, kills, killfeed and kicks are only
-  checked by reading the code. A test with 20-40 players and then 100 or more is pending.
-- With `enable_zone_damage` set to false the client still shows the zone damage indicator.
+- Not played yet with more than one player. Kills between players, groups, late joins, the
+  admin menu and the load with 100 or more players are only checked by reading the code. A test with
+  20-40 players and then 100 or more is pending.
+- With `enable_zone_damage` set to false the client still shows the zone damage indicator during
+  the rounds.
 - `gui.pbo` is 126 MB because of uncompressed textures inherited from 0.1.0.
 - The Expansion airdrop has not been tested.
-- If every player but one leaves during the start countdown, the winner stays frozen until the win
-  screen kicks them.
 - Some non-fatal fallbacks inherited from 0.1.0 log with `Error()` and show up as script errors.
 - The music "Apocalypse" is credited to Desolation Redux without a verified licence; check it before
   publishing.
