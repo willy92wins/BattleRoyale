@@ -163,7 +163,8 @@ class BattleRoyaleStartMatch: BattleRoyaleState
         }
 
         MessagePlayersUntranslated( "STR_BR_MATCH_STARTED" );
-        MessagePlayersUntranslatedTimed( "STR_BR_UNSTUCK_INFORMATION", 90 );
+        if (BattleRoyaleConfig.GetConfig().GetGameData().enable_unstuck)
+            MessagePlayersUntranslatedTimed( "STR_BR_UNSTUCK_INFORMATION", 90 );
 
         b_IsGameplay = true;
     }

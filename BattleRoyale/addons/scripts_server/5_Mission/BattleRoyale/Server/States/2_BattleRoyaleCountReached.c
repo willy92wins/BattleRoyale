@@ -44,8 +44,9 @@ class BattleRoyaleCountReached: BattleRoyaleDebugState
         i_NumStartingPlayers = m_Players.Count();
 
         MessagePlayersUntranslated("STR_BR_ANNOUNCEMENT_PLAYERCOUNTREACHED", i_TimeToStart.ToString(), second);
+        // Players keep moving during the countdown: a client-only input lock without the
+        // matching server lock desyncs movement (rubber banding and sliding in the lobby)
         m_StartTimer = AddTimer(i_TimeToStart, this, "DoStart", NULL, false);
-        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetInput", new Param1<bool>(true), true); //disable user input on all clients (we'll do this on the server in another thread)
     }
 
     override void Deactivate()

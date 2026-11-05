@@ -18,6 +18,7 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 	bool show_spawn_heatmap = true;  // show spawn heatmap (0 = no, 1 = yes)
 
     int time_until_teleport_unlock = 10;  // seconds before unlock after teleporting & preparing, must stay below the first zone delay
+    bool enable_unstuck = true;  // the unstuck key (F2) teleports a player stuck at the start of the match (0 = off, 1 = on)
 
     ref array<int> zone_notification_minutes = { 1, 2 };  // minutes when notification about the zone shrinking will be displayed
     ref array<int> zone_notification_seconds = { 30, 10 };  // seconds when notification about the zone shrinking will be displayed, when under the minute

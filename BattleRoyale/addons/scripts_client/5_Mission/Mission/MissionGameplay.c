@@ -342,15 +342,6 @@ modded class MissionGameplay
 			if (GetUApi().GetInputByID(UADayZBRUnstuck).LocalPress()) {
 				BattleRoyaleClient.Cast( m_BattleRoyale ).Unstuck();
 			}
-#ifdef DIAG
-			// Debug key
-			if (GetUApi().GetInputByID(UADayZBRDebug).LocalPress()) {
-				SpawnSelectionMenu m = SpawnSelectionMenu.Cast(GetUIManager().EnterScriptedMenu(MENU_SPAWN_SELECTION, GetUIManager().GetMenu()));
-				m.SetInitialCountdown(45);
-				m.SetSpawnSize(50);
-				m.SetFirstZone(Vector(6000, 0, 7777), 1500);
-			}
-#endif
 #ifdef BR_MINIMAP
 			if (GetUApi().GetInputByID(UADayZBRToggleMiniMap).LocalPress()) {
 				b_MiniMapShow = !b_MiniMapShow;

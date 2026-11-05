@@ -567,6 +567,9 @@ class BattleRoyaleServer: BattleRoyaleBase
     {
 		if(type == CallType.Server)
 		{
+			if (!BattleRoyaleConfig.GetConfig().GetGameData().enable_unstuck)
+				return;
+
 			PlayerBase targetBase = ResolveSenderPlayer(sender, target);
 			if (!targetBase)
 				return;

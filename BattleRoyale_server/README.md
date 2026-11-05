@@ -32,7 +32,7 @@ A match starts once the server has been up for `min_waiting_time` (300 s) with a
 in one of two ways (`lobby_settings.json`): more than `minimum_players` (10) are in the lobby and 80 % of
 them are ready (F1), or by autostart, where the number of ready players needed falls from `maxPlayers`
 to 2 over `autostart_delay` (750 s) after the first player joined. F2 is the unstuck key at the start of
-a match.
+a match; `enable_unstuck` in `general_settings.json` turns it off (on by default).
 
 ## 1. Mods and load order
 

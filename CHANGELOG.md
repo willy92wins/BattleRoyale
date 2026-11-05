@@ -9,6 +9,12 @@ Requires DayZ 1.30, CF, Dabs Framework, DayZ-Expansion-Core, DayZ-Expansion and
 DayZ-Expansion-Navigation. Load order and admin permissions: `BattleRoyale_server/README.md`.
 
 ### Changed
+- `enable_unstuck` in `general_settings.json` (default `true`) turns the F2 unstuck key off: the
+  server ignores the request and the start of match message about F2 is not sent.
+- Players are no longer frozen during the lobby countdown. The freeze was applied on the client
+  only and made the character rubber band and slide without animation until the spawn map opened.
+- The DayZDiag-only F3 debug key, which opened a spawn map that could not be used or closed, is
+  removed.
 - Community Online Tools is no longer required. With COT loaded, the `[BR] State Machine` module
   works as in 1.0; without it, that code is not compiled.
 - The VPPAdminTools menu moved to a separate mod, `@BattleRoyale-VPP`, which requires VPPAdminTools
