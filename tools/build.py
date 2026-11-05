@@ -101,6 +101,12 @@ def build_mod(addons, out, names, full, key, temp, mod_cpp):
     shutil.copyfile(bikey, os.path.join(out, "keys", os.path.basename(bikey)))
     for f in ("LICENSE", "NOTICE.md"):
         shutil.copyfile(os.path.join(ROOT, f), os.path.join(out, f))
+    if out == OUT:
+        # Server owners get the server package with the Workshop mod
+        server_files = os.path.join(out, "ServerFiles")
+        if os.path.isdir(server_files):
+            shutil.rmtree(server_files)
+        shutil.copytree(os.path.join(ROOT, "BattleRoyale_server"), server_files)
     print("built", len(names), "addons into", out)
 
 
