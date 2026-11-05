@@ -9,3 +9,4 @@
 *.biprivatekey
 *.pbo
 *.bisign
+__pycache__/
