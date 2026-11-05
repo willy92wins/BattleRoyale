@@ -3,6 +3,8 @@ modded class MissionGameplay
 {
 	protected Widget m_BattleRoyaleHudRootWidget;
 	protected ref BattleRoyaleHud m_BattleRoyaleHud;
+	protected ref BattleRoyaleKillFeed m_BattleRoyaleKillFeed;
+	protected Widget m_BattleRoyaleWinScreen;
 
 #ifdef BR_MINIMAP
 	protected ref MapWidget m_MiniMap;
@@ -19,6 +21,7 @@ modded class MissionGameplay
 	{
 		Print("MissionGameplay::MissionGameplay");
 		m_BattleRoyaleHudRootWidget = null;
+		m_BattleRoyaleWinScreen = null;
 		m_BattleRoyale = null;
 
 		// Add RPCs
@@ -33,6 +36,11 @@ modded class MissionGameplay
 		if (m_BattleRoyaleHudRootWidget)
 		{
 			m_BattleRoyaleHudRootWidget.Unlink();
+		}
+
+		if (m_BattleRoyaleWinScreen)
+		{
+			m_BattleRoyaleWinScreen.Unlink();
 		}
 
 		m_BattleRoyale = null;
@@ -85,31 +93,52 @@ modded class MissionGameplay
 			m_BattleRoyaleHudRootWidget = GetGame().GetWorkspace().CreateWidgets("Vigrid-BattleRoyale/GUI/layouts/hud/br_hud.layout");
 #endif
 
+			if (!m_BattleRoyaleHudRootWidget)
+			{
+				Error("Failed to create the BattleRoyale HUD!");
+				return;
+			}
+
 			m_BattleRoyaleHud = new BattleRoyaleHud( m_BattleRoyaleHudRootWidget );
 			m_BattleRoyaleHud.ShowHud( true );
+
+			// Kill feed rows live under the HUD root and are unlinked with it
+			m_BattleRoyaleKillFeed = new BattleRoyaleKillFeed( m_BattleRoyaleHudRootWidget );
 			BattleRoyaleUtils.Trace("HUD Initialized");
 		}
 	}
 
 	void UpdateKillCount(int count)
 	{
+		if (!m_BattleRoyaleHud)
+			return;
+
 		m_BattleRoyaleHud.ShowKillCount( count > 0 );
 		m_BattleRoyaleHud.SetKillCount( count );
 	}
 
 	void HideCountdownTimer()
 	{
+		if (!m_BattleRoyaleHud)
+			return;
+
 		m_BattleRoyaleHud.ShowCountdown( false );
 	}
 
 	void UpdateCountdownTimer(int seconds)
 	{
+		if (!m_BattleRoyaleHud)
+			return;
+
 		m_BattleRoyaleHud.ShowCountdown( true );
 		m_BattleRoyaleHud.SetCountdown( seconds );
 	}
 
 	void UpdatePlayerCount(int nb_players, int nb_groups)
 	{
+		if (!m_BattleRoyaleHud)
+			return;
+
 		//BattleRoyaleUtils.Trace(string.Format("UpdatePlayerCount: %1 %2", nb_players, nb_groups));
 		m_BattleRoyaleHud.ShowCount( true );
 		m_BattleRoyaleHud.SetCount( nb_players, nb_groups );
@@ -117,6 +146,9 @@ modded class MissionGameplay
 
 	void UpdateZoneDistance(bool isInsideZone, float distExt, float distInt, float angle)
 	{
+		if (!m_BattleRoyaleHud)
+			return;
+
 		m_BattleRoyaleHud.ShowDistance(true);
 		//m_BattleRoyaleHud.ShowDistance( distance > 0 );
 		m_BattleRoyaleHud.SetDistance( isInsideZone, distExt, distInt, angle );
@@ -124,7 +156,48 @@ modded class MissionGameplay
 
 	void HideDistance()
 	{
+		if (!m_BattleRoyaleHud)
+			return;
+
 		m_BattleRoyaleHud.ShowDistance( false );
+	}
+
+	//! label is one of BattleRoyaleHud.PHASE_LABEL_*, seconds is -1 when there is no timer to show
+	void UpdateMatchPhase(int label, int seconds)
+	{
+		if (!m_BattleRoyaleHud)
+			return;
+
+		m_BattleRoyaleHud.SetMatchPhase( label, seconds );
+	}
+
+	void UpdateZoneDamage(bool taking_damage)
+	{
+		if (!m_BattleRoyaleHud)
+			return;
+
+		m_BattleRoyaleHud.ShowZoneDamage( taking_damage );
+	}
+
+	void UpdateKillFeed()
+	{
+		if (!m_BattleRoyaleKillFeed)
+			return;
+
+		m_BattleRoyaleKillFeed.Update();
+	}
+
+	//! Created once; unlinked by the destructor when the mission ends
+	void ShowWinScreen()
+	{
+		if (m_BattleRoyaleWinScreen || !GetGame().GetWorkspace())
+			return;
+
+		m_BattleRoyaleWinScreen = GetGame().GetWorkspace().CreateWidgets("Vigrid-BattleRoyale/GUI/layouts/hud/win_screen.layout");
+		if (m_BattleRoyaleWinScreen)
+		{
+			m_BattleRoyaleWinScreen.Show( true );
+		}
 	}
 
 #ifdef BR_MINIMAP
