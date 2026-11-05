@@ -290,13 +290,13 @@ class BattleRoyaleClient: BattleRoyaleBase
     }
 
     //! The last round clears the current area when the final zone locks; from then on every player takes damage.
-    //! An empty current area in the last round counts as collapsed even without an earlier area (late connection)
+    //! An empty current area counts as collapsed only once the server has sent one; before that the area is unknown
     protected bool IsZoneCollapsed(BattleRoyaleRPC br_rpc)
     {
 		if ( br_rpc.match_phase != EBRMatchPhase.LAST_ROUND )
 			return false;
 
-		return br_rpc.current_play_area_center == "0 0 0" && br_rpc.current_play_area_radius == 0.0;
+		return br_rpc.current_play_area_received && br_rpc.current_play_area_center == "0 0 0" && br_rpc.current_play_area_radius == 0.0;
     }
 
     //! Picks the phase label and the timer it describes; the HUD only redraws when one of them changes

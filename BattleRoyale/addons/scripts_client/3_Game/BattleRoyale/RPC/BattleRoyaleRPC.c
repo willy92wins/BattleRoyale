@@ -52,6 +52,7 @@ class BattleRoyaleRPC
 		countdown_seconds = 0;
 		current_play_area_center = "0 0 0";
 		current_play_area_radius = 0.0;
+		current_play_area_received = false;
 		future_play_area_center = "0 0 0";
 		future_play_area_radius = 0.0;
 		top_position = 0;
@@ -186,6 +187,7 @@ class BattleRoyaleRPC
 
 	vector current_play_area_center = "0 0 0";
 	float current_play_area_radius = 0.0;
+	bool current_play_area_received = false;
 
 	void UpdateCurrentPlayArea(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
@@ -201,6 +203,7 @@ class BattleRoyaleRPC
 				BattleRoyaleUtils.Trace(string.Format("UpdateCurrentPlayArea: %1 %2", data.param1, data.param2));
 			current_play_area_center = data.param1;
 			current_play_area_radius = data.param2;
+			current_play_area_received = true;
 		}
 	}
 
