@@ -156,8 +156,11 @@ class BattleRoyaleClient: BattleRoyaleBase
 		UpdateMatchPhase( gameplay, br_rpc );
 		gameplay.UpdateKillFeed();
 
-		// Wall along the edge of the current zone, gone once the final zone collapsed
+		// Wall along the edge of the current zone (before the first zone, the zone players must reach),
+		// gone once the final zone collapsed
 		BattleRoyalePlayArea wall_area = m_CurrentPlayArea;
+		if ( !wall_area )
+			wall_area = m_FuturePlayArea;
 		if ( IsZoneCollapsed( br_rpc ) )
 			wall_area = null;
 		m_ZoneWall.Update( delta, GetGame().GetCurrentCameraPosition(), wall_area );
