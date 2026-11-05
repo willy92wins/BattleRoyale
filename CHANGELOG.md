@@ -14,14 +14,25 @@ DayZ-Expansion-Navigation. Load order and admin permissions: `BattleRoyale_serve
 - The VPPAdminTools menu moved to a separate mod, `@BattleRoyale-VPP`, which requires VPPAdminTools
   and BattleRoyale so that it compiles after both. Load it after `@VPPAdminTools` and
   `@BattleRoyale`, and only with VPP. The menu still has only Next State.
-- The build also packs and signs `@BattleRoyale-VPP` with the same key, and the lint gate checks it.
+- The build also packs and signs `@BattleRoyale-VPP` with the same key. The lint gate lints into an
+  empty folder and allows each known false positive only by rule and file.
+
+### Verified
+- DayZDiag 1.30, server and client, with no admin tool, with COT loaded before or after
+  `@BattleRoyale`, with VPPAdminTools alone and with VPPAdminTools plus `@BattleRoyale-VPP`: every
+  setup compiles with no script error and the match starts.
+- VPPAdminTools sets its `VPPADMINTOOLS` define in a script file, not in its config. Loaded before
+  `@BattleRoyale`, the define reaches both sides: the VPP log registers `MenuBattleRoyaleManager` and
+  the four `BattleRoyale:` permissions, and the client compiles the two classes of
+  `@BattleRoyale-VPP` (1154 classes in the mission module with it, 1152 without).
 
 ### Known issues
-- Not tested in game yet: no admin tool, COT, and VPP with `@BattleRoyale-VPP`.
-- VPPAdminTools sets its `VPPADMINTOOLS` define in a script file, not in its config, so the server
-  side of the VPP integration in `@BattleRoyale` (permissions and the Next State RPC) may not see it
-  unless VPP is compiled first. Load `@VPPAdminTools` before `@BattleRoyale` and check that the VPP
-  log registers the `BattleRoyale:` permissions.
+- The VPP menu button and the COT module were not clicked in game: the VPP toolbar opens through an
+  input the test tools cannot press. Admin actions with and without permission still need a check by
+  hand.
+- With VPPAdminTools loaded after `@BattleRoyale` (not tested), the server side of the VPP
+  integration is not expected to see the define: no `BattleRoyale:` permission would be registered and
+  every VPP admin action would be denied. Keep `@VPPAdminTools` before `@BattleRoyale`.
 
 ## 1.0.0 (2026-11-05, release candidate)
 

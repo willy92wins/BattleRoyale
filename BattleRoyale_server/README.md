@@ -46,7 +46,9 @@ With COT, nothing else is needed:
 -mod=@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@Community-Online-Tools;@BattleRoyale
 ```
 
-With VPPAdminTools, `@BattleRoyale-VPP` goes after both `@VPPAdminTools` and `@BattleRoyale`:
+With VPPAdminTools, `@VPPAdminTools` goes before `@BattleRoyale` (VPP sets its `VPPADMINTOOLS` define
+in a script, which only reaches the mods compiled after it; without it the BattleRoyale permissions
+are not registered and every VPP admin action is denied), and `@BattleRoyale-VPP` goes after both:
 
 ```
 -mod=@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@VPPAdminTools;@BattleRoyale;@BattleRoyale-VPP
