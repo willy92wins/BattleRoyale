@@ -4,7 +4,7 @@
 # gui PBO), scripts_server 2 (ES-OVERRIDE-PARAM-NAME-MISMATCH on RemovePlayer, false positives),
 # every other script PBO 0.
 # Usage: tools/gate.sh <repo_or_worktree_root>
-ROOT="${1:-.}"; OUT="$ROOT/build/lint"
+ROOT="${1:-.}"; OUT="$ROOT/build/lint"; mkdir -p "$OUT"
 bash "$ROOT/tools/lint.sh" "$ROOT" "$OUT" > "$OUT.summary.txt" 2>&1
 cat "$OUT.summary.txt"
 python - "$OUT" <<'EOF'
