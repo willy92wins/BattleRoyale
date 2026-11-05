@@ -1,10 +1,72 @@
 # Informe del carril client-menu (BattleRoyale 1.0)
 
-Rama `lane/client-menu`, worktree `C:\Users\guill\Repos\br-wt\client-menu`. Este fichero va en el mismo commit que los cambios; su sha está en el mensaje de entrega (`git log -1 lane/client-menu`).
+Rama `lane/client-menu`, worktree `C:\Users\guill\Repos\br-wt\client-menu`. Hay dos commits: el inicial (`160a509`) y el de la ronda 1 de correcciones, que trae esta versión del informe; su sha está en el mensaje de entrega (`git log -1 lane/client-menu`).
 
-Resumen: el menú principal ya no hace ninguna llamada HTTP, `-connect` vuelve a funcionar y el botón de jugar abre el navegador de servidores (o conecta con los argumentos de línea de comandos si los hay). El carrusel de noticias de 1.30 nace dentro de un frame oculto del layout del BR. El nivel de log se resuelve una sola vez. Las URLs del proyecto original ya no son destino por defecto, la versión pasa a 1.0.0 y Chernarus tiene su entrada de pantallas de carga. El lint queda igual que la base. No se ha compilado con el motor ni probado en el juego.
+Resumen del estado tras la ronda 1:
+- El menú principal ya no hace ninguna llamada HTTP. `-connect` vuelve a funcionar al arrancar el juego y el botón de jugar abre siempre el navegador de servidores.
+- El carrusel de noticias de 1.30 nace dentro de un frame oculto del layout del BR.
+- El nivel de log se resuelve una sola vez.
+- Las URLs del proyecto original ya no son destino por defecto y la versión pasa a 1.0.0.
+- Chernarus tiene su entrada de pantallas de carga, y la pantalla de carga ya no deja un NULL pointer al arrancar el cliente.
+- El gate da GATE GREEN.
+- No se ha compilado con el motor ni probado en el juego.
 
 Rutas relativas a `BattleRoyale/addons/` salvo que se diga otra cosa. Vanilla = `C:\Users\guill\OneDrive\Documentos\DayZ Projects\scripts\` (1.30).
+
+## Ronda 1 de correcciones (revisión de Codex)
+
+### D1 (MAJOR): Play abre siempre el navegador
+- **Problema.** Con `-connect` en la línea de comandos, `Play()` reconectaba siempre al destino del CLI. Como «Choose server» sigue oculto (`MainMenu.c:152`), el navegador quedaba inaccesible.
+- **Arreglo.** `scripts_client/5_Mission/Mission/MainMenu.c:171-175`: `Play()` solo llama a `OpenMenuServerBrowser()` (vanilla `mainmenu.c:465-468`). Sale el código de `-connect`, `-port` y `-password` de ese método. Elegí la opción más simple: sin estado ni condición de «primera vez».
+- **Por qué no se pierde la conexión por CLI.** La conexión inicial ya la hace vanilla una sola vez por sesión del juego. `OnInitialize` solo entra con `GetLoadState() == DayZLoadState.UNDEFINED` y llama a `ConnectLaunch` si hay `-connect` (`dayzgame.c:2120-2133`); en PC, `ConnectLaunch` llama a `ConnectFromCLI` (`:2281-2299`). Esos dos métodos vanilla vuelven a correr porque el BR ya no los sobrescribe (commit `160a509`). Tras desconectarse, el jugador vuelve al servidor del CLI desde el navegador (historial o conexión directa).
+- **Verificación.** Diff, y grep de `GetCLIParam|ConnectFromServerBrowser` en `MainMenu.c`: 0 líneas. `check_overrides.py` sobre `scripts_client`: mismos 73 overrides, 29 MISSING y 2 OBSOLETE que tras el commit inicial, idénticos quitando los números de línea.
+- **Estado.** Confirmado en el código. En el juego es plausible.
+
+### Bug del arranque: NULL pointer en `LoadingScreen.UpdateLoadingBackground`
+- **Causa.** `LoadingScreen` se construye dentro del constructor de `DayZGame` (`dayzgame.c:1062-1070`), y ahí mismo se llama a `ShowEx` → `Show` (`:845`). En ese momento `g_Game` todavía es NULL, porque se asigna al volver de `new DayZGame` (`3_game/game.c:7`). Por eso `GetGame().GetWorldName()` (antes en `LoadingScreen.c:56`) fallaba.
+  - Ojo: tampoco vale `m_DayZGame.GetWorldName()`, porque esa sobrecarga usa `g_Game` por dentro (`global/game.c:934-937`).
+  - Las dos líneas previas (`RESOURCES (E): Bad texture name ''` y `ImageWidget::AlphaMaskTexture can't load ''`) no venían de una lista vacía. Las causaba `m_ImageBackground.LoadMaskTexture("")`, la forma en que el autor quita la máscara de revelado de `gui/layouts/loading.layout:52-54`, que se ejecutaba en cada `Show`.
+- **Arreglo** (`scripts_client/3_Game/Loading/LoadingScreen.c`):
+  - `:35-37`: sale sin hacer nada si `m_DayZGame` o `m_ImageBackground` son NULL.
+  - `:63-64`: el nombre del mundo se lee con la sobrecarga proto sobre la instancia, `m_DayZGame.GetWorldName(out)` (`global/game.c:932`), como hace vanilla en `missionbase.c:110`. `GetTickTime` ya se llamaba sobre `m_DayZGame` (`game.c:914`).
+  - `:68-89`: el bucle solo corre si `m_Backgrounds` existe.
+  - `:97-105`: solo se pide `GetRandomPath()` si la entrada tiene rutas. `ExpansionArray` con lista vacía indexaría `m_Indexes[-1]` (`br-ref/exp_core_scripts/3_Game/DayZExpansion_Core/ExpansionArray.c:70-89`). Si no hay lista, la lista está vacía o la ruta sale vacía, carga `br_loading_1.edds`.
+  - `:18-20`: el `LoadMaskTexture("")` pasa del `Show` al constructor, con guarda, y se ejecuta una sola vez.
+    - Vanilla nunca recarga la máscara: el único `LoadMaskTexture` del árbol vanilla es el proto (`1_core/proto/enwidgets.c:282`), y `Show` solo toca el progreso (`dayzgame.c:854`).
+    - Las dos líneas de RESOURCES pasan a salir una vez por arranque y no en cada carga.
+    - No las quité del todo: dejar la máscara devolvería el revelado vanilla sobre los fondos del BR, y eso no puedo evaluarlo sin el juego.
+- **¿Cambia la rama `chernarus` → `chernarusplus` al arrancar?** No. Modelé en Python la selección nueva leyendo el JSON real, la de HEAD y la de la base (`344d930`):
+  - Con nombre de mundo vacío (lo esperable dentro del constructor, sin mundo cargado), la base y ahora caen en `default`: las 12 imágenes.
+  - Solo cambia cuando el mundo ya se llama `ChernarusPlus`: antes `default` (12) y ahora `chernarusplus` (las 6 que el autor asignó a Chernarus).
+  - `namalsk` y `sakhal` no cambian, y `Enoch` cae en `default`.
+  - Con la lista vacía o nula, o una entrada sin rutas, carga `br_loading_1.edds`.
+- **Estado.** Confirmado en el código: el uso de `g_Game` a través de `GetGame()` ya no está en este fichero (grep 0) y las guardas cubren los caminos de arriba. Que el error desaparezca del RPT y qué devuelve `GetWorldName` dentro del constructor es plausible, no comprobado en el motor.
+
+### Punto 3: logs que se construyen antes del filtro
+No son de este carril y no los he tocado: están en CROSS-LANE, punto 7.
+
+### Gate de la ronda 1
+`tools/gate.sh` solo existe en `main` (commit `b18c5ec`), y no puedo hacer merge ni rebase. Lo ejecuté desde una copia byte a byte: `git show main:tools/gate.sh > build/gate.sh` (mismo sha1 `51d27e9f…` que en `main`). Como `tools/lint.sh` es idéntico en `main` y en esta rama, es lo mismo que `bash tools/gate.sh .` después del merge.
+
+Salida de `bash build/gate.sh .` desde la raíz del worktree:
+
+```
+extra_changefeedbackurl PASS errors 0 warnings 0
+extra_defaultfullauto PASS errors 0 warnings 0
+extra_limitunconscioustime PASS errors 0 warnings 0
+extra_preventplayermodifiers PASS errors 0 warnings 0
+extra_preventweaponraise PASS errors 0 warnings 0
+extra_spawncarfull PASS errors 0 warnings 0
+extra_spawnweaponchambered PASS errors 0 warnings 0
+extra_spawnwithammoandmagazine PASS errors 0 warnings 0
+extra_spawnwithbattery PASS errors 0 warnings 0
+extra_vehicle3ppdefaultfix PASS errors 0 warnings 0
+scripts_client FAIL errors 10 warnings 3
+scripts_server FAIL errors 2 warnings 12
+GATE GREEN
+```
+
+Código de salida 0. Las reglas de error son solo `ES-LAYOUT-PATH-PBOPREFIX-MISMATCH` (cliente) y `ES-OVERRIDE-PARAM-NAME-MISMATCH` (servidor). Quitando los números de línea, los mensajes de errores y avisos de `scripts_client` y `scripts_server` son idénticos a la pasada de base hecha antes del primer commit (`build/lint-base`): 0 añadidos y 0 quitados.
 
 ## ZON-01 / NET-05 / UI-30: fuera el matchmaking, vuelve `-connect`
 
@@ -12,22 +74,20 @@ Qué cambió:
 - `scripts_client/5_Mission/Mission/MainMenu.c`:
   - Fuera `IsMatchMakingAvailable` (hacía `GET_now`), `StartMatchMaking` (hacía `POST_now` con la lista de mods y se reprogramaba con `CallLaterByName`), el `Update` que pintaba su estado, `ColorDisable` y los miembros `modList`, `b_MatchMakingAvailable`, `m_MatchMakingState` y `m_MatchMakingTryCount`.
   - `Init` deja la etiqueta en `#main_menu_play` (`:144`).
-  - `Play()` (`:171-187`): si `-connect` trae dirección, conecta con `-connect`/`-port`/`-password` por `g_Game.ConnectFromServerBrowser` (firma vanilla `3_game/dayzgame.c:2804`), el mismo camino que ya usaba el BR; si no, abre el navegador de servidores.
-  - Se quita el override vacío de `OpenMenuServerBrowser`, así que vuelve el vanilla (`5_mission/gui/newui/mainmenu/mainmenu.c:465-468`, `EnterScriptedMenu(MENU_SERVER_BROWSER)`).
-  - `OnClick` (`:285-290`) manda el botón a `Play()`, como vanilla (`mainmenu.c:235-240`).
+  - `Play()` (`:171-175`) abre siempre el navegador de servidores (ronda 1, D1).
+  - Se quita el override vacío de `OpenMenuServerBrowser`, así que vuelve el vanilla (`mainmenu.c:465-468`).
+  - `OnClick` (`:273-278`) manda el botón a `Play()`, como vanilla (`mainmenu.c:235-240`).
   - El botón «choose server» sigue oculto (`BR_OverrideUI`, `:152`): el menú conserva el aspecto del BR.
 - `scripts_client/3_Game/DayZGame.c`: quitados los overrides de `ConnectFromCLI` (vacío) y `ConnectLaunch` (mandaba al menú). Vuelven a correr los vanilla, que es lo mismo que llamar a `super`: `OnInitialize` → `ConnectLaunch` con `-connect` (`dayzgame.c:2131-2133`), `ConnectLaunch` → `ConnectFromCLI` en PC (`:2281-2299`) y `ConnectFromCLI` → `Connect()` (`:2827-2840`).
 - `scripts_client/3_Game/BattleRoyale/Webhook/MatchMakingWebhook.c`: borrado. Antes de borrarlo, el grep de `MatchMakingWebhook|MM_PlayerInfo|isMatchMakingAvailable|searchGame` en todo `BattleRoyale/` solo encontró el propio fichero.
 
 Cómo lo verifiqué:
 - grep de `GET_now|POST_now|GetRestContext|GetRestApi|RestCallback|\.GET(|\.POST(` en `scripts_client/`: 0 líneas. Control positivo: el mismo patrón da 35 líneas en `scripts_server/`, y en HEAD `MainMenu.c` tenía 2 referencias a `MatchMakingWebhook` y el webhook 2 llamadas `GET_now`/`POST_now`.
-- Overrides resueltos contra vanilla con `C:\temp\lfq130\tools\check_overrides.py`: mismos 29 MISSING (todos overrides de clases de COT, Expansion y VPP que la herramienta no ve) y 2 OBSOLETE (`FilterDlcs`, `ShowDlcFrame`) que en HEAD; pasa de 77 a 73 overrides comprobados por los cuatro quitados. `Play()` no tiene parámetros, como `mainmenu.c:444`.
+- Overrides resueltos contra vanilla con `C:\temp\lfq130\tools\check_overrides.py`: mismos 29 MISSING (todos overrides de clases de COT, Expansion y VPP que la herramienta no ve) y 2 OBSOLETE (`FilterDlcs`, `ShowDlcFrame`) que en HEAD; pasa de 77 a 73 overrides comprobados por los cuatro quitados.
 
 Estado: confirmado en el código. En el juego es plausible, no comprobado.
 
-No verificado: el flujo real con el launcher o Steam (`-connect`), que el navegador se abra desde este menú, y `-connect=ip:puerto` en un solo parámetro (se pasa tal cual, como hace `ConnectFromCLI` vanilla).
-
-Decisión: sin `-connect`, Play abre el navegador y no hace `ConnectLastSession` (vanilla `mainmenu.c:444-454`, `:595-616`, que reconecta al último servidor jugado). «Choose server» sigue oculto, y con la reconexión directa el navegador quedaría inaccesible desde este menú.
+No verificado: el flujo real con el launcher o Steam (`-connect`) y que el navegador se abra desde este menú.
 
 ## UI-01: carrusel de noticias de 1.30
 
@@ -60,6 +120,7 @@ Cómo lo verifiqué:
 - Control positivo: un mutante sin la comprobación de `LOG_DISABLED` da 108 diferencias.
 - El script está en `build/verify/loglevel_equiv.py`, sin versionar (`/build/` está en `.gitignore`).
 - Único caller: `LogServerMessage` (grep de `CheckLogLevel` en `BattleRoyale/addons`).
+- En el cliente la resolución solo lee parámetros de CLI, sin `GetGame()`. Es seguro aunque el primer log llegue dentro del constructor de `DayZGame` (el `Trace` del constructor de `LoadingScreen`).
 
 Estado: confirmado como transformación lógica. En el motor es plausible.
 
@@ -103,8 +164,9 @@ Estado: confirmado (diff).
 ## Pantallas de carga y hints de Chernarus
 
 - `data/LoadingScreens.json:20`: la entrada `chernarus` pasa a `chernarusplus`.
-  - `scripts_client/3_Game/Loading/LoadingScreen.c:56-67` compara el nombre del mundo en minúsculas con `MapName` en minúsculas. Chernarus es `chernarusplus`: vanilla `5_mission/mission/missionbase.c:110-116` lo compara igual.
+  - `scripts_client/3_Game/Loading/LoadingScreen.c:63-65` y `:75-77` comparan el nombre del mundo en minúsculas con `MapName` en minúsculas. Chernarus es `chernarusplus`: vanilla `5_mission/mission/missionbase.c:110-116` lo compara igual.
   - Antes nunca casaba y caía en `default`.
+  - Al arrancar el cliente no cambia de rama: ver la ronda 1.
   - Las rutas (`br_loading_1..6.edds`) no cambian. Las 12 existen en `C:\Users\guill\Repos\BattleRoyale\BattleRoyale\addons\gui\textures\loading_screens\` (Glob).
 - `data/hints.json:2-16`: tres hints del BR, todos con `m_ImagePath` vacío como en vanilla:
   - F1 para marcarse listo en el lobby.
@@ -113,32 +175,20 @@ Estado: confirmado (diff).
   - Las teclas son las de `data/Inputs.xml:23-28`.
   - Se mantienen los tres de Expansion, cuyas teclas sí son las suyas: K en `navigation_scripts/Data/Inputs.xml:56-57`, P y Z en `expansion_scripts/Data/Inputs.xml:16-20`.
   - hints.json no tiene entradas por mapa.
-- Hoy ningún script lee hints.json (el override de `UiHintPanel` está comentado) ni `LoadingMessages.json`. Ver cross-lane 3 y 6.
+- Hoy ningún script lee hints.json (el override de `UiHintPanel` está comentado; el coordinador lo ha asignado a client-hud como D2) ni `LoadingMessages.json`. Ver cross-lane 3 y 6.
 
 Estado: confirmado en los datos. En la pantalla de carga es plausible.
 
 No verificado: no abrí las imágenes EDDS; conservé el reparto del autor (1-6 para Chernarus).
 
-## Lint (gate)
+## Lint (commit inicial)
 
-`bash tools/lint.sh . build/lint` desde la raíz del worktree:
+`bash tools/lint.sh . build/lint` dio exactamente la base de `common.md`:
+- `scripts_client` FAIL con 10 errores y 3 avisos.
+- `scripts_server` FAIL con 2 errores y 12 avisos.
+- Cada `extra_*` PASS con 0.
 
-```
-extra_changefeedbackurl PASS errors 0 warnings 0
-extra_defaultfullauto PASS errors 0 warnings 0
-extra_limitunconscioustime PASS errors 0 warnings 0
-extra_preventplayermodifiers PASS errors 0 warnings 0
-extra_preventweaponraise PASS errors 0 warnings 0
-extra_spawncarfull PASS errors 0 warnings 0
-extra_spawnweaponchambered PASS errors 0 warnings 0
-extra_spawnwithammoandmagazine PASS errors 0 warnings 0
-extra_spawnwithbattery PASS errors 0 warnings 0
-extra_vehicle3ppdefaultfix PASS errors 0 warnings 0
-scripts_client FAIL errors 10 warnings 3
-scripts_server FAIL errors 2 warnings 12
-```
-
-Igual que la base de `common.md`. También comparé el contenido con una pasada de base sobre este mismo worktree antes de tocarlo (`build/lint-base`). Quitando los números de línea, los mensajes de errores y avisos son idénticos en `scripts_client`, `scripts_server` y `extra_changefeedbackurl`: 0 añadidos y 0 quitados.
+Además comparé el contenido con una pasada de base sobre este mismo worktree antes de tocarlo (`build/lint-base`). Quitando los números de línea, los mensajes de errores y avisos son idénticos: 0 añadidos y 0 quitados. El gate de la ronda 1 está arriba.
 
 Límite del gate, medido: el lint no detecta un identificador sin definir ni un `override` de un método que no existe. Una copia de `extra_changefeedbackurl` con `BATTLEROYALE_FEEDBACK_URL_UNDEFINED`, y otra con `InitX()` y `OpenFeedback(int)`, dieron las dos PASS con 0 errores. Por eso las firmas están verificadas a mano contra vanilla (citas arriba) y los nombres de override con `check_overrides.py`.
 
@@ -154,7 +204,7 @@ Límite del gate, medido: el lint no detecta un identificador sin definir ni un 
    - `Matches/StartMatchWebhook.c:38`
    - `Servers/LockServerWebhook.c:44`
 2. **Servidor (ZON-03).** `scripts_server/3_Game/Config/BattleRoyaleServerData.c:29`: `autolock_url` sigue apuntando a `https://api.vigrid.ovh/`.
-3. **Hints (UI-27).** Hay que reactivar el override de `scripts_client/5_Mission/GUI/Hints/UiHintPanel.c:1-8` para que se lea `Vigrid-BattleRoyale/Data/hints.json`, con la firma de 1.30. Vanilla: `3_game/gui/hints/uihintpanel.c:85-90`, y `m_DataPath` es `const` en `:14`, así que no se puede reasignar:
+3. **Hints (UI-27, D2 de Codex, asignado a client-hud).** Hay que reactivar el override de `scripts_client/5_Mission/GUI/Hints/UiHintPanel.c:1-8` para que se lea `Vigrid-BattleRoyale/Data/hints.json`, con la firma de 1.30. Vanilla: `3_game/gui/hints/uihintpanel.c:85-90`, y `m_DataPath` es `const` en `:14`, así que no se puede reasignar:
 
    ```
    override protected void LoadContentList()
@@ -168,7 +218,11 @@ Límite del gate, medido: el lint no detecta un identificador sin definir ni un 
 5. **Limpieza opcional.**
    - `scripts_client/2_GameLib/BattleRoyaleEnums.c:20`: el enum `BattleRoyaleMatchMakingState` ya no lo usa nadie.
    - `languagecore/stringtable.csv:6-9`: tampoco las filas `STR_BR_MM_MATCHMAKING`, `STR_BR_MM_LOGIN`, `STR_BR_MM_SEARCHING` y `STR_BR_MM_CONNECTING`.
-6. **LoadingMessages.json (UI-27).** Ningún script lo carga; solo existe la constante `DAYZBR_LOADING_MESSAGES_PATH` (`BattleRoyaleConstants.c:79`). Hay que cablearlo en `scripts_client/3_Game/Loading/` o borrarlo.
+6. **LoadingMessages.json (UI-27).** Ningún script lo carga; solo existe la constante `DAYZBR_LOADING_MESSAGES_PATH` (`BattleRoyaleConstants.c:79`). Hay que cablearlo en `scripts_client/3_Game/Loading/` (ahora de este carril, si se decide hacerlo) o borrarlo.
+7. **Logs construidos antes del filtro (punto 3 de la ronda 1).** El mensaje se arma con `string.Format` antes de que `Debug`/`Trace` lo descarten:
+   - `scripts_client/5_Mission/GUI/HUD/BattleRoyaleHud.c:122` (`SetDistance`, cada frame fuera de zona; client-hud).
+   - `scripts_client/3_Game/BattleRoyale/RPC/BattleRoyaleRPC.c:277` (`NotificationMessage`, por RPC; client-network).
+   - Arreglo propuesto: envolverlos en `if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.DEBUG))`, o `TRACE` en el segundo. Desde este carril, `CheckLogLevel` cuesta una comparación tras la primera llamada.
 
 Nota de operación, no de código: el logo y el newsfeed que Expansion pinta en el menú de pausa se gobiernan con sus ajustes de servidor `InGameMenuLogoPath` y `UseNewsFeedInGameMenu` (`br-ref/expansion_scripts/5_Mission/DayZExpansion/GUI/InGameMenu.c:149-163`).
 
@@ -177,12 +231,15 @@ Nota de operación, no de código: el logo y el newsfeed que Expansion pinta en 
 - **Compilación con el motor.** No lancé DayZ, DayZServer ni DayZDiag (regla del carril), y el lint no es un compilador: lo probé arriba con dos mutantes.
 - **Nada probado en el juego:**
   - que el carrusel no se vea y no quede huérfano;
-  - que Play abra el navegador o conecte con `-connect`;
+  - que Play abra el navegador;
   - el arranque directo con `-connect` desde el launcher o Steam;
   - el botón de feedback oculto y cómo se recoloca la lista del menú de pausa;
   - la pantalla de carga de Chernarus.
+- **Pantalla de carga al arrancar.**
+  - Que el NULL pointer y las dos líneas de RESOURCES desaparezcan del RPT: las de RESOURCES deberían salir una vez por arranque.
+  - Qué devuelve `GetWorldName` dentro del constructor de `DayZGame`.
+  - Que no aparezca un parpadeo o un fondo distinto con la máscara quitada en el constructor y no en `Show`.
 - **Primera lectura de `BRLogLevel`.** Que en la primera llamada de log del servidor ya refleje serverDZ.cfg.
-- **`-connect=ip:puerto`** en un solo parámetro.
 - **Imágenes `br_loading_1..6.edds`.** No las abrí.
 - **`creditsJson` del CfgMods.** No sé cómo lo usa el motor: el `CreditsLoader` vanilla solo lee `scripts/data/credits.json` (`3_game/gui/credits/creditsloader.c:3`). Mantuve el formato de `JsonDataCredits`, `JsonDataCreditsDepartment` y `JsonDataCreditsSection` (`3_game/gui/credits/jsondatacredits*.c`).
 - **hints.json y LoadingMessages.json.** No tienen efecto hasta que se resuelvan los cross-lane 3 y 6.

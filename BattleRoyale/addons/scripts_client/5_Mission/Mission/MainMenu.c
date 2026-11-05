@@ -168,21 +168,9 @@ modded class MainMenu
 		super.ShowDlcFrame(false);
 	}
 
-	// Connects to the server given with -connect, otherwise opens the server browser
+	// Always opens the server browser; a -connect target is joined once at startup by DayZGame.ConnectLaunch
 	override void Play()
 	{
-		string address;
-		if (GetCLIParam("connect", address) && address != "")
-		{
-			string port;
-			string password;
-			GetCLIParam("port", port);
-			GetCLIParam("password", password);
-
-			g_Game.ConnectFromServerBrowser(address, port.ToInt(), password);
-			return;
-		}
-
 		OpenMenuServerBrowser();
 	}
 
