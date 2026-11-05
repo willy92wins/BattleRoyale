@@ -62,15 +62,18 @@
     Extra command line parameters for DayZServer_x64.exe.
 
 .EXAMPLE
-    .\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -Mod '@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@Community-Online-Tools;@BattleRoyale'
+    .\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@Community-Online-Tools;@BattleRoyale'
 
 .EXAMPLE
-    .\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -Mod '@CF;@Dabs Framework' -WhatIf
+    .\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Dabs Framework' -WhatIf
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Mandatory = $true)]
     [string]$ServerRoot,
+    [Parameter(Mandatory = $true)]
+    [ValidateRange(0, 2147483647)]
+    [int]$InstanceId,
     [string]$Mission = 'dayzOffline.chernarusplus',
     [string]$Config = 'serverDZ.cfg',
     [string]$Profiles = 'profiles',
@@ -302,16 +305,18 @@ if ($templateMatches[0].Groups[1].Value -ne $Mission)
     throw "$configPath loads mission '$($templateMatches[0].Groups[1].Value)', not '$Mission': fix -Mission or template="
 }
 
-$instanceMatches = [regex]::Matches($activeConfig, '(?<![A-Za-z0-9_])instanceId\s*=\s*([^;]*);', 'IgnoreCase')
+# The storage folder comes from the explicit -InstanceId; the cfg only has to agree with it.
+# The match is anchored to the start of a line, so text inside a quoted value cannot satisfy it.
+$instanceMatches = [regex]::Matches($activeConfig, '(?im)^[ 	]*instanceId[ 	]*=[ 	]*(-?\d+)[ 	]*;')
 if ($instanceMatches.Count -ne 1)
 {
-    throw "$configPath has $($instanceMatches.Count) active instanceId= assignments, expected exactly one: the world storage folder is named after it"
+    throw "$configPath has $($instanceMatches.Count) line-start instanceId= assignments, expected exactly one equal to -InstanceId $InstanceId"
 }
-$instanceId = $instanceMatches[0].Groups[1].Value.Trim()
-if ($instanceId -notmatch '^-?\d+$')
+if ([int]$instanceMatches[0].Groups[1].Value -ne $InstanceId)
 {
-    throw "instanceId in $configPath is '$instanceId', not an integer"
+    throw "instanceId in $configPath is $($instanceMatches[0].Groups[1].Value), but -InstanceId is ${InstanceId}: fix one of them"
 }
+$instanceId = $InstanceId
 $storageName = 'storage_' + $instanceId
 $storageDir = Join-Path $missionDir $storageName
 $previousPattern = '^' + [regex]::Escape($storageName) + '\.prev-(\d{8}-\d{6})(?:-(\d+))?$'
@@ -398,33 +403,42 @@ function Move-WorldStorage([string]$MissionPhysical)
     {
         Rename-Item -LiteralPath $storageDir -NewName $newName
         Write-Log "Moved world storage to $(Join-Path $missionDir $newName)"
+        $script:LastMovedStorage = $newName
     }
 }
 
 function Remove-OldWorldStorage([string]$MissionPhysical)
 {
+    # The copy made by this restart is never a deletion candidate, whatever the clock says.
     $previous = @()
     foreach ($folder in @(Get-ChildItem -LiteralPath $missionDir -Directory -Force))
     {
         $match = [regex]::Match($folder.Name, $previousPattern)
         if ($match.Success)
         {
+            # Any link among the copies stops the run, whether or not it is a deletion candidate
+            Assert-NotLink $folder.FullName
+        }
+        if ($match.Success -and $folder.Name -ne $script:LastMovedStorage)
+        {
             $order = 0
             if ($match.Groups[2].Success)
             {
                 $order = [int]$match.Groups[2].Value
             }
-            $previous += New-Object PSObject -Property @{ Name = $folder.Name; Stamp = $match.Groups[1].Value; Order = $order }
+            $previous += New-Object PSObject -Property @{ Name = $folder.Name; Stamp = $match.Groups[1].Value; Order = $order; Written = $folder.LastWriteTimeUtc }
         }
     }
 
-    $sorted = @($previous | Sort-Object -Property @{ Expression = 'Stamp'; Descending = $true }, @{ Expression = 'Order'; Descending = $true })
-    if ($sorted.Count -le $KeepPrevious)
+    $sorted = @($previous | Sort-Object -Property @{ Expression = 'Written'; Descending = $true }, @{ Expression = 'Stamp'; Descending = $true }, @{ Expression = 'Order'; Descending = $true })
+    $keepOthers = $KeepPrevious
+    if ($script:LastMovedStorage) { $keepOthers = $KeepPrevious - 1 }
+    if ($sorted.Count -le $keepOthers)
     {
         return
     }
 
-    foreach ($old in $sorted[$KeepPrevious..($sorted.Count - 1)])
+    foreach ($old in $sorted[$keepOthers..($sorted.Count - 1)])
     {
         $oldPath = Join-Path $missionDir $old.Name
         Assert-NotLink $oldPath
@@ -451,6 +465,7 @@ while ($true)
     $run++
     Assert-ServerStopped
     $missionPhysical = Assert-MissionLocation
+    $script:LastMovedStorage = $null
     Move-WorldStorage $missionPhysical
     Remove-OldWorldStorage $missionPhysical
 
