@@ -26,7 +26,10 @@ class BattleRoyaleServerData: BattleRoyaleDataBase
 	// Example: { "rcon_password": "mypassword" }
 	bool use_autolock = false;
 
-	string autolock_url = "https://api.vigrid.ovh/";  // Autolock API URL (mandatory if use_autolock is true)
+	string autolock_url = "";  // Autolock API URL. Empty disables the request even if use_autolock is true.
+
+	// Optional match stats. Empty disables the webhook. Never includes the server or RCON password.
+	string stats_webhook_url = "";
 	string autolock_ip = "";  // Server RCon IP (mandatory if use_autolock is true)
 	int autolock_port = 2305;  // Server RCon Port (mandatory if use_autolock is true)
 	string autolock_rcon_password = "";  // Server RCon Password (mandatory if use_autolock is true)

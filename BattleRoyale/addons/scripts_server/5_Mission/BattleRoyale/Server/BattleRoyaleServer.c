@@ -11,7 +11,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 
     string match_uuid;
 
-    protected ref Timer m_Timer;
+    protected ref map<string, ref Timer> m_LateJoinTimers;
 
     void BattleRoyaleServer()
     {
@@ -27,12 +27,14 @@ class BattleRoyaleServer: BattleRoyaleBase
 
     void ~BattleRoyaleServer()
     {
-        if ( m_Timer && m_Timer.IsRunning() )
+        if (m_LateJoinTimers)
         {
-            m_Timer.Stop();
+            foreach (string steamid, Timer kickTimer : m_LateJoinTimers)
+            {
+                if (kickTimer && kickTimer.IsRunning())
+                    kickTimer.Stop();
+            }
         }
-
-        delete m_Timer;
     }
 
     void Init()
@@ -41,7 +43,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         BattleRoyaleUtils.Trace("BattleRoyaleServer() Init()");
 #ifdef VPPADMINTOOLS
-        GetPermissionManager().AddPermissionType({ "MenuBattleRoyaleManager" });
+        GetPermissionManager().AddPermissionType({ "MenuBattleRoyaleManager", "BattleRoyale:Next", "BattleRoyale:Pause", "BattleRoyale:Resume", "BattleRoyale:SpawnAirdrop" });
 #endif
 
         BattleRoyaleConfig config_data = BattleRoyaleConfig.GetConfig();
@@ -55,29 +57,21 @@ class BattleRoyaleServer: BattleRoyaleBase
 
 		if ( m_ServerData.enable_vigrid_api )
 		{
-			BattleRoyaleUtils.Trace("Server password: " + m_ServerData.server_password);
+			BattleRoyaleUtils.Trace("Requesting match uuid from the Vigrid API");
 			CreateMatchWebhook createMatchWebhook = new CreateMatchWebhook( m_ServerData.webhook_jwt_token, m_ServerData.server_password );
 			match_uuid = createMatchWebhook.getMatchUUID();
 
 			if ( match_uuid.Length() != 36 )
 			{
-				if( m_ServerData.force_match_uuid )
-				{
-					BattleRoyaleUtils.LogMessage("Erreur getting match uuid. Restarting. Got: " + match_uuid);
-					GetGame().RequestExit(0);
-				}
-				else
-				{
-					match_uuid = "";
-					BattleRoyaleUtils.LogMessage("Erreur getting match uuid. Got: " + match_uuid);
-				}
+				match_uuid = "";
+				BattleRoyaleUtils.LogMessage("Failed to get match uuid. Continuing without one.");
 			}
 			BattleRoyaleUtils.Trace("Match UUID: " + match_uuid);
         } else {
         	match_uuid = "disabled";  // Set a string to disable the ingame error message if no uuid is set
         }
 
-        m_Timer = new Timer;
+        m_LateJoinTimers = new map<string, ref Timer>;
 
         //load config (this may error because GetBattleRoyale would return false)
         BattleRoyaleGameData m_GameData = config_data.GetGameData();
@@ -221,6 +215,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 					i_CurrentStateIndex = next_index;//move us to the next state
 					BattleRoyaleUtils.Trace("[State Machine] Entering State `" + GetCurrentState().GetName() + "`");
 					GetCurrentState().Activate(); //activate new state
+					NotifyStatsWebhook(GetCurrentState());
 				}
 				else
 				{
@@ -275,7 +270,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 			}
 
 			Error("PLAYER CONNECTED DURING NON-DEBUG ZONE STATE!");
-			m_Timer.Run( 30.0, this, "Disconnect", new Param1<PlayerIdentity>( player.GetIdentity() ), false);
+			ScheduleLateJoinKick(player.GetIdentity());
 
             return;
         }
@@ -286,13 +281,68 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         GetCurrentState().AddPlayer(player);
 
+        if (player.GetIdentity())
+            GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetMatchPhase", new Param2<int, int>(EBRMatchPhase.LOBBY, -1), true, player.GetIdentity());
+
         if( match_uuid == "" )
         	GetCurrentState().MessagePlayerUntranslated( player, "STR_BR_MM_ERROR_REGISTERING_MATCH");
+    }
+
+    void ScheduleLateJoinKick(PlayerIdentity identity)
+    {
+        if (!identity)
+            return;
+
+        string steamid = identity.GetPlainId();
+        if (m_LateJoinTimers && m_LateJoinTimers.Contains(steamid))
+        {
+            Timer existing = m_LateJoinTimers.Get(steamid);
+            if (existing && existing.IsRunning())
+                existing.Stop();
+        }
+
+        Timer kickTimer = new Timer;
+        kickTimer.Run(30.0, this, "Disconnect", new Param1<PlayerIdentity>(identity), false);
+        m_LateJoinTimers.Set(steamid, kickTimer);
     }
 
     void Disconnect(PlayerIdentity identity)
     {
         GetGame().DisconnectPlayer( identity ); //can't directly call disconnectplayer with timer, so we use this method
+    }
+
+    protected void NotifyStatsWebhook(BattleRoyaleState state)
+    {
+        if (!state)
+            return;
+
+        BattleRoyaleServerData serverData = BattleRoyaleConfig.GetConfig().GetServerData();
+        if (!serverData || serverData.stats_webhook_url == "")
+            return;
+
+        string stateName = state.GetName();
+        if (stateName == "Start Match State")
+        {
+            int players = 0;
+            if (state.GetPlayers())
+                players = state.GetPlayers().Count();
+            BRStatsWebhook.Send(serverData.stats_webhook_url, "match_start", players, "");
+        }
+        else if (stateName == "Win State")
+        {
+            string winnerName = "";
+            ref array<PlayerBase> winners = state.GetPlayers();
+            if (winners)
+            {
+                for (int i = 0; i < winners.Count(); i++)
+                {
+                    PlayerBase winner = winners[i];
+                    if (winner && winner.GetIdentity())
+                        winnerName = winner.GetIdentity().GetName();
+                }
+            }
+            BRStatsWebhook.Send(serverData.stats_webhook_url, "winner", 0, winnerName);
+        }
     }
 
     void OnPlayerDisconnect(PlayerBase player, PlayerIdentity identity)
@@ -435,19 +485,42 @@ class BattleRoyaleServer: BattleRoyaleBase
         return -1;
     }
 
+    protected PlayerBase ResolveSenderPlayer(PlayerIdentity sender, Object target)
+    {
+        if (!sender)
+        {
+            BattleRoyaleUtils.Warn("RPC rejected: null sender");
+            return null;
+        }
+
+        string steamid = sender.GetPlainId();
+        PlayerBase player = PlayerBase.Cast(sender.GetPlayer());
+        if (!player)
+        {
+            BattleRoyaleUtils.Warn("RPC rejected: sender has no player, steamid=" + steamid);
+            return null;
+        }
+
+        if (target != player)
+        {
+            BattleRoyaleUtils.Warn("RPC rejected: target is not the sender, steamid=" + steamid);
+            return null;
+        }
+
+        return player;
+    }
+
     void PlayerReadyUp(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
     {
         Param1< bool > data;
         if( !ctx.Read( data ) ) return;
 
-        if(!target) return;
-
-        PlayerBase targetBase = PlayerBase.Cast(target);
-
-        if(!targetBase) return;
-
         if(type == CallType.Server)
         {
+            PlayerBase targetBase = ResolveSenderPlayer(sender, target);
+            if (!targetBase)
+                return;
+
             BattleRoyaleDebug m_DebugStateObj;
             if(!Class.CastTo(m_DebugStateObj, GetCurrentState())) //this ensures we can only ready up during the debug state
                 return;
@@ -472,14 +545,12 @@ class BattleRoyaleServer: BattleRoyaleBase
 
     void PlayerUnstuck(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
     {
-		if(!target) return;
-
-		PlayerBase targetBase = PlayerBase.Cast(target);
-
-		if(!targetBase) return;
-
 		if(type == CallType.Server)
 		{
+			PlayerBase targetBase = ResolveSenderPlayer(sender, target);
+			if (!targetBase)
+				return;
+
 			BattleRoyaleStartMatch m_StartMatchStateObj;
 			if(!Class.CastTo(m_StartMatchStateObj, GetCurrentState()))
 				return;
@@ -537,16 +608,13 @@ class BattleRoyaleServer: BattleRoyaleBase
     {
         BattleRoyaleUtils.Trace("BattleRoyaleManager NextState");
 #ifdef SERVER
-        BattleRoyaleServer m_BrServer;
-        if(Class.CastTo( m_BrServer, GetBR()))
-        {
-            BattleRoyaleUtils.Trace("[DayZBR COT] State Machine Skipping!");
-            m_BrServer.GetCurrentState().Deactivate();// super.IsComplete() will return TRUE when this is run
-        }
-        else
-        {
-            Error("Failed to cast GetBR() to BattleRoyaleServer");
-        }
+        if (type != CallType.Server)
+            return;
+
+        if (!BRAdminAuthorizer.IsAllowed(sender, "Next"))
+            return;
+
+        BRAdminController.Next();
 #endif
     }
 }
