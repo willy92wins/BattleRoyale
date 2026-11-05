@@ -36,26 +36,7 @@ class BattleRoyaleUtils: Managed
         		msg = hour.ToStringLen(2) + ":" + minute.ToStringLen(2) + ":" + second.ToStringLen(2) + " [DayZ-BattleRoyale][" + level + "] " + message;
 	        	PrintFormat("%1:%2:%3 [DayZ-BattleRoyale][%4] %5", hour.ToStringLen(2), minute.ToStringLen(2), second.ToStringLen(2), level, message);
             }
-
-			string chat_color = "default";
-			if (level == WARN) {
-				chat_color = "colorFriendly";
-			} else if (level == INFO) {
-				chat_color = "colorStatusChannel";
-			} else if (level == DEBUG) {
-				chat_color = "colorAction";
-			} else if (level == TRACE) {
-				chat_color = "colorImportant";
-			}
-
-#ifdef SERVER
-#ifdef DIAG
-			GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "ChatLog", new Param2<string, string>(msg, chat_color), true);
-#endif
-#else
-			if ( GetGame() )
-				GetGame().Chat("C:" + msg, chat_color);
-#endif
+            // Logs go to the script log only: they are not echoed to the in-game chat
         }
     }
 
