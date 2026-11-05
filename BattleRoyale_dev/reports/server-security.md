@@ -57,6 +57,28 @@ Los 2 errores de `scripts_server` siguen siendo `ES-OVERRIDE-PARAM-NAME-MISMATCH
 ## CROSS-LANE REQUESTS
 Ninguna.
 
+## Ronda 1 de correcciones
+
+### D1
+`3_BattleRoyaleSpawnSelection.c:263` llama a `ContainsPlayer` (`0_BattleRoyaleState.c:128`) antes del rate limit, del mapa de calor y de `SetSpawnPos`. Quien no está en el estado no escribe datos.
+Verificado por lectura. No se simuló un late joiner.
+
+### D3
+El rechazo de frecuencia avisa como máximo cada 10 s por steamid (`WarnSpawnRateLimit`, `3_BattleRoyaleSpawnSelection.c:215`). `IsAllowed` avisa como máximo cada 10 s por steamid y acción (`BRAdminAuthorizer.c:89`, `ShouldLogDeny`). El rechazo sigue en cada paquete.
+Verificado por lectura. No se midió un flood.
+
+### D4
+`ScheduleLateJoinKick` quita la entrada al cancelar el timer anterior (`BattleRoyaleServer.c:304`). `Disconnect` la quita al ejecutarse (`:315`). El destructor hace `Clear` tras parar los timers.
+Verificado por lectura. No se disparó un timer.
+
+### D5
+El UUID inválido usa `BattleRoyaleUtils.Warn` (`BattleRoyaleServer.c:68`), no `LogMessage`.
+Verificado por lectura del diff.
+
+### P1
+La exención de expulsión mantiene `admins_steamid64` y añade `BRAdminAuthorizer.IsOperator` (`BattleRoyaleServer.c:268`). `IsOperator` (`BRAdminAuthorizer.c:27`) es verdadero si COT o VPP conceden Next, Pause, Resume o SpawnAirdrop, y no escribe en el log. La lista de steamid del authorizer de RPC no cambia: sigue siendo el respaldo cuando no hay COT ni VPP.
+Verificado por lectura. No se conectó un admin COT ni VPP.
+
 ## LO QUE NO PUDE VERIFICAR
 - Ningún RPC, permiso COT/VPP, kick ni webhook se ejecutó en DayZ.
 - Un perfil ya escrito con `autolock_url` apuntando a api.vigrid.ovh sigue enviando si `use_autolock` está activo; solo cambia el default de la clase.

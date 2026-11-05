@@ -34,6 +34,7 @@ class BattleRoyaleServer: BattleRoyaleBase
                 if (kickTimer && kickTimer.IsRunning())
                     kickTimer.Stop();
             }
+            m_LateJoinTimers.Clear();
         }
     }
 
@@ -64,7 +65,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 			if ( match_uuid.Length() != 36 )
 			{
 				match_uuid = "";
-				BattleRoyaleUtils.LogMessage("Failed to get match uuid. Continuing without one.");
+				BattleRoyaleUtils.Warn("Failed to get match uuid. Continuing without one.");
 			}
 			BattleRoyaleUtils.Trace("Match UUID: " + match_uuid);
         } else {
@@ -263,7 +264,8 @@ class BattleRoyaleServer: BattleRoyaleBase
 			BattleRoyaleGameData m_GameSettings = BattleRoyaleConfig.GetConfig().GetGameData();
 			ref array<string> a_AdminsList = m_GameSettings.admins_steamid64;
 
-			if ( a_AdminsList.Find( player.GetIdentity().GetPlainId() ) != -1 )
+			bool listedAdmin = a_AdminsList && a_AdminsList.Find( player.GetIdentity().GetPlainId() ) != -1;
+			if ( listedAdmin || BRAdminAuthorizer.IsOperator( player.GetIdentity() ) )
 			{
 				BattleRoyaleUtils.Info("Admin " + player.GetIdentity().GetName() + " has connected during non-debug state, allowing connection.");
 				return; //allow admins to connect during non-debug state
@@ -299,6 +301,7 @@ class BattleRoyaleServer: BattleRoyaleBase
             Timer existing = m_LateJoinTimers.Get(steamid);
             if (existing && existing.IsRunning())
                 existing.Stop();
+            m_LateJoinTimers.Remove(steamid);
         }
 
         Timer kickTimer = new Timer;
@@ -308,6 +311,9 @@ class BattleRoyaleServer: BattleRoyaleBase
 
     void Disconnect(PlayerIdentity identity)
     {
+        if (identity && m_LateJoinTimers)
+            m_LateJoinTimers.Remove(identity.GetPlainId());
+
         GetGame().DisconnectPlayer( identity ); //can't directly call disconnectplayer with timer, so we use this method
     }
 

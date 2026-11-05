@@ -19,6 +19,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 	protected float m_ExtraSpawnRadius;
 	protected bool m_HeatMapDirty;
 	protected ref map<string, int> m_LastSpawnAcceptMs;
+	protected ref map<string, int> m_RateWarnMs;
 
     void BattleRoyaleSpawnSelection()
     {
@@ -54,6 +55,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 
 		spawnpoints = new map<string, vector>();
 		m_LastSpawnAcceptMs = new map<string, int>();
+		m_RateWarnMs = new map<string, int>();
     }
 
     override void Activate()
@@ -210,6 +212,20 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 		return (dx * dx) + (dz * dz) <= (limit * limit);
 	}
 
+	protected void WarnSpawnRateLimit(string steamid)
+	{
+		int nowMs = GetGame().GetTime();
+		if (m_RateWarnMs.Contains(steamid))
+		{
+			int elapsed = nowMs - m_RateWarnMs.Get(steamid);
+			if (elapsed >= 0 && elapsed < 10000)
+				return;
+		}
+
+		m_RateWarnMs.Set(steamid, nowMs);
+		BattleRoyaleUtils.Warn("Spawn selection rate limited, steamid=" + steamid);
+	}
+
 	void BroadcastHeatMap()
 	{
 		if (!m_HeatMapDirty)
@@ -244,11 +260,14 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 			PlayerBase pbTarget = ResolveSpawnSender(sender, target);
 			if(pbTarget)
 			{
+				if (!ContainsPlayer(pbTarget))
+					return;
+
 				string steamid = sender.GetPlainId();
 				int nowMs = GetGame().GetTime();
 				if (m_LastSpawnAcceptMs.Contains(steamid) && (nowMs - m_LastSpawnAcceptMs.Get(steamid)) < 500)
 				{
-					BattleRoyaleUtils.Warn("Spawn selection rate limited, steamid=" + steamid);
+					WarnSpawnRateLimit(steamid);
 					return;
 				}
 
