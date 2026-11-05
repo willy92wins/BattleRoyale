@@ -3,11 +3,9 @@ class BattleRoyalePOIsData: BattleRoyaleDataBase
 {
 	int version = 1;  // Config version
 
-	// Allow to override the position of the POIs
-	ref array<ref BattleRoyaleOverridePOIPosition> override_poi_positions = {
-		new BattleRoyaleOverridePOIPosition("Settlement_Chernogorsk", { 100, 200 }),
-		new BattleRoyaleOverridePOIPosition("Settlement_Novodmitrovsk", { 300, 400 })
-	};
+	// Allow to override the position of the POIs, by CfgWorlds Names class name
+	// Example entry: { "poi_name": "Settlement_Chernogorsk", "new_position": [ 6780, 2320 ] } ([ x, z ] in meters)
+	ref array<ref BattleRoyaleOverridePOIPosition> override_poi_positions = {};
 
 	[NonSerialized()]
 	ref map<string, vector> m_OverrideSpawnPositions;
@@ -54,23 +52,53 @@ class BattleRoyalePOIsData: BattleRoyaleDataBase
 			ErrorEx(errorMessage);
 	}
 
+	override void Validate()
+	{
+		if (!override_poi_positions)
+		{
+			override_poi_positions = new array<ref BattleRoyaleOverridePOIPosition>;
+			return;
+		}
+
+		string entry_name;
+		BattleRoyaleOverridePOIPosition entry;
+		for (int i = override_poi_positions.Count() - 1; i >= 0; i--)
+		{
+			entry = override_poi_positions[i];
+			if (entry && entry.poi_name != "" && entry.new_position && entry.new_position.Count() >= 2)
+				continue;
+
+			entry_name = "(empty)";
+			if (entry)
+				entry_name = "\"" + entry.poi_name + "\"";
+
+			Error("[DayZ-BattleRoyale] pois_settings.json: override_poi_positions entry " + entry_name + " needs a poi_name and a [ x, z ] new_position, entry ignored");
+			override_poi_positions.RemoveOrdered(i);
+		}
+	}
+
 	vector GetOverrodePosition(string poi_name)
 	{
+		// Built once from the values BattleRoyaleConfig already loaded (profile, then mission override)
 		if( !m_OverrideSpawnPositions )
 		{
-			Load();
-
 			BattleRoyaleUtils.Trace("Load m_OverrideSpawnPositions!");
 			m_OverrideSpawnPositions = new map<string, vector>();
 
-			foreach(BattleRoyaleOverridePOIPosition position: override_poi_positions)
+			if( override_poi_positions )
 			{
-				BattleRoyaleUtils.Trace(position.poi_name + " " + position.new_position);
-				vector temp_pos;
-				temp_pos[0] = position.new_position[0];
-				temp_pos[2] = position.new_position[1];
-				temp_pos[1] = GetGame().SurfaceY( temp_pos[0], temp_pos[2] );
-				m_OverrideSpawnPositions.Set( position.poi_name, temp_pos );
+				foreach(BattleRoyaleOverridePOIPosition position: override_poi_positions)
+				{
+					if( !position || !position.new_position || position.new_position.Count() < 2 )
+						continue;
+
+					BattleRoyaleUtils.Trace(position.poi_name + " " + position.new_position);
+					vector temp_pos;
+					temp_pos[0] = position.new_position[0];
+					temp_pos[2] = position.new_position[1];
+					temp_pos[1] = GetGame().SurfaceY( temp_pos[0], temp_pos[2] );
+					m_OverrideSpawnPositions.Set( position.poi_name, temp_pos );
+				}
 			}
 		}
 
@@ -87,7 +115,7 @@ class BattleRoyalePOIsData: BattleRoyaleDataBase
 class BattleRoyaleOverridePOIPosition
 {
     string poi_name;
-    array<int> new_position;
+    ref array<int> new_position;  // [ x, z ]
 
     void BattleRoyaleOverridePOIPosition(string in_poi_name, array<int> in_new_position)
 	{

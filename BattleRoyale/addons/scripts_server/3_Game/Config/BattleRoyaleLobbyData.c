@@ -83,19 +83,55 @@ class BattleRoyaleLobbyData: BattleRoyaleDataBase
 	{
 		if (version < 2)
 		{
-			// Add default items to the lobby items
-			player_lobby_items.Insert("TShirt_DBR");
-			player_lobby_items.Insert("Jeans_Black");
-			player_lobby_items.Insert("Sneakers_Black");
-			player_lobby_items.Insert("Apple");
-			player_lobby_items.Insert("Zucchini");
-			player_lobby_items.Insert("Apple");
+			// A version 1 file has no lobby item lists, so the declared defaults are already loaded
+			// Only fill the lists the file left empty, otherwise every item would be given twice
+			if (!player_lobby_items)
+				player_lobby_items = new array<string>;
 
-			// Set default shortcut to the Zucchini
-			player_lobby_items_shortcut.Insert(4);  // Zucchini
+			if (!player_lobby_items_shortcut)
+				player_lobby_items_shortcut = new array<int>;
+
+			if (player_lobby_items.Count() == 0)
+			{
+				// Add default items to the lobby items
+				player_lobby_items.Insert("TShirt_DBR");
+				player_lobby_items.Insert("Jeans_Black");
+				player_lobby_items.Insert("Sneakers_Black");
+				player_lobby_items.Insert("Apple");
+				player_lobby_items.Insert("Zucchini");
+				player_lobby_items.Insert("Apple");
+
+				// Set default shortcut to the Zucchini
+				if (player_lobby_items_shortcut.Count() == 0)
+					player_lobby_items_shortcut.Insert(4);  // Zucchini
+			}
 
 			version = 2;
 			Save();
+		}
+	}
+
+	override void Validate()
+	{
+		BattleRoyaleLobbyData defaults = new BattleRoyaleLobbyData;
+
+		if (min_waiting_time < 0)
+		{
+			LogInvalidSetting("lobby_settings.json", "min_waiting_time", min_waiting_time.ToString(), "must not be negative");
+			min_waiting_time = defaults.min_waiting_time;
+		}
+
+		if (time_to_start_match_seconds < 1)
+		{
+			LogInvalidSetting("lobby_settings.json", "time_to_start_match_seconds", time_to_start_match_seconds.ToString(), "must be positive");
+			time_to_start_match_seconds = defaults.time_to_start_match_seconds;
+		}
+
+		// Divides the autostart countdown
+		if (autostart_delay <= 0)
+		{
+			LogInvalidSetting("lobby_settings.json", "autostart_delay", autostart_delay.ToString(), "must be positive");
+			autostart_delay = defaults.autostart_delay;
 		}
 	}
 };
