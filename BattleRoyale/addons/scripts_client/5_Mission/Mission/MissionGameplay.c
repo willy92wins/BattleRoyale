@@ -108,13 +108,15 @@ modded class MissionGameplay
 		}
 	}
 
-	void UpdateKillCount(int count)
+	//! Returns false while the HUD does not exist yet, so the caller can try again on the next update
+	bool UpdateKillCount(int count)
 	{
 		if (!m_BattleRoyaleHud)
-			return;
+			return false;
 
 		m_BattleRoyaleHud.ShowKillCount( count > 0 );
 		m_BattleRoyaleHud.SetKillCount( count );
+		return true;
 	}
 
 	void HideCountdownTimer()
@@ -134,14 +136,16 @@ modded class MissionGameplay
 		m_BattleRoyaleHud.SetCountdown( seconds );
 	}
 
-	void UpdatePlayerCount(int nb_players, int nb_groups)
+	//! Returns false while the HUD does not exist yet, so the caller can try again on the next update
+	bool UpdatePlayerCount(int nb_players, int nb_groups)
 	{
 		if (!m_BattleRoyaleHud)
-			return;
+			return false;
 
 		//BattleRoyaleUtils.Trace(string.Format("UpdatePlayerCount: %1 %2", nb_players, nb_groups));
 		m_BattleRoyaleHud.ShowCount( true );
 		m_BattleRoyaleHud.SetCount( nb_players, nb_groups );
+		return true;
 	}
 
 	void UpdateZoneDistance(bool isInsideZone, float distExt, float distInt, float angle)

@@ -82,18 +82,21 @@ class BattleRoyaleClient: BattleRoyaleBase
 		BattleRoyaleRPC br_rpc = BattleRoyaleRPC.GetInstance();
 
 		// Update player and group remaining count
+		// A value is only marked as shown once the HUD exists: one received before it would be lost
 		if ( br_previous_nb_players != br_rpc.nb_players || br_previous_nb_groups != br_rpc.nb_groups )
 		{
-			PlayerCountChanged( br_rpc.nb_players, br_rpc.nb_groups );
-			br_previous_nb_players = br_rpc.nb_players;
-			br_previous_nb_groups = br_rpc.nb_groups;
+			if ( gameplay.UpdatePlayerCount( br_rpc.nb_players, br_rpc.nb_groups ) )
+			{
+				br_previous_nb_players = br_rpc.nb_players;
+				br_previous_nb_groups = br_rpc.nb_groups;
+			}
 		}
 
 		// Update player kill count
 		if ( br_previous_kills != br_rpc.player_kills )
 		{
-			gameplay.UpdateKillCount( br_rpc.player_kills );
-			br_previous_kills = br_rpc.player_kills;
+			if ( gameplay.UpdateKillCount( br_rpc.player_kills ) )
+				br_previous_kills = br_rpc.player_kills;
 		}
 
 		// Update match start state
