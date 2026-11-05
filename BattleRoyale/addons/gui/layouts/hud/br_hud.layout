@@ -291,6 +291,71 @@ FrameWidgetClass BattleRoyaleHudFrame {
       }
      }
     }
+    PanelWidgetClass PhasePanel {
+     visible 0
+     ignorepointer 1
+     position 0 0
+     size 640 40
+     halign center_ref
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      TextWidgetClass PhaseText {
+       ignorepointer 1
+       position 0 0
+       size 1 1
+       halign center_ref
+       valign center_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 0
+       vexactsize 0
+       style Bold
+       text "#STR_BR_PHASE_LOBBY"
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" center
+       "text valign" center
+      }
+     }
+    }
+    PanelWidgetClass ZoneDamagePanel {
+     visible 0
+     ignorepointer 1
+     position 0 44
+     size 640 32
+     halign center_ref
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      TextWidgetClass ZoneDamageText {
+       ignorepointer 1
+       color 0.9059 0.298 0.2353 1
+       position 0 0
+       size 1 1
+       halign center_ref
+       valign center_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 0
+       vexactsize 0
+       style Bold
+       text "#STR_BR_HUD_ZONE_DAMAGE"
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" center
+       "text valign" center
+      }
+     }
+    }
    }
   }
  }

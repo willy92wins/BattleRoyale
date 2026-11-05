@@ -20,6 +20,14 @@ class BattleRoyaleMapMarkerZone: ExpansionMapWidgetBase
 #endif
     protected ZoneType e_ZoneType;
 
+    // What the canvas currently shows; Update only redraws when the circle changes on screen
+    protected bool b_RedrawNeeded = true;
+    protected vector v_DrawnPosition;
+    protected float f_DrawnRadiusA;
+    protected float f_DrawnRadiusB;
+    protected float f_DrawnCanvasWidth;
+    protected float f_DrawnCanvasHeight;
+
     void BattleRoyaleMapMarkerZone( Widget parent, MapWidget mapWidget, bool autoInit = true )
     {
         BattleRoyaleUtils.Trace("BattleRoyaleMapMarkerZone::Constructor()");
@@ -71,9 +79,11 @@ class BattleRoyaleMapMarkerZone: ExpansionMapWidgetBase
     {
         super.Update(pDt);
 
-        Show();
+        if (!m_BRCanvas)
+            return;
 
-        m_BRCanvas.Clear();
+        if (!GetLayoutRoot().IsVisible())
+            Show();
 
         vector m_edgePos_A = GetPosition();
         m_edgePos_A[0] = m_edgePos_A[0] + f_SizeA;
@@ -103,6 +113,10 @@ class BattleRoyaleMapMarkerZone: ExpansionMapWidgetBase
 
             m_BRCanvas.SetSize(new_size,new_size);
 
+            m_BRCanvas.GetSize(canvas_width, canvas_height);
+            center_x = canvas_width / 2.0;
+            center_y = canvas_height / 2.0;
+
 #ifdef BR_TRACE_ENABLED
             Print("Resize Marker");
             Print(canvas_width);
@@ -121,9 +135,24 @@ class BattleRoyaleMapMarkerZone: ExpansionMapWidgetBase
 
         if(f_Thickness <= 0)
         {
+            m_BRCanvas.Clear();
+            b_RedrawNeeded = true;
             Error("Thickness for marker invalid!");
             return;
         }
+
+        // Redraw only when the position, the size, the map zoom or the style changed
+        if (!b_RedrawNeeded && GetPosition() == v_DrawnPosition && Math.AbsFloat(distance_A - f_DrawnRadiusA) < 0.5 && Math.AbsFloat(distance_B - f_DrawnRadiusB) < 0.5 && canvas_width == f_DrawnCanvasWidth && canvas_height == f_DrawnCanvasHeight)
+            return;
+
+        b_RedrawNeeded = false;
+        v_DrawnPosition = GetPosition();
+        f_DrawnRadiusA = distance_A;
+        f_DrawnRadiusB = distance_B;
+        f_DrawnCanvasWidth = canvas_width;
+        f_DrawnCanvasHeight = canvas_height;
+
+        m_BRCanvas.Clear();
 
         if(e_ZoneType == ZoneType.Circle)
         {
@@ -141,13 +170,17 @@ class BattleRoyaleMapMarkerZone: ExpansionMapWidgetBase
 
     void RenderOval(float cx, float cy, float a, float b)
     {
-        for(int i = 0; i < 360;i++)
-        {
-            float x1 = cx + (a * Math.Cos(i*Math.DEG2RAD));
-            float y1 = cy + (b * Math.Sin(i*Math.DEG2RAD));
+        // 64 to 96 segments keep the error under a pixel up to a radius of about 1800 px
+        int segments = Math.Clamp(Math.Round(Math.Max(a, b) / 8), 64, 96);
+        float angleIncrement = 360.0 / segments;
 
-            float x2 = cx + (a * Math.Cos((i+1)*Math.DEG2RAD));
-            float y2 = cy + (b * Math.Sin((i+1)*Math.DEG2RAD));
+        for(int i = 0; i < segments;i++)
+        {
+            float x1 = cx + (a * Math.Cos(i*angleIncrement*Math.DEG2RAD));
+            float y1 = cy + (b * Math.Sin(i*angleIncrement*Math.DEG2RAD));
+
+            float x2 = cx + (a * Math.Cos((i+1)*angleIncrement*Math.DEG2RAD));
+            float y2 = cy + (b * Math.Sin((i+1)*angleIncrement*Math.DEG2RAD));
 
             m_BRCanvas.DrawLine(x1, y1, x2, y2, f_Thickness, i_Color);
 
@@ -263,6 +296,8 @@ class BattleRoyaleMapMarkerZone: ExpansionMapWidgetBase
 
     void SetZoneType( ZoneType type )
     {
+        if (e_ZoneType != type)
+            b_RedrawNeeded = true;
         e_ZoneType = type;
     }
 
@@ -278,6 +313,8 @@ class BattleRoyaleMapMarkerZone: ExpansionMapWidgetBase
 
     void SetColor(int color)
     {
+        if (i_Color != color)
+            b_RedrawNeeded = true;
         i_Color = color;
     }
 
@@ -288,6 +325,8 @@ class BattleRoyaleMapMarkerZone: ExpansionMapWidgetBase
 
     void SetSize_A(float value)
     {
+        if (f_SizeA != value)
+            b_RedrawNeeded = true;
         f_SizeA = value;
     }
 
@@ -298,6 +337,8 @@ class BattleRoyaleMapMarkerZone: ExpansionMapWidgetBase
 
     void SetSize_B(float value)
     {
+        if (f_SizeB != value)
+            b_RedrawNeeded = true;
         f_SizeB = value;
     }
 
@@ -308,6 +349,8 @@ class BattleRoyaleMapMarkerZone: ExpansionMapWidgetBase
 
     void SetThickness(float value)
     {
+        if (f_Thickness != value)
+            b_RedrawNeeded = true;
         f_Thickness = value;
     }
 

@@ -19,6 +19,9 @@ class BattleRoyaleRPC
 
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "NotificationMessage", this );
 
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetMatchPhase", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "KillFeedEvent", this );
+
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
 	}
 
@@ -53,6 +56,9 @@ class BattleRoyaleRPC
 		future_play_area_radius = 0.0;
 		top_position = 0;
 		winner_screen = false;
+		match_phase = -1;
+		match_phase_end_time = -1;
+		kill_feed_serial = 0;
 	}
 
 	// Set the number of players and groups
@@ -291,6 +297,94 @@ class BattleRoyaleRPC
 
 			ExpansionNotification(DAYZBR_MSG_TITLE, translated_message, DAYZBR_MSG_IMAGE, COLOR_EXPANSION_NOTIFICATION_INFO, data.param2).Create();
 		}
+	}
+
+	// Set the match phase (EBRMatchPhase) and the time left in it
+
+	int match_phase = -1;
+	int match_phase_end_time = -1; //!< GetGame().GetTime() at which the phase timer reaches zero, -1 if the server sent no timer
+
+	void SetMatchPhase(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param2<int, int> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ SETMATCHPHASE RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+		{
+			BattleRoyaleUtils.Trace(string.Format("SetMatchPhase: %1 %2", data.param1, data.param2));
+			match_phase = data.param1;
+			if ( data.param2 >= 0 )
+			{
+				match_phase_end_time = GetGame().GetTime() + ( data.param2 * 1000 );
+			}
+			else
+			{
+				match_phase_end_time = -1;
+			}
+		}
+	}
+
+	//! Seconds left in the current match phase, -1 if unknown
+	int GetMatchPhaseSecondsLeft()
+	{
+		if ( match_phase_end_time < 0 )
+			return -1;
+
+		float seconds_left = ( match_phase_end_time - GetGame().GetTime() ) / 1000.0;
+		if ( seconds_left <= 0 )
+			return 0;
+
+		return Math.Ceil( seconds_left );
+	}
+
+	// Kill feed, stored in a fixed ring buffer until the HUD reads it
+
+	static const int KILL_FEED_SIZE = 5;
+
+	int kill_feed_serial = 0; //!< number of KillFeedEvent received since Reset
+	protected string m_KillFeedKiller[KILL_FEED_SIZE];
+	protected string m_KillFeedVictim[KILL_FEED_SIZE];
+	protected string m_KillFeedWeapon[KILL_FEED_SIZE];
+	protected float m_KillFeedDistance[KILL_FEED_SIZE];
+	protected int m_KillFeedTime[KILL_FEED_SIZE];
+
+	void KillFeedEvent(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param4<string, string, string, float> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ KILLFEEDEVENT RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+		{
+			BattleRoyaleUtils.Trace(string.Format("KillFeedEvent: %1 %2 %3 %4", data.param1, data.param2, data.param3, data.param4));
+			int slot = kill_feed_serial % KILL_FEED_SIZE;
+			m_KillFeedKiller[slot] = data.param1;
+			m_KillFeedVictim[slot] = data.param2;
+			m_KillFeedWeapon[slot] = data.param3;
+			m_KillFeedDistance[slot] = data.param4;
+			m_KillFeedTime[slot] = GetGame().GetTime();
+			kill_feed_serial++;
+		}
+	}
+
+	//! Reads the kill feed event number 'serial' (0 based); false if it was never received or was already overwritten
+	bool GetKillFeedEvent(int serial, out string killer, out string victim, out string weapon, out float distance, out int time)
+	{
+		if ( serial < 0 || serial >= kill_feed_serial || serial < kill_feed_serial - KILL_FEED_SIZE )
+			return false;
+
+		int slot = serial % KILL_FEED_SIZE;
+		killer = m_KillFeedKiller[slot];
+		victim = m_KillFeedVictim[slot];
+		weapon = m_KillFeedWeapon[slot];
+		distance = m_KillFeedDistance[slot];
+		time = m_KillFeedTime[slot];
+		return true;
 	}
 }
 #endif
