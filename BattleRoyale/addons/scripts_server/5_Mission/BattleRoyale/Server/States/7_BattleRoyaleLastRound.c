@@ -87,7 +87,8 @@ class BattleRoyaleLastRound: BattleRoyaleState
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", new Param3<vector, float, bool>( "0 0 0", 0.0, false ), true);
 
         super.Activate();
-        BroadcastMatchPhase(EBRMatchPhase.LAST_ROUND, i_RoundTimeInSeconds);
+        // Seconds until the final zone locks (half the round), matching SetCountdownSeconds above.
+        BroadcastMatchPhase(EBRMatchPhase.LAST_ROUND, i_RoundTimeInSeconds / 2);
     }
 
     override void Deactivate()

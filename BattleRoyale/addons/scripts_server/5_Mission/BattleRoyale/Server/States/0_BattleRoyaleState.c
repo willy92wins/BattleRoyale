@@ -15,6 +15,7 @@ class BattleRoyaleState: Timeable
     bool hide_players_endgame = false;
     int m_CachedGroupsCount = -1;
     int m_CachedGroupsPlayers = -1;
+    float m_GroupsCountComputedAt = -1000;
 #endif
 
     static ref array<string> s_BadTeleportSurfaces;
@@ -389,8 +390,12 @@ class BattleRoyaleState: Timeable
 		if (m_Players.Count() == 0)
 			return 0;
 
-		// Recomputed only when the player count changes. IsComplete polls this every 0.1s.
-		if (m_CachedGroupsPlayers == m_Players.Count() && m_CachedGroupsCount >= 0)
+		// No cheap Carim membership event was found. While the state is active the
+		// count is recomputed at most once every 5 seconds. IsComplete polls this every 0.1s.
+		bool same_players = m_CachedGroupsPlayers == m_Players.Count() && m_CachedGroupsCount >= 0;
+		if (same_players && IsActive() && (GetGame().GetTickTime() - m_GroupsCountComputedAt) < 5.0)
+			return m_CachedGroupsCount;
+		if (same_players && !IsActive())
 			return m_CachedGroupsCount;
 
 		ref map<string, ref CarimSet> parties = MissionServer.Cast(GetGame().GetMission()).carimModelPartyParties.mutuals;
@@ -400,6 +405,7 @@ class BattleRoyaleState: Timeable
 		{
 			m_CachedGroupsPlayers = m_Players.Count();
 			m_CachedGroupsCount = m_Players.Count();
+			m_GroupsCountComputedAt = GetGame().GetTickTime();
 			return m_CachedGroupsCount;
 		}
 
@@ -450,6 +456,7 @@ class BattleRoyaleState: Timeable
 
 		m_CachedGroupsPlayers = m_Players.Count();
 		m_CachedGroupsCount = group_count;
+		m_GroupsCountComputedAt = GetGame().GetTickTime();
 		return m_CachedGroupsCount;
 	}
 
@@ -748,9 +755,32 @@ class BattleRoyaleState: Timeable
 				distance_m = vector.Distance(victim.GetPosition(), playerSource.GetPosition());
 			}
 
-			if (source_ai && killer_name != "")
+			string activator_id = "";
+			Grenade_Base grenade = Grenade_Base.Cast(source);
+			LandMineTrap mine = LandMineTrap.Cast(source);
+			if (grenade)
+				activator_id = grenade.GetActivatorId();
+			else if (mine)
+				activator_id = mine.GetActivatorId();
+
+			if (killer_name == "" && activator_id != "")
 			{
-				if (source.IsWeapon() || source.IsMeleeWeapon() || source.IsInherited(Grenade_Base) || source.IsInherited(LandMineTrap))
+				for (int i = 0; i < m_Players.Count(); i++)
+				{
+					PlayerBase activator = m_Players[i];
+					if (!activator || !activator.GetIdentity())
+						continue;
+					if (activator.GetIdentity().GetPlainId() != activator_id)
+						continue;
+					killer_name = activator.GetIdentity().GetName();
+					distance_m = vector.Distance(victim.GetPosition(), activator.GetPosition());
+					break;
+				}
+			}
+
+			if (source_ai)
+			{
+				if (source.IsWeapon() || source.IsMeleeWeapon() || grenade || mine)
 					weapon_name = source_ai.GetDisplayName();
 			}
 		}

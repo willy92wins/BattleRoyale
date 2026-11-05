@@ -87,12 +87,50 @@ extra_vehicle3ppdefaultfix PASS errors 0 warnings 0
 scripts_client FAIL errors 10 warnings 3
 scripts_server FAIL errors 2 warnings 12
 ```
-The two server errors are the known `RemovePlayer` / `UID` false positives (`1_BattleRoyaleDebug.c:169`, `4_BattleRoyalePrepare.c:787`). No new error.
+The two server errors are the known `RemovePlayer` / `UID` false positives (`1_BattleRoyaleDebug.c:169`, `4_BattleRoyalePrepare.c:892` after this round). No new error. The second lint run of this round printed the same 12 lines, still `scripts_server FAIL errors 2 warnings 12`.
 
 ## CROSS-LANE REQUESTS
 - Spawn selection `Activate` must send `SetMatchPhase` (`EBRMatchPhase.SPAWN_SELECTION`). File `3_BattleRoyaleSpawnSelection.c` is not this lane.
 - Client lane registers `SetMatchPhase` and `KillFeedEvent` and draws the zone-damage indicator that used to be `STR_BR_TAKING_DAMAGE`.
 - `BattleRoyaleServer.c` still polls `IsComplete` every 0.1 s (that is what used to recompute groups). No edit requested there; the count is cached in this lane.
+
+## Ronda 1 de correcciones
+
+Sobre `2c141d7`, revisión Codex en `br-runs/server-states/review/codex_review.md`.
+
+### D1
+`m_ProcessWatchdog` guarda el `ref Timer` que devuelve `AddTimer(..., false)` (`4_BattleRoyalePrepare.c`). `StopProcessWatchdog` lo para al terminar `ProcessPlayers` y en `Deactivate`. `Timeable.c:23` solo conserva timers en bucle; sin el miembro el `Timer` vanilla se destruía (`tools.c:228`, `:382`).
+Verificado por lectura. No verificado: que el callback siga vivo a los 120 s en el motor.
+
+### D2
+Si los 40 puntos aleatorios fallan, no se devuelve el último rechazado. `GetValidatedReserve` usa el centro de la primera zona a `SurfaceY`, o un anillo de 16 puntos, y solo si `IsAcceptedSpawn` pasa. Si la reserva también falla, el vector queda en cero y `Teleport` / `ResolveFinalSpawn` no llaman a `TeleportPlayer`.
+Verificado por lectura. No verificado en Chernarus.
+
+### D3
+El acierto de `m_SafeVillagePoints` asigna `village_pos` y sigue hasta `random_pos = village_pos`, igual que un punto recién validado. Ya no hace `break` antes de esa copia.
+Verificado por lectura del bucle.
+
+### D-SEC
+`IsAcceptedSpawn` exige estar en el mapa (`0..GetWorldSize`), dentro del primer círculo más `BattleRoyaleSpawnsData.extra_spawn_radius` (`BattleRoyaleSpawnsData.c:11`) y pasar `IsSafeForTeleport`. Lo usan la búsqueda de pueblo, la aleatoria, `GetRandomSafePosition`, el desplazamiento de grupo y `TeleportPlayer` antes de la juncture. Si el candidato final falla, `ResolveFinalSpawn` usa la reserva de D2.
+Verificado por lectura. No verificado el radio extra con un spawn real.
+
+### D4
+`BroadcastKillFeed` lee `GetActivatorId` de `Grenade_Base` (`Grenade_Base.c:6`) y `LandMineTrap` (`LandMineTrap.c:6`). Si el id coincide con un jugador aún en el estado, rellena el nombre y la distancia. El nombre de arma sale de `GetDisplayName` aunque no haya jugador.
+Verificado por lectura. No verificado: el activador ya no está en la lista de jugadores.
+
+### D5
+La pasada Carim suma `SleepPlayerBatch` una vez por miembro del grupo, no una vez por grupo.
+Verificado por lectura. Lint no define `Carim`.
+
+### D6
+No hay evento barato de pertenencia Carim en este repo. Con el estado activo, `GetGroupsCount` recalcula como mucho cada 5 s (`m_GroupsCountComputedAt`) aunque el número de jugadores no cambie. Fuera de activo sigue valiendo la caché por recuento.
+Verificado por lectura. No verificado con Carim cargado.
+
+### CountReached
+`2_BattleRoyaleCountReached.c` emite `SetMatchPhase` `LOBBY` con `i_TimeToStart` después de `super.Activate()` (que aún manda `LOBBY, -1`).
+
+### LastRound
+Los segundos de `SetMatchPhase` son `i_RoundTimeInSeconds / 2`: el tiempo hasta que la zona final se bloquea, el mismo plazo que `SetCountdownSeconds` y `m_FinalZoneLockTimer`. No es la duración entera de la ronda. División entera.
 
 ## LO QUE NO PUDE VERIFICAR
 - No DayZ, DayZServer or DayZDiag process, and no dayz-mcp.

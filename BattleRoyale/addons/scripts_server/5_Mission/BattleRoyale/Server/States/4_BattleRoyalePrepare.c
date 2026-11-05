@@ -23,6 +23,7 @@ class BattleRoyalePrepare: BattleRoyaleState
     protected ref map<string, ref array<vector>> m_SafeVillagePoints;
     protected bool m_PlayersProcessed;
     protected int m_PlayerBatch;
+    protected ref Timer m_ProcessWatchdog;
 
     void BattleRoyalePrepare()
     {
@@ -76,8 +77,15 @@ class BattleRoyalePrepare: BattleRoyaleState
 		}
 
         m_PlayersProcessed = false;
-        AddTimer(120.0, this, "ProcessPlayersWatchdog", NULL, false);
+        m_ProcessWatchdog = AddTimer(120.0, this, "ProcessPlayersWatchdog", NULL, false);
         GetGame().GameScript.Call(this, "ProcessPlayers", NULL); //Spin up a new thread to process giving players items and teleporting them
+    }
+
+    protected void StopProcessWatchdog()
+    {
+        if (m_ProcessWatchdog && m_ProcessWatchdog.IsRunning())
+            m_ProcessWatchdog.Stop();
+        m_ProcessWatchdog = null;
     }
 
     void ProcessPlayersWatchdog()
@@ -112,6 +120,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 
     override void Deactivate()
     {
+        StopProcessWatchdog();
         super.Deactivate();
 
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetFade", new Param1<bool>(false), true); //fade out screen
@@ -358,18 +367,15 @@ class BattleRoyalePrepare: BattleRoyaleState
                 BattleRoyaleUtils.Trace("Try to spawn in village " + village_spawn_try);
 
                 village = NULL;
-                bool check_zone = true;
                 if(m_SpawnsSettings.spawn_in_first_zone)
-                {
                     village = GetRandomVillage(spawn_area, true);
-                    check_zone = false;  // We got a village in zone, don't need to check if the player will spawn in zone
-                }
                 else
                     village = GetRandomVillage();
 
                 if (village != NULL && village.Name != "")
                 {
                     BattleRoyaleUtils.Trace("Found village " + village.Name);
+                    village_pos = "0 0 0";
                     vector search_for_village = "0 0 0";
 
                     if( village.Name == last_village_spawn )
@@ -379,12 +385,15 @@ class BattleRoyalePrepare: BattleRoyaleState
 					}
 
                     ref array<vector> cached_points = m_SafeVillagePoints.Get(village.Name);
+                    int cached_index = -1;
                     if (cached_points && cached_points.Count() > 0)
                     {
-                        village_pos = cached_points.Get(Math.RandomInt(0, cached_points.Count()));
+                        cached_index = Math.RandomInt(0, cached_points.Count());
+                        village_pos = cached_points.Get(cached_index);
                         BattleRoyaleUtils.Trace("Reusing cached village position " + village_pos);
-                        break;
                     }
+                    else
+                    {
 
 					// Override village position from config file using the technical name (e.g. "Settlement_Novoselki")
 					vector override_position = BattleRoyaleConfig.GetConfig().GetPOIsData().GetOverrodePosition( village.GetName() );
@@ -401,7 +410,7 @@ class BattleRoyalePrepare: BattleRoyaleState
                         BattleRoyaleUtils.Trace("Try to find a position in village " + search_pos);
                         search_for_village = GetRandomVillagePosition(village);
 
-                        if(!IsSafeForTeleport(search_for_village[0], search_for_village[1], search_for_village[2], check_zone))
+                        if(!IsAcceptedSpawn(search_for_village))
                             continue;
 
                         if (!cached_points)
@@ -413,9 +422,14 @@ class BattleRoyalePrepare: BattleRoyaleState
                         village_pos = search_for_village;
                         break;
                     }
+                    }
 
-                    if( village_pos == "0 0 0" )
+                    if( village_pos == "0 0 0" || !IsAcceptedSpawn(village_pos) )
+                    {
+                        if (cached_points && cached_index >= 0 && cached_index < cached_points.Count())
+                            cached_points.Remove(cached_index);
                         continue;
+                    }
 
                     BattleRoyaleUtils.Trace("Found village position " + village_pos);
                     random_pos = village_pos; // Found a valid village position
@@ -447,7 +461,7 @@ class BattleRoyalePrepare: BattleRoyaleState
                 random_pos[1] = y;
                 random_pos[2] = z;
 
-                if(!IsSafeForTeleport(random_pos[0], random_pos[1], random_pos[2], true))
+                if(!IsAcceptedSpawn(random_pos))
                     continue;
 
                 found_random = true;
@@ -456,7 +470,11 @@ class BattleRoyalePrepare: BattleRoyaleState
 
             if (!found_random)
             {
-                Error("GetRandomSpawnPosition exhausted 40 attempts; using last candidate " + random_pos.ToString());
+                random_pos = GetValidatedReserve();
+                if (random_pos == vector.Zero)
+                    Error("GetRandomSpawnPosition found no safe point and the zone-center reserve failed");
+                else
+                    Error("GetRandomSpawnPosition exhausted 40 attempts; using validated zone-center reserve " + random_pos.ToString());
             }
         }
 
@@ -477,7 +495,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 			random_pos[2] = position[2] + Math.RandomFloatInclusive(-radius-i, radius+i);
 			random_pos[1] = GetGame().SurfaceY(random_pos[0], random_pos[2]);
 
-			if(!IsSafeForTeleport(random_pos[0], random_pos[1], random_pos[2], false))
+			if(!IsAcceptedSpawn(random_pos))
 			{
 				BattleRoyaleUtils.Trace("Position " + random_pos + " is not safe, we try again");
 				random_pos = "0 0 0";  // Reset random_pos to zero vector
@@ -490,12 +508,87 @@ class BattleRoyalePrepare: BattleRoyaleState
 		return random_pos;
 	}
 
+    protected bool IsOnMap(vector pos)
+    {
+        int world_size = GetGame().GetWorld().GetWorldSize();
+        return pos[0] >= 0 && pos[2] >= 0 && pos[0] <= world_size && pos[2] <= world_size;
+    }
+
+    protected bool IsInsideExpandedFirstZone(vector pos)
+    {
+        BattleRoyalePlayArea area = BattleRoyaleZone.GetZone(GetDynamicStartingZone(i_NumStartingPlayers)).GetArea();
+        if (!area)
+            return false;
+
+        vector center = area.GetCenter();
+        float limit = area.GetRadius() + m_SpawnsSettings.extra_spawn_radius;
+        float dx = pos[0] - center[0];
+        float dz = pos[2] - center[2];
+        return (dx * dx) + (dz * dz) <= (limit * limit);
+    }
+
+    // Final spawn: on the map, inside the first circle plus extra_spawn_radius, and clear of collision.
+    protected bool IsAcceptedSpawn(vector pos)
+    {
+        if (pos == vector.Zero)
+            return false;
+        if (!IsOnMap(pos))
+            return false;
+        if (!IsInsideExpandedFirstZone(pos))
+            return false;
+        return IsSafeForTeleport(pos[0], pos[1], pos[2], false);
+    }
+
+    protected vector GetValidatedReserve()
+    {
+        BattleRoyalePlayArea area = BattleRoyaleZone.GetZone(GetDynamicStartingZone(i_NumStartingPlayers)).GetArea();
+        if (!area)
+            return vector.Zero;
+
+        vector reserve = area.GetCenter();
+        reserve[1] = GetGame().SurfaceY(reserve[0], reserve[2]);
+        if (IsAcceptedSpawn(reserve))
+            return reserve;
+
+        for (int i = 0; i < 16; i++)
+        {
+            float radius = 5.0 + (i * 2.0);
+            float angle = Math.RandomFloat(0, 360) * Math.DEG2RAD;
+            vector candidate = reserve;
+            candidate[0] = reserve[0] + (radius * Math.Cos(angle));
+            candidate[2] = reserve[2] + (radius * Math.Sin(angle));
+            candidate[1] = GetGame().SurfaceY(candidate[0], candidate[2]);
+            if (IsAcceptedSpawn(candidate))
+                return candidate;
+        }
+
+        return vector.Zero;
+    }
+
+    protected vector ResolveFinalSpawn(vector position)
+    {
+        if (IsAcceptedSpawn(position))
+            return position;
+
+        vector reserve = GetValidatedReserve();
+        if (IsAcceptedSpawn(reserve))
+        {
+            Error("Spawn candidate rejected; using validated reserve " + reserve.ToString());
+            return reserve;
+        }
+
+        Error("Spawn candidate and zone-center reserve were both rejected; teleport skipped");
+        return vector.Zero;
+    }
+
     protected void Teleport(PlayerBase process_player)
     {
         ref Param2<vector, NamedLocation> random_pos = GetRandomSpawnPosition();
-        vector position = random_pos.param1;
-        NamedLocation village = random_pos.param2;
+        vector position = ResolveFinalSpawn(random_pos.param1);
+        if (position == vector.Zero)
+            return;
 
+        NamedLocation village = random_pos.param2;
         TeleportPlayer(process_player, position, village);
     }
 
@@ -509,27 +602,28 @@ class BattleRoyalePrepare: BattleRoyaleState
         for(int i = 0; i < tmpNbPlayers; i++)
         {
             PlayerBase player = group.Get(i);
-            if(player)
+            if(player && player.GetIdentity())
             {
                 BattleRoyaleUtils.Trace("Teleport player " + player.GetIdentity().GetName() + " to position " + position);
 
-                int spawn_try = 1;
-                while(true)
+                vector accepted = vector.Zero;
+                for (int spawn_try = 1; spawn_try <= 50; spawn_try++)
                 {
                     BattleRoyaleUtils.Trace("Try Group " + spawn_try);
-                    spawn_try = spawn_try + 1;
                     float x = position[0] + Math.RandomFloatInclusive(-5.0, 5.0);
                     float z = position[2] + Math.RandomFloatInclusive(-5.0, 5.0);
                     float y = GetGame().SurfaceY(x, z);
-
-                    if( IsSafeForTeleport(x, y, z, false) )
+                    vector candidate = Vector(x, y, z);
+                    if (IsAcceptedSpawn(candidate))
+                    {
+                        accepted = candidate;
                         break;
-
-                    if( spawn_try > 50 )
-                        break;
+                    }
                 }
 
-                TeleportPlayer(player, Vector(x, y, z), village);
+                accepted = ResolveFinalSpawn(accepted);
+                if (accepted != vector.Zero)
+                    TeleportPlayer(player, accepted, village);
             }
         }
     }
@@ -538,6 +632,12 @@ class BattleRoyalePrepare: BattleRoyaleState
     {
         if (!player || !player.GetIdentity())
             return;
+
+        if (!IsAcceptedSpawn(position))
+        {
+            Error("TeleportPlayer refused a position outside the expanded zone or the map");
+            return;
+        }
 
         BattleRoyaleUtils.Trace("Spawn player " + player.GetIdentity().GetName() + " at " + position);
 
@@ -614,7 +714,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 
 					BattleRoyaleUtils.Trace("Try to spawn player " + process_player.GetIdentity().GetName() + " at " + position + " with a radius of " + f_SpawnSelectionRadius);
 
-					vector random_position = GetRandomSafePosition(position, f_SpawnSelectionRadius);
+					vector random_position = ResolveFinalSpawn(GetRandomSafePosition(position, f_SpawnSelectionRadius));
 
 					if ( random_position == vector.Zero )
 					{
@@ -658,7 +758,11 @@ class BattleRoyalePrepare: BattleRoyaleState
 					process_player = group.Get(0);
 					if (process_player) Teleport(process_player);
 				}
-                SleepPlayerBatch();
+                int members = 0;
+                if (group)
+                    members = group.Count();
+                for (int member_i = 0; member_i < members; member_i++)
+                    SleepPlayerBatch();
 			}
             FlushPlayerBatch();
 #else
@@ -744,6 +848,7 @@ class BattleRoyalePrepare: BattleRoyaleState
         BattleRoyaleUtils.Trace("Healed players");
 
         m_PlayersProcessed = true;
+        StopProcessWatchdog();
         if (IsActive())
             Deactivate();
     }
