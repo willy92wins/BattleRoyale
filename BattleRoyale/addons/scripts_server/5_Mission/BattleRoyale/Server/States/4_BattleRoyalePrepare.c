@@ -679,7 +679,7 @@ class BattleRoyalePrepare: BattleRoyaleState
             PlayerBase player = group.Get(i);
             if(player && player.GetIdentity())
             {
-                BattleRoyaleUtils.Trace("Teleport player " + player.GetIdentity().GetName() + " to position " + position);
+                BattleRoyaleUtils.Trace("Teleport player " + player.GetIdentityName() + " to position " + position);
 
                 vector accepted = vector.Zero;
                 for (int spawn_try = 1; spawn_try <= 50; spawn_try++)
@@ -724,7 +724,7 @@ class BattleRoyalePrepare: BattleRoyaleState
             Error("TeleportPlayer last resort ignores collision for " + player.GetIdentity().GetPlainId() + " at " + position.ToString());
         }
 
-        BattleRoyaleUtils.Trace("Spawn player " + player.GetIdentity().GetName() + " at " + position);
+        BattleRoyaleUtils.Trace("Spawn player " + player.GetIdentityName() + " at " + position);
 
         //TODO: make sure the retarded game engine doesn't keep the player in a swimming state ????
         //TODO: force stand up
@@ -792,13 +792,13 @@ class BattleRoyalePrepare: BattleRoyaleState
 
 					if( position == vector.Zero )
 					{
-						BattleRoyaleUtils.Trace("Player " + process_player.GetIdentity().GetName() + " didn't select a spawn point, we randomly teleport them");
+						BattleRoyaleUtils.Trace("Player " + process_player.GetIdentityName() + " didn't select a spawn point, we randomly teleport them");
 						Teleport(process_player);
                         SleepPlayerBatch();
 						continue;
 					}
 
-					BattleRoyaleUtils.Trace("Try to spawn player " + process_player.GetIdentity().GetName() + " at " + position + " with a radius of " + f_SpawnSelectionRadius);
+					BattleRoyaleUtils.Trace("Try to spawn player " + process_player.GetIdentityName() + " at " + position + " with a radius of " + f_SpawnSelectionRadius);
 
 					vector random_position = ResolveFinalSpawn(GetRandomSafePosition(position, f_SpawnSelectionRadius));
 

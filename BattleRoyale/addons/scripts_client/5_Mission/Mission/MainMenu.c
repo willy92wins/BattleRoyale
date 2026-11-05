@@ -168,10 +168,14 @@ modded class MainMenu
 		super.ShowDlcFrame(false);
 	}
 
-	// Always opens the server browser; a -connect target is joined once at startup by DayZGame.ConnectLaunch
+	// As vanilla: joins the last server played with this character, or opens the server browser when
+	// there is none. A -connect target is joined once at startup by DayZGame.ConnectLaunch
 	override void Play()
 	{
-		OpenMenuServerBrowser();
+		if (m_ScenePC && m_ScenePC.GetIntroCharacter())
+			g_Game.GetCallQueue(CALL_CATEGORY_GUI).CallByName(this, "ConnectLastSession");
+		else
+			OpenMenuServerBrowser();
 	}
 
 	bool OnStart(bool force_restart = false)

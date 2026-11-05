@@ -228,7 +228,7 @@ class BattleRoyaleServer: BattleRoyaleBase
     void OnPlayerConnected(PlayerBase player)
     {
         //Teleport player into debug zone
-        BattleRoyaleUtils.Trace("Player " + player.GetIdentity().GetName() + " connected!"); //lets find out if respawning players end up here
+        BattleRoyaleUtils.Trace("Player " + player.GetIdentityName() + " connected!"); //lets find out if respawning players end up here
 
         //Copy PlainID (steamid) to PlayerBase to avoid the disparition of PlayerIdentity (OnPlayerDisconnected)
         player.player_steamid = player.GetIdentity().GetPlainId();
@@ -266,7 +266,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 			bool listedAdmin = a_AdminsList && a_AdminsList.Find( player.GetIdentity().GetPlainId() ) != -1;
 			if ( listedAdmin || BRAdminAuthorizer.IsOperator( player.GetIdentity() ) )
 			{
-				BattleRoyaleUtils.Info("Admin " + player.GetIdentity().GetName() + " has connected during non-debug state, allowing connection.");
+				BattleRoyaleUtils.Info("Admin " + player.GetIdentityName() + " has connected during non-debug state, allowing connection.");
 				BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
 				return; //allow admins to connect during non-debug state
 			}
@@ -376,19 +376,19 @@ class BattleRoyaleServer: BattleRoyaleBase
                 {
                     if ( player.last_unconscious_source.IsInherited( PlayerBase ) )
                     {
-                        BattleRoyaleUtils.Info("Player " + player.GetIdentity().GetName() + " disconnected while unconscious, adding kill to last damage source.");
+                        BattleRoyaleUtils.Info("Player " + player.GetIdentityName() + " disconnected while unconscious, adding kill to last damage source.");
 
                         PlayerBase killer = PlayerBase.Cast( player.last_unconscious_source );
                         GetCurrentState().OnPlayerKilled( player, killer );
                     } else {
-                        BattleRoyaleUtils.Info("Player " + player.GetIdentity().GetName() + " disconnected while unconscious, but the last damage source is not a player.");
+                        BattleRoyaleUtils.Info("Player " + player.GetIdentityName() + " disconnected while unconscious, but the last damage source is not a player.");
                     }
                 } else {
-                    BattleRoyaleUtils.Info("Player " + player.GetIdentity().GetName() + " disconnected while unconscious, but there is no last damage source.");
+                    BattleRoyaleUtils.Info("Player " + player.GetIdentityName() + " disconnected while unconscious, but there is no last damage source.");
                 }
 
                 // If the player is alive, we kill him
-                BattleRoyaleUtils.Info("Player " + player.GetIdentity().GetName() + " disconnected while unconscious, killing him.");
+                BattleRoyaleUtils.Info("Player " + player.GetIdentityName() + " disconnected while unconscious, killing him.");
                 player.SetHealth("GlobalHealth", "Health", 0);
                 player.SetHealth("GlobalHealth", "Blood", 0);
             }

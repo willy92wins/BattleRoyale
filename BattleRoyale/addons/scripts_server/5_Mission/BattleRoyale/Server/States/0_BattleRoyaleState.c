@@ -331,7 +331,7 @@ class BattleRoyaleState: Timeable
 	    {
 	    	if(player.GetIdentity())
 	    	{
-	    		BattleRoyaleUtils.Info(string.Format("MessagePlayerUntranslated: %1 %2", player.GetIdentity().GetName(), message));
+	    		BattleRoyaleUtils.Info(string.Format("MessagePlayerUntranslated: %1 %2", player.GetIdentityName(), message));
 	    		GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "NotificationMessage", new Param7<string, float, string, string, string, string, string>( message, time, param1, param2, param3, param4, param5 ), true, player.GetIdentity());
 	    	}
 	    }
@@ -552,14 +552,14 @@ class BattleRoyaleState: Timeable
 				PlayerBase plr = PlayerBase.Cast(id_map.Get(registered_parties.GetKey(i)));  // Get party leader
 				if(plr && plr.GetIdentity())
 				{
-					BattleRoyaleUtils.Trace("Party leader is " + plr.GetIdentity().GetName());
+					BattleRoyaleUtils.Trace("Party leader is " + plr.GetIdentityName());
 					if(m_PlayerWaitList.Find(plr) != -1)// Test if party leader is still in waiting list
 					{
-						BattleRoyaleUtils.Trace(plr.GetIdentity().GetName() + " is in the wait list");
+						BattleRoyaleUtils.Trace(plr.GetIdentityName() + " is in the wait list");
 						m_PlayerWaitList.Remove(m_PlayerWaitList.Find(plr));
 						if (plr && plr.GetIdentity() && plr.IsAlive())
 						{
-							BattleRoyaleUtils.Trace("Add leader " + plr.GetIdentity().GetName() + " to the group");
+							BattleRoyaleUtils.Trace("Add leader " + plr.GetIdentityName() + " to the group");
 							group.Insert(plr);  // Insert guild leader into group
 							if (registered_parties.GetElement(i))
 							{
@@ -571,10 +571,10 @@ class BattleRoyaleState: Timeable
 									PlayerBase plrpart = id_map.Get(tmpPlayPart.Get(j));
 									if ( plrpart )
 									{
-										BattleRoyaleUtils.Trace("Try to add player " + plrpart.GetIdentity().GetName() + " to teleport group");
+										BattleRoyaleUtils.Trace("Try to add player " + plrpart.GetIdentityName() + " to teleport group");
 										if(m_PlayerWaitList.Find(plrpart) != -1)
 										{
-											BattleRoyaleUtils.Trace("Added player " + plrpart.GetIdentity().GetName() + " to teleport group");
+											BattleRoyaleUtils.Trace("Added player " + plrpart.GetIdentityName() + " to teleport group");
 											m_PlayerWaitList.Remove(m_PlayerWaitList.Find(plrpart));
 											group.Insert(plrpart);  // Insert party member into group
 										}
@@ -613,14 +613,14 @@ class BattleRoyaleState: Timeable
 
     set<PlayerBase> GetGroup(PlayerBase player)
 	{
-		BattleRoyaleUtils.Trace("GetGroup for player " + player.GetIdentity().GetName());
+		BattleRoyaleUtils.Trace("GetGroup for player " + player.GetIdentityName());
 		ref array<ref set<PlayerBase>> groups = GetGroups();
 		for (int i = 0; i < groups.Count(); i++)
 		{
 			BattleRoyaleUtils.Trace("Group " + i + " has " + groups.Get(i).Count() + " players");
 			if (groups.Get(i).Find(player) != -1)
 			{
-				BattleRoyaleUtils.Trace("Found group for player " + player.GetIdentity().GetName());
+				BattleRoyaleUtils.Trace("Found group for player " + player.GetIdentityName());
 				return groups.Get(i);
 			}
 		}

@@ -156,7 +156,7 @@ class BattleRoyaleStartMatch: BattleRoyaleState
             if (!player || !player.GetIdentity())
                 continue;
 
-            BattleRoyaleUtils.Trace("Unlock " + player.GetIdentity().GetName());
+            BattleRoyaleUtils.Trace("Unlock " + player.GetIdentityName());
 
             player.DisableInput(false); //This will re-enable input
 			//DayZPlayerSyncJunctures.SendPlayerUnconsciousness( player , false );
@@ -179,7 +179,7 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 		{
 			player.wait_unstuck = true;
 			MessagePlayerUntranslated( player, "STR_BR_UNSTUCK_TELEPORTATION" );
-			BattleRoyaleUtils.Trace( player.GetIdentity().GetName() + " asked for an unstuck teleportation." );
+			BattleRoyaleUtils.Trace( player.GetIdentityName() + " asked for an unstuck teleportation." );
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLaterByName(this, "Unstuck", Math.RandomFloat(1, 3) * 1000 , false, new Param1<PlayerBase>( player ));
 		}
 		else
@@ -225,7 +225,7 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 
 		if( !unstuckSuccess )
 		{
-			BattleRoyaleUtils.Warn( player.GetIdentity().GetName() + " unstuck failed at " + player.GetPosition() );
+			BattleRoyaleUtils.Warn( player.GetIdentityName() + " unstuck failed at " + player.GetPosition() );
 			player.wait_unstuck = false;
 		}
 	}
