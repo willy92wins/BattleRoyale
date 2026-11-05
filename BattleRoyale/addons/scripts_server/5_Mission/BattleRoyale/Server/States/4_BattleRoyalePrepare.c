@@ -693,7 +693,10 @@ class BattleRoyalePrepare: BattleRoyaleState
                 accepted = ResolveFinalSpawn(accepted);
                 if (!TeleportPlayer(player, accepted, village))
                 {
-                    Error("Prepare could not place grouped player " + player.GetIdentity().GetPlainId() + " inside the first zone");
+                    string grouped_steamid = "unknown";
+                    if (player && player.GetIdentity())
+                        grouped_steamid = player.GetIdentity().GetPlainId();
+                    Error("Prepare could not place grouped player " + grouped_steamid + " inside the first zone");
                 }
             }
             SleepPlayerBatch();

@@ -543,7 +543,7 @@ class BattleRoyaleZone
 			vector override_position = m_Config.GetPOIsData().GetOverrodePosition( city );
 			if( override_position != "0 0 0" )
 			{
-				city_position = {override_position[0], 0, override_position[2]};
+				city_position = {override_position[0], override_position[2]}; // CfgWorlds Names positions are { x, z }
 				BattleRoyaleUtils.Trace("Override " + city + " position!");
 			}
 
