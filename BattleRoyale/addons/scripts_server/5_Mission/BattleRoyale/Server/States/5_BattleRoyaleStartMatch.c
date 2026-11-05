@@ -74,7 +74,17 @@ class BattleRoyaleStartMatch: BattleRoyaleState
     {
         //deactivate all one-time timers
         if ( m_UnlockTimer && m_UnlockTimer.IsRunning() )
+        {
             m_UnlockTimer.Stop();
+
+            // The match ends before the unlock: the players left get their input back
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetInput", new Param1<bool>(false), true);
+            foreach (PlayerBase locked: m_Players)
+            {
+                if (locked)
+                    locked.DisableInput(false);
+            }
+        }
 
         if ( m_ShowFirstZone && m_ShowFirstZone.IsRunning() )
             m_ShowFirstZone.Stop();
