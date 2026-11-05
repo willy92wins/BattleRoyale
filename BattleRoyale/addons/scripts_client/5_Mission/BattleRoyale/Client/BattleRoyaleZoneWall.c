@@ -6,7 +6,7 @@ class BattleRoyaleZoneWall
 {
 	static const string PANEL_MODEL = "Vigrid-BattleRoyale/Models/Shapes/zonewall.p3d";
 	static const float PANEL_WIDTH = 20;  //!< width of zonewall.p3d
-	static const float SPACING = 19;  //!< metres between two panels along the edge, a little under the width so curves leave no gap
+	static const float SPACING = 20;  //!< metres of edge per panel: the chord between two slot boundaries is a hair under the width
 	static const float SINK = 2;  //!< panels go this far below the lowest ground under them, so slopes leave no gap
 	static const float VIEW_RANGE = 500;  //!< panels further than this from the camera are not created
 	static const float REFRESH_SECONDS = 0.5;
@@ -114,18 +114,40 @@ class BattleRoyaleZoneWall
 		RemoveAllBut(wanted);
 	}
 
+	//! Point of the edge at angle, on the ground
+	protected vector EdgePoint(float angle)
+	{
+		float x = m_Center[0] + m_Radius * Math.Cos(angle);
+		float z = m_Center[2] + m_Radius * Math.Sin(angle);
+		return Vector(x, GetGame().SurfaceY(x, z), z);
+	}
+
 	protected Object CreatePanel(float angle, float x, float z)
 	{
-		// The panel spans its local X axis, so it faces the center to lie along the edge
-		vector radial = Vector(Math.Cos(angle), 0, Math.Sin(angle));
-		vector tangent = Vector(-radial[2], 0, radial[0]);
-		float half = PANEL_WIDTH * 0.5;
-		float y = GetGame().SurfaceY(x, z);
-		y = Math.Min(y, GetGame().SurfaceY(x + tangent[0] * half, z + tangent[2] * half));
-		y = Math.Min(y, GetGame().SurfaceY(x - tangent[0] * half, z - tangent[2] * half));
-		vector pos = Vector(x, y - SINK, z);
+		// The panel runs from one slot boundary to the next on the ground, so neighbours share their
+		// ends and the top edge follows the terrain instead of stepping
+		float half_step = Math.PI / m_Count;
+		vector left = EdgePoint(angle - half_step);
+		vector right = EdgePoint(angle + half_step);
 
-		Object panel = GetGame().CreateStaticObjectUsingP3D(PANEL_MODEL, pos, "0 0 0", 1.0, true);
+		vector aside = vector.Direction(left, right).Normalized();
+		vector up = "0 1 0";
+		up = (up - aside * vector.Dot(up, aside)).Normalized();
+		vector inward = Vector(-Math.Cos(angle), 0, -Math.Sin(angle));
+		vector dir = inward - aside * vector.Dot(inward, aside);
+		dir = (dir - up * vector.Dot(dir, up)).Normalized();
+
+		// Ground that bulges between the two ends would show under the panel: sink it that much deeper
+		vector middle = (left + right) * 0.5;
+		float bulge = Math.Max(0, GetGame().SurfaceY(x, z) - middle[1]);
+
+		vector transform[4];
+		transform[0] = aside;
+		transform[1] = up;
+		transform[2] = dir;
+		transform[3] = middle - up * (SINK + bulge);
+
+		Object panel = GetGame().CreateStaticObjectUsingP3D(PANEL_MODEL, transform[3], "0 0 0", 1.0, true);
 		if (!panel)
 		{
 			BattleRoyaleUtils.Warn("ZoneWall: cannot create " + PANEL_MODEL);
@@ -133,8 +155,7 @@ class BattleRoyaleZoneWall
 			return null;
 		}
 
-		panel.SetDirection(radial);
-		panel.SetPosition(pos);
+		panel.SetTransform(transform);
 		return panel;
 	}
 
