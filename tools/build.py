@@ -88,6 +88,9 @@ def main():
     names = sorted(d for d in os.listdir(ADDONS) if os.path.isfile(os.path.join(ADDONS, d, "config.cpp")))
     if a.only:
         names = [n for n in names if n in a.only]
+    if not a.only and os.path.isdir(os.path.join(OUT, "addons")):
+        # A full build starts from an empty output so removed addons do not linger.
+        shutil.rmtree(os.path.join(OUT, "addons"))
     os.makedirs(os.path.join(OUT, "addons"), exist_ok=True)
     os.makedirs(os.path.join(OUT, "keys"), exist_ok=True)
     temp = os.path.join(ROOT, "build", "abtemp")
