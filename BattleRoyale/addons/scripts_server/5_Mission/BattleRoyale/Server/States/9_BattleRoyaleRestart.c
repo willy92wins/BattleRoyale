@@ -6,6 +6,7 @@ class BattleRoyaleRestart: BattleRoyaleState
     override void Activate()
     {
         super.Activate();
+        BroadcastMatchPhase(EBRMatchPhase.RESTARTING, 10);
 
         BattleRoyaleUtils.Trace("[Restart State] Restarting!");
 

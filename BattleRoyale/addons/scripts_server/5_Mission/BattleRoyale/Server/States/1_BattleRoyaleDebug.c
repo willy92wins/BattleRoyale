@@ -65,6 +65,7 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
         	AddTimer(2.0, this, "CheckReadyState", NULL, true);
 
         super.Activate();
+        BroadcastMatchPhase(EBRMatchPhase.LOBBY, -1);
     }
 
     void CheckReadyState()
@@ -144,7 +145,7 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
 			return false;
 #endif
 
-        float percent = (ready_count / player_count);
+        float percent = ready_count / (player_count * 1.0);
         return (percent >= f_VoteThreshold);
     }
 

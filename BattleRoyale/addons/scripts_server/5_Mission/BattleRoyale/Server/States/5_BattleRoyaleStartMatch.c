@@ -47,6 +47,7 @@ class BattleRoyaleStartMatch: BattleRoyaleState
     override void Activate()
     {
         super.Activate();
+        BroadcastMatchPhase(EBRMatchPhase.STARTING, i_TimeToUnlock);
 
         //send start match RPC (this will enable UI such as kill count)
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "StartMatch", new Param1<bool>(true), true); //don't need a param, but id rather keep it just so i know nothing wierd occurs (eventually find out if we can remove it)
@@ -138,6 +139,9 @@ class BattleRoyaleStartMatch: BattleRoyaleState
         for(int i = 0; i < a_PlayerList.Count(); i++)
         {
             PlayerBase player = a_PlayerList[i];
+            if (!player || !player.GetIdentity())
+                continue;
+
             BattleRoyaleUtils.Trace("Unlock " + player.GetIdentity().GetName());
 
             player.DisableInput(false); //This will re-enable input
@@ -172,6 +176,9 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 
 	void Unstuck( PlayerBase player )
 	{
+        if (!player || !player.GetIdentity())
+            return;
+
 		bool unstuckSuccess = false;
 		for(int search_pos = 0; search_pos < 50; search_pos++)
 		{

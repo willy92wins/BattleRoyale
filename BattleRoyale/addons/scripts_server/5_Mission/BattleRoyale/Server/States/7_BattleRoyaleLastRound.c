@@ -78,12 +78,16 @@ class BattleRoyaleLastRound: BattleRoyaleState
             m_PreviousArea = GetPreviousZone().GetArea();
 
         //tell client the current play has not changed (note that if this is the first round, then the current area will be NULL )
-        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( m_PreviousArea.GetCenter(), m_PreviousArea.GetRadius() ), true);
+        if (m_PreviousArea)
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( m_PreviousArea.GetCenter(), m_PreviousArea.GetRadius() ), true);
+        else
+            Error("Last round has no previous zone; current play area was not sent");
 
         //tell the client the future zone is NULL (no future zone)
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", new Param3<vector, float, bool>( "0 0 0", 0.0, false ), true);
 
         super.Activate();
+        BroadcastMatchPhase(EBRMatchPhase.LAST_ROUND, i_RoundTimeInSeconds);
     }
 
     override void Deactivate()
@@ -151,7 +155,7 @@ class BattleRoyaleLastRound: BattleRoyaleState
         if(!do_damage)
         {
             BattleRoyaleZone current_zone = GetPreviousZone();
-            if(b_DoZoneDamage)
+            if(b_DoZoneDamage && current_zone && current_zone.GetArea())
             {
                 float radius = current_zone.GetArea().GetRadius();
                 vector center = current_zone.GetArea().GetCenter();
@@ -174,7 +178,6 @@ class BattleRoyaleLastRound: BattleRoyaleState
             if(player.time_until_damage <= 0)
             {
                 //DAMAGE
-                MessagePlayerUntranslated(player, "STR_BR_TAKING_DAMAGE");
                 player.GetSymptomManager().QueueUpPrimarySymptom(SymptomIDs.SYMPTOM_PAIN_HEAVY);
                 player.DecreaseHealthCoef( f_Damage );
                 player.time_until_damage = i_DamageTickTime; //reset timer
