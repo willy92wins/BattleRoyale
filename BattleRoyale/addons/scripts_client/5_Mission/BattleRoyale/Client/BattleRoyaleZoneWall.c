@@ -130,12 +130,11 @@ class BattleRoyaleZoneWall
 		vector left = EdgePoint(angle - half_step);
 		vector right = EdgePoint(angle + half_step);
 
-		vector aside = vector.Direction(left, right).Normalized();
+		// Sheared frame: X stretches the panel exactly from left to right (slope included) while Y stays
+		// vertical, so the side edges of neighbouring panels coincide whatever their slopes
+		vector aside = vector.Direction(left, right) * (1.0 / PANEL_WIDTH);
 		vector up = "0 1 0";
-		up = (up - aside * vector.Dot(up, aside)).Normalized();
-		vector inward = Vector(-Math.Cos(angle), 0, -Math.Sin(angle));
-		vector dir = inward - aside * vector.Dot(inward, aside);
-		dir = (dir - up * vector.Dot(dir, up)).Normalized();
+		vector dir = Vector(-Math.Cos(angle), 0, -Math.Sin(angle));
 
 		// Ground that bulges between the two ends would show under the panel: sink it that much deeper
 		vector middle = (left + right) * 0.5;
