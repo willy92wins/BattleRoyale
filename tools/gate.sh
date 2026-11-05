@@ -1,7 +1,7 @@
 #!/bin/bash
 # Lint gate: run tools/lint.sh and fail when any script PBO has more errors than the known baseline.
-# Baseline: scripts_client 10 (ES-LAYOUT-PATH-PBOPREFIX-MISMATCH false positives, layouts live in the
-# gui PBO), scripts_server 2 (ES-OVERRIDE-PARAM-NAME-MISMATCH on RemovePlayer, false positives),
+# Baseline: scripts_client 11 (ES-LAYOUT-PATH-PBOPREFIX-MISMATCH false positives, layouts live in the
+# gui PBO; the 11th is the 1.0 killfeed layout), scripts_server 2 (ES-OVERRIDE-PARAM-NAME-MISMATCH on RemovePlayer, false positives),
 # every other script PBO 0.
 # Usage: tools/gate.sh <repo_or_worktree_root>
 ROOT="${1:-.}"; OUT="$ROOT/build/lint"; mkdir -p "$OUT"
@@ -10,7 +10,7 @@ cat "$OUT.summary.txt"
 python - "$OUT" <<'EOF'
 import json, os, sys
 out = sys.argv[1]
-base = {"scripts_client": 10, "scripts_server": 2}
+base = {"scripts_client": 11, "scripts_server": 2}
 bad = []
 for name in sorted(os.listdir(out)):
     if not name.endswith(".json"):
