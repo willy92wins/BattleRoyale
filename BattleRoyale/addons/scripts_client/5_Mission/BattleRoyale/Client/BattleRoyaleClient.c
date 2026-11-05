@@ -12,6 +12,8 @@ class BattleRoyaleClient: BattleRoyaleBase
 
     protected ref ExpansionServerMarkerData m_ZoneCenterMapMarker;
 
+    protected ref BattleRoyaleZoneWall m_ZoneWall;
+
     //! Outside zone effect last queued: -1 unknown, 0 removed, 1 added; reset when the local player entity changes
     protected int i_OutsideZoneEffectState;
     protected PlayerBase m_OutsideZoneEffectPlayer;
@@ -25,6 +27,7 @@ class BattleRoyaleClient: BattleRoyaleBase
         i_Kills = 0;
         i_SecondsRemaining = 0;
         i_OutsideZoneEffectState = -1;
+        m_ZoneWall = new BattleRoyaleZoneWall();
 
         Init();
     }
@@ -152,6 +155,12 @@ class BattleRoyaleClient: BattleRoyaleBase
 		// Match phase and kill feed, also shown without a local player
 		UpdateMatchPhase( gameplay, br_rpc );
 		gameplay.UpdateKillFeed();
+
+		// Wall along the edge of the current zone, gone once the final zone collapsed
+		BattleRoyalePlayArea wall_area = m_CurrentPlayArea;
+		if ( IsZoneCollapsed( br_rpc ) )
+			wall_area = null;
+		m_ZoneWall.Update( delta, GetGame().GetCurrentCameraPosition(), wall_area );
 
 #ifdef BR_MINIMAP
         vector camera_pos = GetGame().GetCurrentCameraPosition();
