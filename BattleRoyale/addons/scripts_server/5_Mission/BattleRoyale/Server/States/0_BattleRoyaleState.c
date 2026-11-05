@@ -176,6 +176,12 @@ class BattleRoyaleState: Timeable
             if (VitalsNeedHeal(player))
                 player.Heal();
         }
+
+        // A killed or disconnected player is removed by the state, then again by BattleRoyaleServer:
+        // only the first removal changes the count and resends it to every client
+        if (!ContainsPlayer(player))
+            return;
+
     	BattleRoyaleUtils.Info(string.Format("BattleRoyaleState::RemovePlayer: %1", player.GetIdentityName()));
         m_Players.RemoveItem(player);
         OnPlayerCountChanged();
