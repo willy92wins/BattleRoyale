@@ -7,7 +7,9 @@ class CfgPatches
 		requiredVersion=0.1;
 		requiredAddons[]=
 		{
-			"DZ_Scripts"
+			"DZ_Scripts",
+			"BattleRoyale_Scripts_Client",
+			"BattleRoyale_Scripts_Server"
 		};
 	};
 };
