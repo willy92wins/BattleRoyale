@@ -49,6 +49,9 @@ DayZ-Expansion-Navigation and Community Online Tools. Load order, keys and serve
 - Spawn heatmap broadcast at most once per second, only when it changed.
 - Lobby godmode instead of periodic healing; the group count is cached instead of polled every 5 s.
 - A death or a disconnection sends the player count and the positions once instead of twice.
+- The 12 loading screens are compressed (DXT1, or DXT5 where their watermark needs alpha) instead of
+  uncompressed 32-bit: `gui.pbo` goes from 126 MB to 28 MB, with no visible difference
+  (`tools/compress_loading_screens.py`, `BattleRoyale_dev/reports/loading-screens-dxt1.md`).
 - Client: player tags raycast every 0.15 s instead of every frame, heatmap and map circle rebuilt
   only on change, no per-frame allocations, log level read once and logs behind it.
 - `extra_cardamage` scales the vanilla contact damage (0.5) instead of replacing it;
@@ -91,7 +94,6 @@ DayZ-Expansion-Navigation and Community Online Tools. Load order, keys and serve
   20-40 players and then 100 or more is pending.
 - With `enable_zone_damage` set to false the client still shows the zone damage indicator during
   the rounds.
-- `gui.pbo` is 126 MB because of uncompressed textures inherited from 0.1.0.
 - The Expansion airdrop has not been tested.
 - Some non-fatal fallbacks inherited from 0.1.0 log with `Error()` and show up as script errors.
 - The music "Apocalypse" is credited to Desolation Redux without a verified licence; check it before
