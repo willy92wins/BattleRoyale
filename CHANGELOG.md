@@ -18,6 +18,9 @@
   full match takes about 25 minutes instead of 32. The final-zone avoid list has 15 more places for the
   larger first zone. A server that already has a `zone_settings.json` keeps its old tables: delete the
   file to get the new defaults.
+- Loading screens: two new images replace the twelve of 1.1 (DXT1, 1920x1080; `gui.pbo` goes from
+  28 MB to 8.7 MB). `tools/make_loading_screens.py` builds them from `BattleRoyale_dev/assets/loading_screens`;
+  the 1.1 textures are kept outside the repository in `br-assets-backup\loading_screens_1.1_dxt`.
 
 ## 1.1.0 (2026-11-05, release candidate for the first player test)
 
