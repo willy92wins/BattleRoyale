@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.2.0 (2026-11-09)
+
+### Changed
+- Zone walls: each client builds a translucent wall from local panels along the zone edges within 500 m
+  of its camera, with no server or network cost. The zone in force is red; the announced zone is yellow
+  until it locks.
+- The map and the spawn selection map draw the zone circles in the same colours: red for the zone in
+  force, yellow for the announced zone.
+- HUD: a kill counter with a skull icon, always shown under the player count, replaces the clock, whose
+  time the phase text already showed. The phase text now turns orange or red when the zone is hard or
+  impossible to reach in time. The arrow no longer shows "safe" inside the zone.
+- Kill credit: a player who bleeds out less than 5 minutes after a hit from another player is that
+  player's kill, in the kill counter and the kill feed (with the weapon and distance of the hit).
+  Grenade and mine kills now also count in the kill counter.
+- Zone tables: the first zone has a 3000 m radius (radii 3000, 2100, 1350, 750, 350, 150, 50) and a
+  full match takes about 25 minutes instead of 32. The final-zone avoid list has 15 more places for the
+  larger first zone. A server that already has a `zone_settings.json` keeps its old tables: delete the
+  file to get the new defaults.
+- Loading screens: two new images replace the twelve of 1.1 (DXT1, 1920x1080; `gui.pbo` goes from
+  28 MB to 8.7 MB). `tools/make_loading_screens.py` builds them from `BattleRoyale_dev/assets/loading_screens`;
+  the 1.1 textures are kept outside the repository in `br-assets-backup\loading_screens_1.1_dxt`.
+- Target of 100 players per server: `serverDZ.cfg.example` sets `maxPlayers = 100` (was 120).
+- No markers are added any more: Expansion's "You died here!" death marker is switched off whatever
+  `CreateDeathMarker` says in `MapSettings.json`, and the 3D marker at the centre of the next zone is gone.
+- The Spanish phase text says "LA ZONA SE CIERRA".
+- `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
+
+### Verified
+- Build and lint gate green, with the same known false positives as 1.1.
+- DayZDiag 1.30, server and client, one player: yellow and red zone walls, yellow first zone on the spawn
+  map, kill counter under the player count, arrow without text, zone 1 of 3000 m, new loading screen, no
+  death marker after a death; no script errors on server or client.
+- Zone tables replayed offline with `zone_table_check.py`: 1495 s per full match, 1 fallback in 8000
+  generations.
+
+### Known issues
+- Not seen in game yet: the circles on the map opened with M, the orange or red phase text, and the kill
+  credit for bleed outs, grenades and mines (it needs two players).
+- Large matches (100 players) are still being tested.
+
 ## 1.1.0 (2026-11-05, release candidate for the first player test)
 
 The admin tool is optional: the mod runs with no admin tool, with Community Online Tools or with

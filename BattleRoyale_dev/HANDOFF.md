@@ -1,6 +1,8 @@
 # HANDOFF — BattleRoyale
 
 <!-- LIVE-STATE -->
+- estado 2026-11-09 21:50Z (manda sobre las líneas de la 1.0 de abajo): `main` = 1.1.0 publicada (Workshop 3834219016 y `@BattleRoyale-VPP` 3834226297). Rama `v1.2`, sin fusionar: muro de zona con paneles locales (rojo = zona en vigor, amarillo = zona anunciada hasta que se cierra; `BattleRoyaleZoneWall.c`, assets en `BattleRoyale_dev/assets/zonewall`), círculos del mapa en los mismos colores, contador de kills en el HUD en lugar del reloj, kills por desangrado (hasta 5 min después del impacto) y por granada o mina, zonas de 3000 a 50 m y unos 25 min (tablas y lista `end_avoid_city` comprobadas con `BattleRoyale_server/tools/zone_table_check.py`; ver `CHANGELOG.md`). Se prueba desde `br-deploy\@BattleRoyale-dev` (junction `!Workshop\@BR-dev`), nunca en `br-deploy\@BattleRoyale`, que es lo que se sube al Workshop. Perfil de prueba: `zone_settings.json` con las tablas nuevas y `min_players` a 0 para empezar en la zona 1 en solitario (copia en `zone_settings.json.bak-20261109`); `general_settings.json` con `round_duration_minutes` 1
+- pendiente v1.2: ver en el juego los círculos del mapa (M) y el texto de fase en naranja o rojo; kills por desangrado y por granada con dos jugadores; opción de config para activar o desactivar el muro; restaurar el perfil de prueba
 - objetivo: 1.0 en 24 h (desde 2026-11-05 00:23Z): DayZ 1.30, Chernarus, 120 jugadores, carga mínima
 - estado (2026-11-05 04:10Z): la rama `integration` es la candidata 1.0 (ver `git log -1 integration`). Seis lanes fusionadas sin conflictos, cada una revisada por Codex con sus rondas de corrección. Revisión final de Codex de los arreglos del integrador y del contrato entre lanes: aprobar con cambios, 0 críticos, 0 mayores, 3 menores (2 corregidos en 1782df4; el tercero es un texto sin traducir en un panel oculto de `main_menu.layout:730`). Los arreglos posteriores (1782df4, f46fefc, 444b718) y el addon de prueba, aprobados sin defectos. Informes en `C:\Users\guill\Repos\br-runs\final-review\`, `final-review2\` y `final-review3\`. Build limpia de e0417e0 desplegada (scripts_server.pbo sha256 176af4a6…, scripts_client.pbo e4418d64…)
 - notas de versión y problemas conocidos: `CHANGELOG.md`
@@ -33,4 +35,4 @@ Guillermo dio permiso pleno para avanzar durante la noche. Todas se revierten co
 
 ## Backlog v1.2
 
-- Zone ring on the ground (requested 2026-11-05): client-only local objects or particles every ~10 m along the zone edge, only within ~300 m of the player, moved as the zone shrinks; no server or network cost. Verify local objects and particles on 1.30 with a prototype first.
+- Done in `v1.2` as a wall of local panels (see LIVE-STATE). Zone ring on the ground (requested 2026-11-05): client-only local objects or particles every ~10 m along the zone edge, only within ~300 m of the player, moved as the zone shrinks; no server or network cost. Verify local objects and particles on 1.30 with a prototype first.

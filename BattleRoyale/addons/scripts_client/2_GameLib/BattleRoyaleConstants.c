@@ -5,7 +5,7 @@
  * TODO: move these constants into something a bit easier for modders to work with, that way any 3rd party can launch their own BR off my framework
  */
 
-static const string BATTLEROYALE_VERSION = "1.1.0";
+static const string BATTLEROYALE_VERSION = "1.2.0";
 
 #ifdef DIAG
 #define BR_TRACE_ENABLED
@@ -18,6 +18,11 @@ static const string BATTLEROYALE_VERSION = "1.1.0";
 #else
 	static const int BATTLEROYALE_LOG_LEVEL = 0; // Error
 #endif
+
+
+//--- Zone edge colours on the map, the same as the zone walls: red for the zone in force, yellow for an announced zone that has not locked yet
+static const int BR_ZONE_COLOR_LOCKED = 0xFFEB2D23;
+static const int BR_ZONE_COLOR_OPEN = 0xFFF5C828;
 
 
 //--- Feedback link opened by the buttons that extra_changefeedbackurl redirects; empty hides the pause menu button

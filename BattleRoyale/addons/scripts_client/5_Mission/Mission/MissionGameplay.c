@@ -114,17 +114,9 @@ modded class MissionGameplay
 		if (!m_BattleRoyaleHud)
 			return false;
 
-		m_BattleRoyaleHud.ShowKillCount( count > 0 );
+		m_BattleRoyaleHud.ShowKillCount( true );
 		m_BattleRoyaleHud.SetKillCount( count );
 		return true;
-	}
-
-	void HideCountdownTimer()
-	{
-		if (!m_BattleRoyaleHud)
-			return;
-
-		m_BattleRoyaleHud.ShowCountdown( false );
 	}
 
 	void UpdateCountdownTimer(int seconds)
@@ -132,7 +124,6 @@ modded class MissionGameplay
 		if (!m_BattleRoyaleHud)
 			return;
 
-		m_BattleRoyaleHud.ShowCountdown( true );
 		m_BattleRoyaleHud.SetCountdown( seconds );
 	}
 

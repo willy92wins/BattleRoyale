@@ -23,6 +23,14 @@ modded class PlayerBase
 	PlayerBase last_unconscious_source;
 	float m_UnconsciousStartTime;
 
+	// Last hit taken from another player, kept to credit that player with a later bleed out
+	PlayerBase br_last_player_hit_by;
+	string br_last_player_hit_name;  //!< empty until another player hits this one
+	int br_last_player_hit_time;  //!< GetGame().GetTime() of that hit, in ms
+	string br_last_player_hit_weapon;  //!< display name of the weapon, empty for fists
+	float br_last_player_hit_distance;  //!< metres between the two players at the hit, 0 in melee
+	bool br_bleeding_at_death;  //!< set when this player dies, from its bleeding sources
+
 	void SetBRPosition( int position )
 	{
 		br_position = position;
@@ -44,6 +52,19 @@ modded class PlayerBase
 
     override void EEKilled( Object killer )
     {
+        // The vanilla EEKilled deletes the bleeding manager, so the bleeding sources are read first
+        br_bleeding_at_death = false;
+        BleedingSourcesManagerServer bleeding = GetBleedingManagerServer();
+        if ( bleeding && bleeding.GetBleedingSourcesCount() > 0 )
+            br_bleeding_at_death = true;
+
+#ifdef EXPANSIONMODNAVIGATION
+        // A battle royale player never goes back to where they died. Expansion reads this flag in its own
+        // EEKilled, inside super.EEKilled, to send the player a death marker. ExpansionMapSettings cannot be
+        // modded instead: its OnLoad passes 'this' to JsonFileLoader<ExpansionMapSettings>, which then no longer compiles
+        GetExpansionSettings().GetMap().CreateDeathMarker = false;
+#endif
+
         super.EEKilled( killer );
 
         BattleRoyaleBase m_BR = GetBR();
@@ -72,6 +93,19 @@ modded class PlayerBase
 		if ( playerSource )
 		{
 			last_unconscious_source = playerSource;
+
+			if ( playerSource != this && playerSource.GetIdentity() )
+			{
+				br_last_player_hit_by = playerSource;
+				br_last_player_hit_name = playerSource.GetIdentity().GetName();
+				br_last_player_hit_time = GetGame().GetTime();
+				br_last_player_hit_weapon = "";
+				br_last_player_hit_distance = 0;
+				if ( source.IsWeapon() || source.IsMeleeWeapon() )
+					br_last_player_hit_weapon = source.GetDisplayName();
+				if ( source.IsWeapon() )
+					br_last_player_hit_distance = vector.Distance( GetPosition(), playerSource.GetPosition() );
+			}
 		} else {
 			last_unconscious_source = NULL;
 			string victim_name = "unknown";

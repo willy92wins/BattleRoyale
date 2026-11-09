@@ -1,13 +1,13 @@
 # DayZ-BattleRoyale 1.0 — server package (Chernarus)
 
 Everything a DayZ 1.30 dedicated server needs on top of the vanilla files to run the BattleRoyale
-mod on Chernarus (`chernarusplus`, 15360 m) for 100-120 players. It only holds what differs from the
+mod on Chernarus (`chernarusplus`, 15360 m) for 100 players. It only holds what differs from the
 vanilla mission `mpmissions\dayzOffline.chernarusplus` of the DayZ Server install, plus templates
 and scripts. No binaries: the mods come from the Steam Workshop and from the BattleRoyale 1.0 build.
 
 ```
 BattleRoyale_server\
-  serverDZ.cfg.example                          stock serverDZ.cfg + maxPlayers 120 + enableCfgGameplayFile 1
+  serverDZ.cfg.example                          stock serverDZ.cfg + maxPlayers 100 + enableCfgGameplayFile 1
   mpmissions\dayzOffline.chernarusplus\
     cfggameplay.json                            vanilla file, weapon obstruction mode 2 (see below)
     db\globals.xml                              vanilla file, 150 infected, no animals
@@ -25,8 +25,9 @@ BattleRoyale_server\
    `hostname`, `password` and `passwordAdmin` (section 4).
 4. Start the server with `tools\restart_loop.ps1` (section 5). The first start writes the mod settings
    to `<profiles>\Vigrid-BattleRoyale\` (section 6).
-5. Players load the same mods in the same order. Until `@BattleRoyale` is on the Steam Workshop, give
-   them the same `@BattleRoyale` folder as the server: client and server must run the same build.
+5. Players load the same mods in the same order, `@BattleRoyale` from the Steam Workshop
+   (https://steamcommunity.com/sharedfiles/filedetails/?id=3834219016). The server must run the same
+   version as the Workshop item.
 
 A match starts once the server has been up for `min_waiting_time` (300 s) with at least two players,
 in one of two ways (`lobby_settings.json`): more than `minimum_players` (10) are in the lobby and 80 % of
@@ -48,8 +49,8 @@ Online Tools (COT), VPPAdminTools or none.
 | 5 | `@DayZ-Expansion-Navigation` | 2792984722 | `Expansion.bikey` | always |
 | 6 | `@Community-Online-Tools` | 1564026768 | `Jacob_Mango_V3.bikey` | optional, admin tool |
 | 7 | `@VPPAdminTools` | 1828439124 | `VPP.bikey` | optional, admin tool |
-| 8 | `@BattleRoyale` | (this build) | the key shipped in `@BattleRoyale\keys` | always |
-| 9 | `@BattleRoyale-VPP` | (this build) | the same key as `@BattleRoyale` | only with `@VPPAdminTools` |
+| 8 | `@BattleRoyale` | 3834219016 | the key shipped in `@BattleRoyale\keys` | always |
+| 9 | `@BattleRoyale-VPP` | 3834226297 | the same key as `@BattleRoyale` | only with `@VPPAdminTools` |
 
 Without an admin tool:
 
@@ -139,7 +140,7 @@ obstruction stays in vanilla mode 1. The stock `serverDZ.cfg` does not have that
 ## 4. Server config
 
 Copy `serverDZ.cfg.example` to `<server>\serverDZ.cfg` and set `hostname`, `password` and
-`passwordAdmin`. Compared with the stock file it only changes `maxPlayers = 120` and adds
+`passwordAdmin`. Compared with the stock file it only changes `maxPlayers = 100` and adds
 `enableCfgGameplayFile = 1`. Keep `template="dayzOffline.chernarusplus"` pointing at the mission of
 section 3, and keep exactly one active `template=` and one active `instanceId` line: the world storage
 folder is named after `instanceId` (`storage_1`), and the restart loop refuses a config where either is
@@ -231,17 +232,19 @@ Index 0 is the final zone, the last index the first one.
 
 | Zone | Radius (m) | Duration (s) | Locks at (s) | Dynamic start if players > |
 |---|---|---|---|---|
-| 1 | 2500 | 240 | 192 | 60 |
-| 2 | 1800 | 330 | 264 | 30 |
-| 3 | 1200 | 300 | 240 | (latest start: zone 3) |
-| 4 | 700 | 270 | 216 | |
-| 5 | 350 | 225 | 180 | |
-| 6 | 150 | 180 | 144 | |
-| 7 | 50 | 135 | 108 | |
+| 1 | 3000 | 120 | 96 | 60 |
+| 2 | 2100 | 270 | 216 | 30 |
+| 3 | 1350 | 250 | 200 | (latest start: zone 3) |
+| 4 | 750 | 225 | 180 | |
+| 5 | 350 | 180 | 144 | |
+| 6 | 150 | 135 | 108 | |
+| 7 | 50 | 110 | 88 | |
 
 With `round_duration_minutes = 5` the first zone starts 150 s after the match start. When the round of
-zone 7 ends, the final zone stays 67 s more and then every player left takes damage until one remains.
-A full match takes about 32 minutes. The final-zone avoid list
+zone 7 ends, the final zone stays 55 s more and then every player left takes damage until one remains.
+A full match takes about 25 minutes. The first zone is shown from the start, so players get about
+4.5 minutes in it before zone 2 is announced. Every zone closes faster than in 1.1; the early ones deal
+little damage (zone k deals k/7 of `zone_damage_delta`). The final-zone avoid list
 (`end_avoid_city`) leaves out the lobby, the islands, the places too close to the map edge for the larger
 zones to fit around them, and the coastal places that would put sea in the first zone; it is tuned for
 these radii. After changing `static_sizes` or the list, check them with:
@@ -259,5 +262,5 @@ which places cause it.
 ## 7. Not in this package
 
 - `types.xml`, events and vehicles of the vanilla mission are unchanged (loot volume and vehicles still
-  to be reviewed for 120 players).
+  to be reviewed for 100 players).
 - Load figures with 100 or more players: the 1.0 was only played with one player so far.

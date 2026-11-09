@@ -10,7 +10,8 @@ class BattleRoyaleClient: BattleRoyaleBase
 
     protected bool b_IsReady;
 
-    protected ref ExpansionServerMarkerData m_ZoneCenterMapMarker;
+    protected ref BattleRoyaleZoneWall m_ZoneWall;  //!< red, on the zone in force
+    protected ref BattleRoyaleZoneWall m_OpenZoneWall;  //!< yellow, on the announced zone until it locks
 
     //! Outside zone effect last queued: -1 unknown, 0 removed, 1 added; reset when the local player entity changes
     protected int i_OutsideZoneEffectState;
@@ -25,6 +26,8 @@ class BattleRoyaleClient: BattleRoyaleBase
         i_Kills = 0;
         i_SecondsRemaining = 0;
         i_OutsideZoneEffectState = -1;
+        m_ZoneWall = new BattleRoyaleZoneWall( BattleRoyaleZoneWall.MODEL_LOCKED );
+        m_OpenZoneWall = new BattleRoyaleZoneWall( BattleRoyaleZoneWall.MODEL_OPEN );
 
         Init();
     }
@@ -130,8 +133,6 @@ class BattleRoyaleClient: BattleRoyaleBase
 			{
 				m_FuturePlayArea = new BattleRoyalePlayArea( br_rpc.future_play_area_center, br_rpc.future_play_area_radius );
 
-				UpdateZoneCenterMaker( br_rpc.future_play_area_center );
-
 				if ( br_rpc.b_ArtillerySound )
 				{
 					ref EffectSound m_ArtySound = SEffectManager.PlaySound("Artillery_Distant_SoundSet", m_FuturePlayArea.GetCenter(), 0.1, 0.1);
@@ -152,6 +153,18 @@ class BattleRoyaleClient: BattleRoyaleBase
 		// Match phase and kill feed, also shown without a local player
 		UpdateMatchPhase( gameplay, br_rpc );
 		gameplay.UpdateKillFeed();
+
+		// Walls along the zone edges: red on the zone in force, yellow on the announced zone until it locks.
+		// Both are gone once the final zone collapsed
+		BattleRoyalePlayArea locked_area = m_CurrentPlayArea;
+		BattleRoyalePlayArea open_area = m_FuturePlayArea;
+		if ( IsZoneLocked() || IsZoneCollapsed( br_rpc ) )
+			open_area = null;
+		if ( IsZoneCollapsed( br_rpc ) )
+			locked_area = null;
+		vector wall_camera_pos = GetGame().GetCurrentCameraPosition();
+		m_ZoneWall.Update( delta, wall_camera_pos, locked_area );
+		m_OpenZoneWall.Update( delta, wall_camera_pos, open_area );
 
 #ifdef BR_MINIMAP
         vector camera_pos = GetGame().GetCurrentCameraPosition();
@@ -402,22 +415,6 @@ class BattleRoyaleClient: BattleRoyaleBase
 		gameplay.UpdateMatchPhase( label, seconds );
     }
 
-    protected void UpdateZoneCenterMaker(vector center)
-    {
-        if (!m_ZoneCenterMapMarker)
-        {
-            m_ZoneCenterMapMarker = new ExpansionServerMarkerData("ServerMarker_Zone_Center");
-            m_ZoneCenterMapMarker.Set3D(true);
-            m_ZoneCenterMapMarker.SetName("Center");
-            m_ZoneCenterMapMarker.SetIconName("Map Marker");
-            m_ZoneCenterMapMarker.SetColor(ARGB(255, 255, 0, 0));
-            m_ZoneCenterMapMarker.SetVisibility(EXPANSION_MARKER_VIS_WORLD | EXPANSION_MARKER_VIS_MAP);
-            GetExpansionSettings().GetMap().AddServerMarker(m_ZoneCenterMapMarker);
-        }
-
-        m_ZoneCenterMapMarker.SetPosition( center + "0 5 0" );
-    }
-
     protected bool GetZoneDistance(PlayerBase player, BattleRoyalePlayArea play_area, out float distExt, out float distInt, out float angle)
     {
         vector center = play_area.GetCenter();
@@ -473,10 +470,6 @@ class BattleRoyaleClient: BattleRoyaleBase
         {
             i_SecondsRemaining--;
             gameplay.UpdateCountdownTimer(i_SecondsRemaining);
-        }
-        else
-        {
-            gameplay.HideCountdownTimer();
         }
 
         // If another system stopped the outside zone effect, queue it again on the next frame

@@ -106,7 +106,9 @@ def build_mod(addons, out, names, full, key, temp, mod_cpp):
         server_files = os.path.join(out, "ServerFiles")
         if os.path.isdir(server_files):
             shutil.rmtree(server_files)
-        shutil.copytree(os.path.join(ROOT, "BattleRoyale_server"), server_files)
+        # Running or importing the server tools leaves Python caches next to them; they are not shipped
+        shutil.copytree(os.path.join(ROOT, "BattleRoyale_server"), server_files,
+                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     print("built", len(names), "addons into", out)
 
 
