@@ -353,6 +353,8 @@ class BattleRoyaleRound: BattleRoyaleState
         return m_Zone;
     }
 
+    //! Zone of the previous round; null in the first round played, which follows the start match state.
+    //! OnPlayerTick reaches this every tick until the first zone locks, so that expected case is not logged
     BattleRoyaleZone GetPreviousZone()
     {
         BattleRoyaleRound prev_round;
@@ -363,8 +365,6 @@ class BattleRoyaleRound: BattleRoyaleState
 //                return prev_round.GetZone();
 //            else
 //                BattleRoyaleUtils.Trace(m_Zone.GetZoneNumber() + " <= " + m_PreviousState.i_StartingZone);
-        } else {
-            BattleRoyaleUtils.Trace("Can't cast m_PreviousState to BattleRoyaleRound!");
         }
 
         return NULL;
