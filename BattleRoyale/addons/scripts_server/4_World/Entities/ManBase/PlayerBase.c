@@ -29,7 +29,7 @@ modded class PlayerBase
 	int br_last_player_hit_time;  //!< GetGame().GetTime() of that hit, in ms
 	string br_last_player_hit_weapon;  //!< display name of the weapon, empty for fists
 	float br_last_player_hit_distance;  //!< metres between the two players at the hit, 0 in melee
-	bool br_bleeding_at_death;  //!< set when this player dies, from its bleeding sources
+	bool br_bled_out;  //!< set when this player dies: its blood was under the fatal level, so the death was blood loss
 
 	void SetBRPosition( int position )
 	{
@@ -52,11 +52,9 @@ modded class PlayerBase
 
     override void EEKilled( Object killer )
     {
-        // The vanilla EEKilled deletes the bleeding manager, so the bleeding sources are read first
-        br_bleeding_at_death = false;
-        BleedingSourcesManagerServer bleeding = GetBleedingManagerServer();
-        if ( bleeding && bleeding.GetBleedingSourcesCount() > 0 )
-            br_bleeding_at_death = true;
+        // Vanilla kills a player through blood loss when the blood falls under BLOOD_THRESHOLD_FATAL
+        // (BleedingCheckMdfr). An open wound alone does not make the death a bleed out
+        br_bled_out = GetHealth( "", "Blood" ) < PlayerConstants.BLOOD_THRESHOLD_FATAL;
 
 #ifdef EXPANSIONMODNAVIGATION
         // A battle royale player never goes back to where they died. Expansion reads this flag in its own

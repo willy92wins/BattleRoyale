@@ -154,14 +154,17 @@ class BattleRoyaleClient: BattleRoyaleBase
 		UpdateMatchPhase( gameplay, br_rpc );
 		gameplay.UpdateKillFeed();
 
-		// Walls along the zone edges: red on the zone in force, yellow on the announced zone until it locks.
-		// Both are gone once the final zone collapsed
-		BattleRoyalePlayArea locked_area = m_CurrentPlayArea;
-		BattleRoyalePlayArea open_area = m_FuturePlayArea;
-		if ( IsZoneLocked() || IsZoneCollapsed( br_rpc ) )
-			open_area = null;
-		if ( IsZoneCollapsed( br_rpc ) )
-			locked_area = null;
+		// Walls along the zone edges while the zones are in play: red on the zone in force, yellow on the announced
+		// zone until it locks. Both are gone once the final zone collapsed and when the match is over, because the
+		// client keeps the last areas after the server clears them
+		BattleRoyalePlayArea locked_area = null;
+		BattleRoyalePlayArea open_area = null;
+		if ( IsZonePlayPhase( br_rpc ) && !IsZoneCollapsed( br_rpc ) )
+		{
+			locked_area = m_CurrentPlayArea;
+			if ( !IsZoneLocked() )
+				open_area = m_FuturePlayArea;
+		}
 		vector wall_camera_pos = GetGame().GetCurrentCameraPosition();
 		m_ZoneWall.Update( delta, wall_camera_pos, locked_area );
 		m_OpenZoneWall.Update( delta, wall_camera_pos, open_area );
@@ -171,10 +174,14 @@ class BattleRoyaleClient: BattleRoyaleBase
         gameplay.UpdateMiniMap( camera_pos );
 #endif
 
-		// Everything below needs the local player
+		// Everything below needs the local player. Without one there is no distance to show, and hiding it also
+		// turns the phase text back to white
 		PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
 		if ( !player )
+		{
+			gameplay.HideDistance();
 			return;
+		}
 
 		// Fade in/out effect
 		if( br_previous_fade_state != br_rpc.fade_state )
@@ -211,8 +218,8 @@ class BattleRoyaleClient: BattleRoyaleBase
 		float angle;
 		bool isInsideZone = true;
 
-		// First check if player is outside current play area
-		if (m_CurrentPlayArea)
+		// First check if player is outside current play area; after the match the last area is no longer in play
+		if (m_CurrentPlayArea && IsZonePlayPhase(br_rpc))
 		{
 			// Check if player is inside current play area and get distExt, distInt and angle
 			isInsideZone = GetZoneDistance(player, m_CurrentPlayArea, distExt, distInt, angle);
@@ -308,6 +315,12 @@ class BattleRoyaleClient: BattleRoyaleBase
     protected bool IsZoneDamagePhase(BattleRoyaleRPC br_rpc)
     {
 		return br_rpc.match_phase == EBRMatchPhase.ROUND || br_rpc.match_phase == EBRMatchPhase.LAST_ROUND;
+    }
+
+    //! The zones are in play from the start of the match, when the first zone is shown, until the match is over
+    protected bool IsZonePlayPhase(BattleRoyaleRPC br_rpc)
+    {
+		return br_rpc.match_phase == EBRMatchPhase.STARTING || IsZoneDamagePhase( br_rpc );
     }
 
     //! The last round clears the current area when the final zone locks; from then on every player takes damage.

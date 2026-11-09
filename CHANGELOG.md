@@ -27,6 +27,17 @@
 - The Spanish phase text says "LA ZONA SE CIERRA".
 - `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
 
+### Fixed after the adversarial review (Codex `gpt-6.1-sol`, SOUND-with-fixes, 0 P1, 3 P2, 3 P3)
+- A death counts as a bleed out only when the blood is under the fatal level (`BLOOD_THRESHOLD_FATAL`, as
+  vanilla's `BleedingCheckMdfr`), not whenever a wound is open: a thirst or zone death is no longer
+  credited to the last shooter.
+- Grenade and mine kills reach the kill counter of their thrower or owner also when that player is
+  already dead but still connected.
+- The zone wall works out which part of the edge is within 500 m with the real geometry; near the centre
+  of a small zone (350 m and less) half of the wall was missing.
+- Walls and the coloured phase text are cleared when the match is over or the local player is gone.
+- The clock is also removed from the unused minimap HUD layout.
+
 ### Verified
 - Build and lint gate green, with the same known false positives as 1.1.
 - DayZDiag 1.30, server and client, one player: yellow and red zone walls, yellow first zone on the spawn

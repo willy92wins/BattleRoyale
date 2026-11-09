@@ -79,12 +79,23 @@ class BattleRoyaleZoneWall
 			return;
 		}
 
-		// Slots within VIEW_RANGE of the camera lie around the camera's bearing from the center
+		// Slots within VIEW_RANGE of the camera lie within an angle theta either side of the camera's bearing from the
+		// center. From the triangle center-camera-slot: VIEW_RANGE^2 = R^2 + d^2 - 2 R d cos(theta). With the camera
+		// near the center of a small zone the whole edge can be in range
 		float step = Math.PI2 / m_Count;
 		float bearing = Math.Atan2(dz, dx);
-		int half_span = Math.Ceil((VIEW_RANGE / m_Radius) / step) + 1;
-		if (half_span * 2 + 1 > m_Count)
-			half_span = m_Count / 2;
+		int half_span = m_Count / 2;
+		if (distance > 1)
+		{
+			float cos_theta = (m_Radius * m_Radius + distance * distance - VIEW_RANGE * VIEW_RANGE) / (2 * m_Radius * distance);
+			if (cos_theta > -1)
+			{
+				float theta = Math.Acos(Math.Clamp(cos_theta, -1, 1));
+				int arc_span = Math.Ceil(theta / step) + 1;
+				if (arc_span < half_span)
+					half_span = arc_span;
+			}
+		}
 
 		int first = Math.Round(bearing / step);
 		float range_sq = VIEW_RANGE * VIEW_RANGE;

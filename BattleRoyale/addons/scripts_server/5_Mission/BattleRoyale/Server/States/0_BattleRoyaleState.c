@@ -789,13 +789,14 @@ class BattleRoyaleState: Timeable
 	static const int BLEED_OUT_CREDIT_SECONDS = 300;
 
 	//! True when the victim bled out less than BLEED_OUT_CREDIT_SECONDS after a hit from another player.
-	//! The engine names the victim itself as the source of a bleed out, as of any other death without a killer
+	//! A death without a killer names the victim itself (or nothing) as the source; br_bled_out tells blood loss
+	//! apart from the other causes, such as thirst or zone damage
 	protected bool IsBleedOutKill(PlayerBase victim, Object source)
 	{
 		if (!victim || (source && source != victim))
 			return false;
 
-		if (!victim.br_bleeding_at_death || victim.br_last_player_hit_name == "")
+		if (!victim.br_bled_out || victim.br_last_player_hit_name == "")
 			return false;
 
 		return GetGame().GetTime() - victim.br_last_player_hit_time <= BLEED_OUT_CREDIT_SECONDS * 1000;
@@ -817,11 +818,29 @@ class BattleRoyaleState: Timeable
 		return null;
 	}
 
+	//! Identity of a connected player whose plain id is plain_id, alive or dead; null when not connected
+	protected PlayerIdentity FindConnectedIdentity(string plain_id)
+	{
+		if (plain_id == "")
+			return null;
+
+		array<PlayerIdentity> identities = new array<PlayerIdentity>;
+		GetGame().GetPlayerIndentities(identities);
+		foreach (PlayerIdentity connected : identities)
+		{
+			if (connected && connected.GetPlainId() == plain_id)
+				return connected;
+		}
+
+		return null;
+	}
+
 	//! Adds one to the HUD kill counter of the player the death is credited to: the one holding the weapon,
 	//! the one who set off the grenade or mine, or for a bleed out the last player who hit the victim
 	protected void CreditKill(PlayerBase victim, Object source, bool bleed_out)
 	{
 		PlayerBase killer;
+		PlayerIdentity identity;
 		if (bleed_out)
 		{
 			killer = victim.br_last_player_hit_by;
@@ -834,18 +853,37 @@ class BattleRoyaleState: Timeable
 			if (!killer)
 				killer = PlayerBase.Cast(source);
 
-			Grenade_Base grenade = Grenade_Base.Cast(source);
-			LandMineTrap mine = LandMineTrap.Cast(source);
-			if (!killer && grenade)
-				killer = FindMatchPlayer(grenade.GetActivatorId());
-			else if (!killer && mine)
-				killer = FindMatchPlayer(mine.GetActivatorId());
+			// A grenade or mine names who set it off by plain id. That player can be dead by now and still
+			// connected, so the identity is looked up among every connected player, not only the living ones
+			if (!killer)
+			{
+				string activator_id = "";
+				Grenade_Base grenade = Grenade_Base.Cast(source);
+				LandMineTrap mine = LandMineTrap.Cast(source);
+				if (grenade)
+					activator_id = grenade.GetActivatorId();
+				else if (mine)
+					activator_id = mine.GetActivatorId();
+
+				identity = FindConnectedIdentity(activator_id);
+			}
 		}
 
-		if (!killer || killer == victim || !killer.GetIdentity())
+		if (killer)
+		{
+			if (killer == victim)
+				return;
+			identity = killer.GetIdentity();
+		}
+
+		if (!identity)
 			return;
 
-		GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "AddPlayerKill", new Param1<int>(1), true, killer.GetIdentity(), killer);
+		// Own grenade or mine
+		if (victim && victim.GetIdentity() && victim.GetIdentity().GetPlainId() == identity.GetPlainId())
+			return;
+
+		GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "AddPlayerKill", new Param1<int>(1), true, identity, killer);
 	}
 
 	protected void BroadcastKillFeed(PlayerBase victim, Object source, bool bleed_out)

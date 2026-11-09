@@ -1,0 +1,55 @@
+===== PROMPT INICIO =====
+
+Tarea: revision ADVERSARIAL de SOLO LECTURA de los cambios de la version 1.2.0 del mod DayZ "BattleRoyale" (Enforce Script, DayZ 1.30). El dueno la pide antes de publicar en el Workshop. Adversarial = intenta demostrar que algo de este diff (a) rompe la partida, el servidor o el cliente, (b) da un resultado falso (kill mal atribuida, zona mal pintada, contador mal) o (c) se comporta mal con 100 jugadores.
+
+REPO: C:\Users\guill\Repos\BattleRoyale (cwd). Base publicada = commit 7a7a494 (1.1.0). Revision = tag v1.2.0.
+Alcance EXACTO: `git diff 7a7a494 v1.2.0 -- . ":(exclude)*.png" ":(exclude)*.jpg" ":(exclude)*.edds.meta" ":(exclude)*.paa"` (27 ficheros, ~700 lineas). Lee el diff con git y abre los ficheros completos cuando necesites contexto. Lo que no esta en ese diff NO se revisa.
+
+CARGA INICIAL (en orden)
+1. El diff de arriba.
+2. BattleRoyale\addons\scripts_server\5_Mission\BattleRoyale\Server\States\0_BattleRoyaleState.c (OnPlayerKilled, IsBleedOutKill, FindMatchPlayer, CreditKill, BroadcastKillFeed).
+3. BattleRoyale\addons\scripts_server\4_World\Entities\ManBase\PlayerBase.c (EEKilled, EEHitBy).
+4. BattleRoyale\addons\scripts_client\5_Mission\BattleRoyale\Client\BattleRoyaleZoneWall.c y BattleRoyaleClient.c.
+5. BattleRoyale\addons\scripts_client\5_Mission\GUI\HUD\BattleRoyaleHud.c, ...\GUI\Map\ExpansionMapMenu.c, ...\Mission\MissionGameplay.c y BattleRoyale\addons\gui\layouts\hud\br_hud.layout.
+6. BattleRoyale\addons\scripts_server\3_Game\Config\BattleRoyaleZoneData.c.
+CONSULTAR SOLO SI UN HALLAZGO LO REQUIERE (fuentes de referencia, solo lectura):
+- Scripts vanilla DayZ 1.30: P:\scripts (1_core, 3_game, 4_world). Ej.: P:\scripts\4_world\entities\manbase\playerbase.c (EEKilled borra el BleedingSourcesManagerServer en :1223-1224).
+- Expansion Navigation desempaquetado: C:\Users\guill\AppData\Local\Temp\claude\72e0954b065197d7\c2d37fb3-e1b3-42db-bc1e-f916ee3c85ef\scratchpad\expx\nav_navigation_scripts (su PlayerBase.EEKilled lee GetExpansionSettings().GetMap().CreateDeathMarker en 4_World\DayZExpansion_Navigation\Entities\ManBase\PlayerBase.c:150).
+- Expansion core desempaquetado: ...\scratchpad\expx\exp_core_scripts y ...\scratchpad\expx\exp_scripts.
+
+HECHOS YA VERIFICADOS (no los repitas; atacalos solo si crees que estan mal)
+- Compila: servidor y cliente arrancan en DayZDiag 1.30 sin "Can't compile" con esta revision (un intento anterior con `modded class ExpansionMapSettings` NO compilaba: "Incompatible parameter 'this'" en el OnLoad de Expansion; se cambio a asignar CreateDeathMarker=false en EEKilled antes de super).
+- Probado con UN jugador: muros rojo/amarillo, circulo amarillo en el mapa de spawn, contador de kills a 0, flecha sin texto, zona 1 de 3000 m, una muerte sin marcador nuevo.
+- NO probado en juego: circulos del mapa abierto con M, color naranja/rojo del texto de fase, credito por desangrado/granada/mina (necesita 2 jugadores).
+- Lint offline: mismos falsos positivos conocidos que la base (ES-LAYOUT-PATH-PBOPREFIX-MISMATCH x10 cliente, ES-OVERRIDE-PARAM-NAME-MISMATCH x2 servidor). No los reportes.
+
+DIMENSIONES (adversariales)
+1) Credito de kills: busca credito falso, doble conteo o credito perdido. Rutas: muerte directa por arma, granada/mina (activador vivo o muerto), desangrado (IsBleedOutKill: source==victima o null, br_bleeding_at_death leido antes de super.EEKilled, ventana de 300 s), desconexion estando inconsciente (BattleRoyaleServer.OnPlayerDisconnect llama a OnPlayerKilled con last_unconscious_source y luego mata), dano de zona, caida, zombi, suicidio, atacante desconectado/muerto/sin identidad, companero de grupo. Traza cada ruta hasta AddPlayerKill y KillFeedEvent. Comprueba que la RPC AddPlayerKill solo se envia una vez por muerte.
+2) Orden de EEKilled: el mod modifica PlayerBase.EEKilled (lee sangrado y fija CreateDeathMarker=false ANTES de super). Verifica con el orden real de carga de mods (BattleRoyale carga despues de Expansion) que el flag llega a tiempo y que no rompe nada en el servidor ni en otros jugadores.
+3) Muros de zona (cliente): fugas de objetos (CreateStaticObjectUsingP3D / ObjectDelete), limpieza al acabar la partida, al morir, al desconectar o al destruir BattleRoyaleClient; coste por frame con radios de 3000 m; transformacion con cizalla (SetTransform con aside no unitario) y si el motor la acepta; que pasa si m_CurrentPlayArea queda obsoleto tras el colapso (el cliente no lo pone a null cuando llega 0,0).
+4) Colores del mapa y "zona cerrada": IsZoneLocked y la comparacion en ExpansionMapMenu usan igualdad exacta de vector/float entre RPCs; busca un caso real en que el anuncio y el cierre no coincidan bit a bit, o en que el circulo siguiente quede amarillo o rojo cuando no toca (primera ronda, ultima ronda, colapso, reconexion a mitad de partida).
+5) HUD: eliminacion del CountdownPanel y sus widgets; ninguna referencia colgante (incluido br_hud_minimap.layout y codigo bajo #ifdef BR_MINIMAP); el color del texto de fase que se queda pegado; panel de kills siempre visible.
+6) Tablas de zonas: valores por defecto contra ValidateZoneTables y GetDynamicStartingZone; con 100 jugadores; con 1-10 jugadores; el comentario y el README dicen ~25 min (150 s + suma de timers + timers[0]/2): comprueba la cuenta. Un servidor que actualiza conserva su zone_settings.json viejo: ?hay algun estado incoherente entre tablas viejas y codigo nuevo?
+7) Cambios menores: 6_BattleRoyaleRound.GetPreviousZone (traza quitada), stringtable.csv (columnas), LoadingScreens.json (solo 2 pantallas), tools/build.py (ignore_patterns), tools/make_loading_screens.py, BattleRoyaleConstants.c.
+8) PREMISA: ?que puede estar mal en la premisa de este encargo o del diseno (por ejemplo, que el motor pase la victima como source en un desangrado)? Distingue hecho verificado de interpretacion.
+
+CRITERIO DE SEVERIDAD (no inflar)
+- P1 = bloquea la publicacion: script error o crash, servidor que no arranca, partida que no termina o termina mal, fuga que crece sin limite, credito de kills sistematicamente falso.
+- P2 = comportamiento incorrecto en un caso real pero acotado.
+- P3 = estilo, comentario, mejora.
+Cada hallazgo P1/P2 necesita: path:line + escenario concreto (estado o entrada exacta -> salida mala) + por que el codigo lo produce, con la cita de la API real (cite-then-verify contra P:\scripts o el Expansion desempaquetado). Sin escenario concreto -> P3.
+
+LIMITES
+- SOLO LECTURA. No modifiques, crees ni borres ficheros. No hagas commits. No ejecutes el juego ni el build.
+- Findings, no fixes: puedes proponer el arreglo en una frase, sin reescribir codigo.
+- No audites lo que no esta en el diff. No repitas el lint.
+- PRESUPUESTO DE ESTA SESION: sin subagentes. Maximo ~60 llamadas a herramientas. Cierra en menos de 40 minutos.
+
+ENTREGABLE (tu mensaje final, en espanol; se guarda tal cual)
+1. Veredicto: SOUND / SOUND-with-fixes / UNSOUND, en una linea.
+2. Tabla: ID | archivo:linea | severidad | resumen | arreglo propuesto.
+3. Detalle por hallazgo con el escenario y las citas.
+4. Respuesta a la dimension 8 (premisa).
+5. "LO QUE NO PUDE VERIFICAR".
+
+===== PROMPT FIN =====
