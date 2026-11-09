@@ -23,6 +23,7 @@ modded class ExpansionMapMenu
         return layoutRoot;
     }
 
+    //! Red circle on the zone in force, yellow on the announced zone; once the announced zone locks it is the zone in force and turns red
     void UpdateZones()
     {
         float radius;
@@ -35,7 +36,7 @@ modded class ExpansionMapMenu
             {
                 m_CurrentZone = new BattleRoyaleMapMarkerZone( layoutRoot, m_MapWidget );
                 m_CurrentZone.SetThickness(2);
-                m_CurrentZone.SetColor(ARGB(255, 0, 0, 255));
+                m_CurrentZone.SetColor(BR_ZONE_COLOR_LOCKED);
                 BattleRoyaleUtils.Trace("Creating Current Zone Map Marker!");
                 m_Markers.Insert( m_CurrentZone );
             }
@@ -53,13 +54,20 @@ modded class ExpansionMapMenu
             if(!m_NextZone)
             {
                 m_NextZone = new BattleRoyaleMapMarkerZone( layoutRoot, m_MapWidget );
-                m_NextZone.SetColor(ARGB(255, 255, 255, 255));
                 m_NextZone.SetThickness(2);
                 BattleRoyaleUtils.Trace("Creating Next Zone Map Marker!");
                 m_Markers.Insert( m_NextZone );
             }
             center = next_playarea.GetCenter();
             radius = next_playarea.GetRadius();
+
+            // SetColor only redraws when the colour changes
+            bool locked = current_playarea && current_playarea.GetCenter() == center && current_playarea.GetRadius() == radius;
+            if (locked)
+                m_NextZone.SetColor(BR_ZONE_COLOR_LOCKED);
+            else
+                m_NextZone.SetColor(BR_ZONE_COLOR_OPEN);
+
             if (m_NextZone.GetPosition() != center)
                 m_NextZone.SetPosition(center);
             m_NextZone.SetSize_A(radius);

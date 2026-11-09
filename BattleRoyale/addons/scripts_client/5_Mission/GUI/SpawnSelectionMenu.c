@@ -219,10 +219,10 @@ class SpawnSelectionMenu extends UIScriptedMenu
 			}
 		}
 
-		// Show the first zone
+		// Show the first zone, in yellow like every announced zone that has not locked yet
 		if(v_FirstZoneCenter != "0 0 0" && f_FirstZoneRadius > 0)
 		{
-			WorldRenderOval(m_SpawnCanvas, m_MapWidget, v_FirstZoneCenter[0], v_FirstZoneCenter[2], f_FirstZoneRadius, f_FirstZoneRadius, ARGB(255, 255, 255, 255));
+			WorldRenderOval(m_SpawnCanvas, m_MapWidget, v_FirstZoneCenter[0], v_FirstZoneCenter[2], f_FirstZoneRadius, f_FirstZoneRadius, BR_ZONE_COLOR_OPEN);
 		}
 
 		// Draw the heat map squares computed by RebuildHeatMap

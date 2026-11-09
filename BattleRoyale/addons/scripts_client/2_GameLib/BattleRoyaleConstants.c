@@ -20,6 +20,11 @@ static const string BATTLEROYALE_VERSION = "1.1.0";
 #endif
 
 
+//--- Zone edge colours on the map, the same as the zone walls: red for the zone in force, yellow for an announced zone that has not locked yet
+static const int BR_ZONE_COLOR_LOCKED = 0xFFEB2D23;
+static const int BR_ZONE_COLOR_OPEN = 0xFFF5C828;
+
+
 //--- Feedback link opened by the buttons that extra_changefeedbackurl redirects; empty hides the pause menu button
 static const string BATTLEROYALE_FEEDBACK_URL = "";
 
