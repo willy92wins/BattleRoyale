@@ -3,50 +3,28 @@
     "MapName": "default",
     "Path": [
       "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_1.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_2.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_3.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_4.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_5.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_6.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_7.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_8.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_9.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_10.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_11.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_12.edds"
+      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_2.edds"
     ]
   },
   {
     "MapName": "chernarusplus",
     "Path": [
       "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_1.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_2.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_3.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_4.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_5.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_6.edds"
+      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_2.edds"
     ]
   },
   {
     "MapName": "namalsk",
     "Path": [
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_7.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_8.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_9.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_10.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_11.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_12.edds"
+      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_1.edds",
+      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_2.edds"
     ]
   },
   {
     "MapName": "sakhal",
     "Path": [
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_7.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_8.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_9.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_10.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_11.edds",
-      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_12.edds"
+      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_1.edds",
+      "Vigrid-BattleRoyale/GUI/textures/loading_screens/br_loading_2.edds"
     ]
   }
 ]
