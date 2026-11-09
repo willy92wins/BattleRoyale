@@ -17,7 +17,7 @@ class BattleRoyaleHud
     static const int PHASE_LABEL_RESTARTING = 12;
     static const int PHASE_LABEL_STARTING = 13;
 
-    //! Color states of the distance and countdown widgets
+    //! Color states of the distance widgets and the phase text
     protected static const int DISTANCE_INSIDE = 0;
     protected static const int DISTANCE_REACHABLE = 1;
     protected static const int DISTANCE_HARD = 2;
@@ -29,7 +29,6 @@ class BattleRoyaleHud
     protected Widget m_GroupCountPanel;
     protected Widget m_ZoneDistancePanel;
     protected Widget m_KillCountPanel;
-    protected Widget m_CountdownPanel;
     protected Widget m_PhasePanel;
     protected Widget m_ZoneDamagePanel;
 
@@ -37,15 +36,13 @@ class BattleRoyaleHud
     protected TextWidget m_GroupTextWidget;
     protected TextWidget m_DistanceTextWidget;
     protected TextWidget m_KillTextWidget;
-    protected TextWidget m_CountdownTextWidget;
     protected TextWidget m_PhaseTextWidget;
 
     protected ImageWidget m_DistanceZoneArrow;
-    protected ImageWidget m_ImageClock;
 
     protected bool is_shown;
 
-    protected int timeRemaining;
+    protected int timeRemaining;  //!< seconds left on the zone countdown, to rate how hard the zone is to reach
 
     // Last values written to the widgets, so the setters only touch them when something changed
     protected int m_DistanceColorState;
@@ -68,7 +65,6 @@ class BattleRoyaleHud
         m_GroupCountPanel = Widget.Cast( m_Root.FindAnyWidget( "GroupsCountPanel" ) );
         m_ZoneDistancePanel = Widget.Cast( m_Root.FindAnyWidget( "ZoneDistancePanel" ) );
         m_KillCountPanel = Widget.Cast( m_Root.FindAnyWidget( "KillCountPanel" ) );
-        m_CountdownPanel = Widget.Cast( m_Root.FindAnyWidget( "CountdownPanel" ) );
         m_PhasePanel = Widget.Cast( m_Root.FindAnyWidget( "PhasePanel" ) );
         m_ZoneDamagePanel = Widget.Cast( m_Root.FindAnyWidget( "ZoneDamagePanel" ) );
 
@@ -76,17 +72,14 @@ class BattleRoyaleHud
         m_GroupTextWidget = TextWidget.Cast( m_GroupCountPanel.FindAnyWidget( "GroupText" ) );
         m_DistanceTextWidget = TextWidget.Cast( m_ZoneDistancePanel.FindAnyWidget( "DistanceText" ) );
         m_KillTextWidget = TextWidget.Cast( m_KillCountPanel.FindAnyWidget( "KillCountText" ) );
-        m_CountdownTextWidget = TextWidget.Cast( m_CountdownPanel.FindAnyWidget( "CountdownText" ) );
         m_PhaseTextWidget = TextWidget.Cast( m_Root.FindAnyWidget( "PhaseText" ) );
 
         m_DistanceZoneArrow = ImageWidget.Cast( m_Root.FindAnyWidget( "ZoneIcon" ) );
-        m_ImageClock = ImageWidget.Cast( m_Root.FindAnyWidget( "CountdownIcon" ) );
 
         m_PlayerCountPanel.Show( false );
         m_GroupCountPanel.Show( false );
         m_ZoneDistancePanel.Show( false );
         m_KillCountPanel.Show( false );
-        m_CountdownPanel.Show( false );
         SetVisible( m_PhasePanel, false );
         SetVisible( m_ZoneDamagePanel, false );
 
@@ -124,16 +117,18 @@ class BattleRoyaleHud
     void ShowDistance( bool show )
     {
         SetVisible( m_ZoneDistancePanel, show );
+
+        // Without a distance there is no zone to reach: the colors go back to white
+        if ( !show && m_DistanceColorState != -1 )
+        {
+            ApplyDistanceColors( DISTANCE_INSIDE );
+            m_DistanceColorState = -1;
+        }
     }
 
     void ShowKillCount( bool show )
     {
         SetVisible( m_KillCountPanel, show );
-    }
-
-    void ShowCountdown( bool show )
-    {
-        SetVisible( m_CountdownPanel, show );
     }
 
     void ShowZoneDamage( bool show )
@@ -144,7 +139,7 @@ class BattleRoyaleHud
     //value control
     void SetDistance(bool isInsideZone, float distExt, float distInt, float angle)
     {
-        if(!m_DistanceTextWidget || !m_DistanceZoneArrow || !m_CountdownTextWidget || !m_ImageClock)
+        if(!m_DistanceTextWidget || !m_DistanceZoneArrow)
         {
             Error("Called SetDistance but widget is null!");
             return;
@@ -202,7 +197,7 @@ class BattleRoyaleHud
             m_DistanceZoneArrow.SetRotation( 0, 0, angle );
         }
 
-        // -1 stands for the "safe" text, otherwise whole metres to the zone
+        // -1 stands for inside the zone, where the arrow shows no text; otherwise whole metres to the zone
         int meters = -1;
         if ( !isInsideZone )
             meters = Math.Ceil(distExt);
@@ -211,13 +206,13 @@ class BattleRoyaleHud
         {
             m_LastDistanceMeters = meters;
             if ( isInsideZone )
-                m_DistanceTextWidget.SetText( "#STR_BR_SAFE" );
+                m_DistanceTextWidget.SetText( "" );
             else
                 m_DistanceTextWidget.SetText( meters.ToString() + "m");
         }
     }
 
-    //! Inside the zone everything is white; outside, the distance is red and the countdown shows how hard the zone is to reach
+    //! Inside the zone everything is white; outside, the distance is red and the phase text, which shows the countdown, tells how hard the zone is to reach
     protected void ApplyDistanceColors( int color_state )
     {
         int distance_color = ARGB(255, 255, 255, 255);
@@ -233,8 +228,8 @@ class BattleRoyaleHud
 
         m_DistanceZoneArrow.SetColor( distance_color );
         m_DistanceTextWidget.SetColor( distance_color );
-        m_CountdownTextWidget.SetColor( countdown_color );
-        m_ImageClock.SetColor( countdown_color );
+        if ( m_PhaseTextWidget )
+            m_PhaseTextWidget.SetColor( countdown_color );
     }
 
     void SetCount(int nb_players, int nb_groups)
@@ -276,17 +271,10 @@ class BattleRoyaleHud
         m_KillTextWidget.SetText( count.ToString() );
     }
 
+    //! The phase text shows the countdown; the HUD keeps it only to rate how hard the zone is to reach
     void SetCountdown(int value)
     {
-        if(!m_CountdownTextWidget)
-        {
-            Error("Called SetCountdown but widget is null!");
-            return;
-        }
-
         timeRemaining = value;
-
-        m_CountdownTextWidget.SetText( FormatTime( value ) );
     }
 
     //! Shows the phase label and, when seconds >= 0, the time it counts down to

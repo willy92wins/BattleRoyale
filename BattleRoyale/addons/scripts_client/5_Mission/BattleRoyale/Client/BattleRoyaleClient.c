@@ -491,10 +491,6 @@ class BattleRoyaleClient: BattleRoyaleBase
             i_SecondsRemaining--;
             gameplay.UpdateCountdownTimer(i_SecondsRemaining);
         }
-        else
-        {
-            gameplay.HideCountdownTimer();
-        }
 
         // If another system stopped the outside zone effect, queue it again on the next frame
         if ( i_OutsideZoneEffectState == 1 )
