@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.2.0 (in progress, branch `v1.2`)
+
+### Changed
+- Zone walls: each client builds a translucent wall from local panels along the zone edges within 500 m
+  of its camera, with no server or network cost. The zone in force is red; the announced zone is yellow
+  until it locks.
+- The map and the spawn selection map draw the zone circles in the same colours: red for the zone in
+  force, yellow for the announced zone.
+- HUD: a kill counter with a skull icon, always shown under the player count, replaces the clock, whose
+  time the phase text already showed. The phase text now turns orange or red when the zone is hard or
+  impossible to reach in time. The arrow no longer shows "safe" inside the zone.
+- Kill credit: a player who bleeds out less than 5 minutes after a hit from another player is that
+  player's kill, in the kill counter and the kill feed (with the weapon and distance of the hit).
+  Grenade and mine kills now also count in the kill counter.
+- Zone tables: the first zone has a 3000 m radius (radii 3000, 2100, 1350, 750, 350, 150, 50) and a
+  full match takes about 25 minutes instead of 32. The final-zone avoid list has 15 more places for the
+  larger first zone. A server that already has a `zone_settings.json` keeps its old tables: delete the
+  file to get the new defaults.
+
 ## 1.1.0 (2026-11-05, release candidate for the first player test)
 
 The admin tool is optional: the mod runs with no admin tool, with Community Online Tools or with
