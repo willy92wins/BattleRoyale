@@ -12,39 +12,43 @@ class BattleRoyaleZoneData: BattleRoyaleDataBase
         // Lobby (Camp Shkolnik) and islands (Skalisty, Storozh prison)
         "Camp_Shkolnik", "Ruin_Storozh", "Ruin_Voron", "Settlement_Skalisty",
         // Too close to the map edge: the larger zones cannot be generated around them
-        "Camp_Metalurg", "Camp_Pobeda", "Hill_BolshoyKotel", "Hill_Simurg",
-        "Hill_Sokol", "Hill_SvyatoyRoman", "Hill_Tumannyverkh", "Hill_Volchiypik",
-        "LocalOffice_Novo", "LocalOffice_Sinys", "LocalOffice_Svetlo", "Local_Chernyeskaly",
+        "Camp_Arsenovo", "Camp_Metalurg", "Camp_Pobeda", "Hill_BolshoyKotel",
+        "Hill_Lysayagora", "Hill_Simurg", "Hill_Sokol", "Hill_SvyatoyRoman",
+        "Hill_Tumannyverkh", "Hill_Volchiypik", "LocalOffice_Cpol", "LocalOffice_Novo",
+        "LocalOffice_Pavlovo", "LocalOffice_Sinys", "LocalOffice_Svetlo", "Local_Chernyeskaly",
         "Local_Grozovyedoly", "Local_Grozovypereval", "Local_Krutyeskaly", "Local_MB_Kamensk",
         "Local_MB_Tisy", "Local_Polonina", "Local_Rostoki", "Local_Skalka",
-        "Local_TriKresta", "Local_Turovskiypereval", "Local_Vidy", "RailroadStation_Dobroye",
-        "RailroadStation_Novo", "RailroadStation_Svetlo", "Settlement_BelayaPolyana", "Settlement_Berezhki",
-        "Settlement_Dobroye", "Settlement_Galkino", "Settlement_Kamensk", "Settlement_Karmanovka",
-        "Settlement_Krasnoye", "Settlement_Nagornoye", "Settlement_Novodmitrovsk", "Settlement_SKVSChBiathlonArena",
-        "Settlement_StaryYar", "Settlement_Svetloyarsk", "Settlement_SvyatoyRomanSkiResort", "Settlement_Tisy",
+        "Local_TriKresta", "Local_Turovskiypereval", "Local_Vidy", "Marine_Rify",
+        "RailroadStation_Dobroye", "RailroadStation_Kamenka", "RailroadStation_Novo", "RailroadStation_Svetlo",
+        "Ruin_Krona", "Settlement_BelayaPolyana", "Settlement_Berezhki", "Settlement_Bogatyrka",
+        "Settlement_ChernayaPolyana", "Settlement_Dobroye", "Settlement_Galkino", "Settlement_Kamensk",
+        "Settlement_Karmanovka", "Settlement_Krasnoye", "Settlement_Nagornoye", "Settlement_Novodmitrovsk",
+        "Settlement_Pavlovo", "Settlement_SKVSChBiathlonArena", "Settlement_Sinystok", "Settlement_StaryYar",
+        "Settlement_Svergino", "Settlement_Svetloyarsk", "Settlement_SvyatoyRomanSkiResort", "Settlement_Tisy",
         "Settlement_Turovo", "Settlement_Zabolotye", "Settlement_Zvir", "ViewPoint_1",
-        "ViewPoint_11", "ViewPoint_12", "ViewPoint_13", "ViewPoint_15",
-        "ViewPoint_16", "ViewPoint_17", "ViewPoint_18", "ViewPoint_19",
-        "ViewPoint_2", "ViewPoint_20", "ViewPoint_21", "ViewPoint_22",
-        "ViewPoint_23", "ViewPoint_24", "ViewPoint_26", "ViewPoint_27",
-        "ViewPoint_28", "ViewPoint_29", "ViewPoint_3", "ViewPoint_30",
-        "ViewPoint_31", "ViewPoint_32", "ViewPoint_33", "ViewPoint_34",
-        "ViewPoint_35", "ViewPoint_36", "ViewPoint_4", "ViewPoint_5",
-        "ViewPoint_6", "ViewPoint_7",
+        "ViewPoint_11", "ViewPoint_12", "ViewPoint_13", "ViewPoint_14",
+        "ViewPoint_15", "ViewPoint_16", "ViewPoint_17", "ViewPoint_18",
+        "ViewPoint_19", "ViewPoint_2", "ViewPoint_20", "ViewPoint_21",
+        "ViewPoint_22", "ViewPoint_23", "ViewPoint_24", "ViewPoint_25",
+        "ViewPoint_26", "ViewPoint_27", "ViewPoint_28", "ViewPoint_29",
+        "ViewPoint_3", "ViewPoint_30", "ViewPoint_31", "ViewPoint_32",
+        "ViewPoint_33", "ViewPoint_34", "ViewPoint_35", "ViewPoint_36",
+        "ViewPoint_4", "ViewPoint_41", "ViewPoint_5", "ViewPoint_56",
+        "ViewPoint_6", "ViewPoint_7", "ViewPoint_8",
         // On or near the coast: the first zone would cover the sea
         "Hill_Dobry", "Hill_Mayak", "Hill_Olsha", "Hill_Ostrog",
         "Hill_PikKozlova", "Hill_Viselitsa", "LocalOffice_Berezino", "LocalOffice_Cherno",
         "LocalOffice_Elektro", "LocalOffice_Kamys", "LocalOffice_Komar", "LocalOffice_Solnich",
-        "Local_AF_Balota", "Local_Drakon", "Local_Grubyeskaly", "Local_MB_Pavlovo",
-        "Local_Maryanka", "Local_MysGolova", "Local_MysKrutoy", "Local_Otmel",
-        "Local_Tridoliny", "Marine_Rify", "RailroadStation_Balota", "RailroadStation_Berezino",
-        "RailroadStation_Cherno", "RailroadStation_Elektro", "RailroadStation_Kamenka", "RailroadStation_Kamyshovo",
-        "RailroadStation_Komarovo", "RailroadStation_Solnich", "RailroadStation_Solnich2", "Settlement_Balota",
-        "Settlement_Berezino", "Settlement_Chernogorsk", "Settlement_Elektrozavodsk", "Settlement_Kamenka",
-        "Settlement_Kamyshovo", "Settlement_Khelm", "Settlement_Komarovo", "Settlement_Nizhneye",
+        "Local_AF_Balota", "Local_AF_Krasno", "Local_Drakon", "Local_Grubyeskaly",
+        "Local_MB_Pavlovo", "Local_Maryanka", "Local_MysGolova", "Local_MysKrutoy",
+        "Local_Otmel", "Local_Tridoliny", "RailroadStation_Balota", "RailroadStation_Berezino",
+        "RailroadStation_Cherno", "RailroadStation_Elektro", "RailroadStation_Kamyshovo", "RailroadStation_Komarovo",
+        "RailroadStation_Solnich", "RailroadStation_Solnich2", "Settlement_Balota", "Settlement_Berezino",
+        "Settlement_Chernogorsk", "Settlement_Elektrozavodsk", "Settlement_Kamenka", "Settlement_Kamyshovo",
+        "Settlement_Khelm", "Settlement_Komarovo", "Settlement_Nizhneye", "Settlement_Novoselki",
         "Settlement_Olsha", "Settlement_Solnechny", "Settlement_Tulga", "Settlement_Vysotovo",
-        "ViewPoint_41", "ViewPoint_45", "ViewPoint_46", "ViewPoint_47",
-        "ViewPoint_48", "ViewPoint_49", "ViewPoint_50", "ViewPoint_8"
+        "ViewPoint_45", "ViewPoint_46", "ViewPoint_47", "ViewPoint_48",
+        "ViewPoint_49", "ViewPoint_50"
     };
 
     // First zone polygon restriction
@@ -65,9 +69,9 @@ class BattleRoyaleZoneData: BattleRoyaleDataBase
 
 	// Static
 	// Index 0 is the final zone and index num_zones - 1 the first one; each table needs num_zones entries (general_settings.json)
-	// Chernarus, 100-120 players: first zone of 2500 m radius, final zone of 50 m, a full match lasts about 32 minutes
-    ref array<float> static_sizes = { 50, 150, 350, 700, 1200, 1800, 2500 };  // zone radius in meters
-    ref array<int> static_timers = { 135, 180, 225, 270, 300, 330, 240 };  // zone duration in seconds, the zone locks at 80%; the first zone also waits (60 * round_duration_minutes) / 2 seconds before it starts
+	// Chernarus, 100-120 players: first zone of 3000 m radius, final zone of 50 m, a full match lasts about 25 minutes
+    ref array<float> static_sizes = { 50, 150, 350, 750, 1350, 2100, 3000 };  // zone radius in meters
+    ref array<int> static_timers = { 110, 135, 180, 225, 250, 270, 120 };  // zone duration in seconds, the zone locks at 80%; the first zone also waits (60 * round_duration_minutes) / 2 seconds before it starts
     ref array<int> min_players = { 10, 10, 10, 10, 10, 30, 60 };  // dynamic zones: the match starts in the first zone (last index first) whose value is below the player count, at the latest in zone num_zones - min_zone_num
 
     // Constant (NOT USED ANYMORE)

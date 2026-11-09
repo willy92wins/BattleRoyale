@@ -232,17 +232,19 @@ Index 0 is the final zone, the last index the first one.
 
 | Zone | Radius (m) | Duration (s) | Locks at (s) | Dynamic start if players > |
 |---|---|---|---|---|
-| 1 | 2500 | 240 | 192 | 60 |
-| 2 | 1800 | 330 | 264 | 30 |
-| 3 | 1200 | 300 | 240 | (latest start: zone 3) |
-| 4 | 700 | 270 | 216 | |
-| 5 | 350 | 225 | 180 | |
-| 6 | 150 | 180 | 144 | |
-| 7 | 50 | 135 | 108 | |
+| 1 | 3000 | 120 | 96 | 60 |
+| 2 | 2100 | 270 | 216 | 30 |
+| 3 | 1350 | 250 | 200 | (latest start: zone 3) |
+| 4 | 750 | 225 | 180 | |
+| 5 | 350 | 180 | 144 | |
+| 6 | 150 | 135 | 108 | |
+| 7 | 50 | 110 | 88 | |
 
 With `round_duration_minutes = 5` the first zone starts 150 s after the match start. When the round of
-zone 7 ends, the final zone stays 67 s more and then every player left takes damage until one remains.
-A full match takes about 32 minutes. The final-zone avoid list
+zone 7 ends, the final zone stays 55 s more and then every player left takes damage until one remains.
+A full match takes about 25 minutes. The first zone is shown from the start, so players get about
+4.5 minutes in it before zone 2 is announced. Every zone closes faster than in 1.1; the early ones deal
+little damage (zone k deals k/7 of `zone_damage_delta`). The final-zone avoid list
 (`end_avoid_city`) leaves out the lobby, the islands, the places too close to the map edge for the larger
 zones to fit around them, and the coastal places that would put sea in the first zone; it is tuned for
 these radii. After changing `static_sizes` or the list, check them with:
