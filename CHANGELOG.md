@@ -22,6 +22,9 @@
   28 MB to 8.7 MB). `tools/make_loading_screens.py` builds them from `BattleRoyale_dev/assets/loading_screens`;
   the 1.1 textures are kept outside the repository in `br-assets-backup\loading_screens_1.1_dxt`.
 - Target of 100 players per server: `serverDZ.cfg.example` sets `maxPlayers = 100` (was 120).
+- No markers are added any more: Expansion's "You died here!" death marker is switched off whatever
+  `CreateDeathMarker` says in `MapSettings.json`, and the 3D marker at the centre of the next zone is gone.
+- The Spanish phase text says "LA ZONA SE CIERRA".
 
 ## 1.1.0 (2026-11-05, release candidate for the first player test)
 

@@ -10,8 +10,6 @@ class BattleRoyaleClient: BattleRoyaleBase
 
     protected bool b_IsReady;
 
-    protected ref ExpansionServerMarkerData m_ZoneCenterMapMarker;
-
     protected ref BattleRoyaleZoneWall m_ZoneWall;  //!< red, on the zone in force
     protected ref BattleRoyaleZoneWall m_OpenZoneWall;  //!< yellow, on the announced zone until it locks
 
@@ -134,8 +132,6 @@ class BattleRoyaleClient: BattleRoyaleBase
 			if ( br_rpc.future_play_area_center && br_rpc.future_play_area_radius )
 			{
 				m_FuturePlayArea = new BattleRoyalePlayArea( br_rpc.future_play_area_center, br_rpc.future_play_area_radius );
-
-				UpdateZoneCenterMaker( br_rpc.future_play_area_center );
 
 				if ( br_rpc.b_ArtillerySound )
 				{
@@ -417,22 +413,6 @@ class BattleRoyaleClient: BattleRoyaleBase
 		}
 
 		gameplay.UpdateMatchPhase( label, seconds );
-    }
-
-    protected void UpdateZoneCenterMaker(vector center)
-    {
-        if (!m_ZoneCenterMapMarker)
-        {
-            m_ZoneCenterMapMarker = new ExpansionServerMarkerData("ServerMarker_Zone_Center");
-            m_ZoneCenterMapMarker.Set3D(true);
-            m_ZoneCenterMapMarker.SetName("Center");
-            m_ZoneCenterMapMarker.SetIconName("Map Marker");
-            m_ZoneCenterMapMarker.SetColor(ARGB(255, 255, 0, 0));
-            m_ZoneCenterMapMarker.SetVisibility(EXPANSION_MARKER_VIS_WORLD | EXPANSION_MARKER_VIS_MAP);
-            GetExpansionSettings().GetMap().AddServerMarker(m_ZoneCenterMapMarker);
-        }
-
-        m_ZoneCenterMapMarker.SetPosition( center + "0 5 0" );
     }
 
     protected bool GetZoneDistance(PlayerBase player, BattleRoyalePlayArea play_area, out float distExt, out float distInt, out float angle)

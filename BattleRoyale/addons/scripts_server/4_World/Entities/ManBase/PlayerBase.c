@@ -58,6 +58,13 @@ modded class PlayerBase
         if ( bleeding && bleeding.GetBleedingSourcesCount() > 0 )
             br_bleeding_at_death = true;
 
+#ifdef EXPANSIONMODNAVIGATION
+        // A battle royale player never goes back to where they died. Expansion reads this flag in its own
+        // EEKilled, inside super.EEKilled, to send the player a death marker. ExpansionMapSettings cannot be
+        // modded instead: its OnLoad passes 'this' to JsonFileLoader<ExpansionMapSettings>, which then no longer compiles
+        GetExpansionSettings().GetMap().CreateDeathMarker = false;
+#endif
+
         super.EEKilled( killer );
 
         BattleRoyaleBase m_BR = GetBR();
