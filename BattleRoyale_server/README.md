@@ -1,13 +1,13 @@
 # DayZ-BattleRoyale 1.0 — server package (Chernarus)
 
 Everything a DayZ 1.30 dedicated server needs on top of the vanilla files to run the BattleRoyale
-mod on Chernarus (`chernarusplus`, 15360 m) for 100-120 players. It only holds what differs from the
+mod on Chernarus (`chernarusplus`, 15360 m) for 100 players. It only holds what differs from the
 vanilla mission `mpmissions\dayzOffline.chernarusplus` of the DayZ Server install, plus templates
 and scripts. No binaries: the mods come from the Steam Workshop and from the BattleRoyale 1.0 build.
 
 ```
 BattleRoyale_server\
-  serverDZ.cfg.example                          stock serverDZ.cfg + maxPlayers 120 + enableCfgGameplayFile 1
+  serverDZ.cfg.example                          stock serverDZ.cfg + maxPlayers 100 + enableCfgGameplayFile 1
   mpmissions\dayzOffline.chernarusplus\
     cfggameplay.json                            vanilla file, weapon obstruction mode 2 (see below)
     db\globals.xml                              vanilla file, 150 infected, no animals
@@ -140,7 +140,7 @@ obstruction stays in vanilla mode 1. The stock `serverDZ.cfg` does not have that
 ## 4. Server config
 
 Copy `serverDZ.cfg.example` to `<server>\serverDZ.cfg` and set `hostname`, `password` and
-`passwordAdmin`. Compared with the stock file it only changes `maxPlayers = 120` and adds
+`passwordAdmin`. Compared with the stock file it only changes `maxPlayers = 100` and adds
 `enableCfgGameplayFile = 1`. Keep `template="dayzOffline.chernarusplus"` pointing at the mission of
 section 3, and keep exactly one active `template=` and one active `instanceId` line: the world storage
 folder is named after `instanceId` (`storage_1`), and the restart loop refuses a config where either is
@@ -262,5 +262,5 @@ which places cause it.
 ## 7. Not in this package
 
 - `types.xml`, events and vehicles of the vanilla mission are unchanged (loot volume and vehicles still
-  to be reviewed for 120 players).
+  to be reviewed for 100 players).
 - Load figures with 100 or more players: the 1.0 was only played with one player so far.

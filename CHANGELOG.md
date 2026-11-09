@@ -21,6 +21,7 @@
 - Loading screens: two new images replace the twelve of 1.1 (DXT1, 1920x1080; `gui.pbo` goes from
   28 MB to 8.7 MB). `tools/make_loading_screens.py` builds them from `BattleRoyale_dev/assets/loading_screens`;
   the 1.1 textures are kept outside the repository in `br-assets-backup\loading_screens_1.1_dxt`.
+- Target of 100 players per server: `serverDZ.cfg.example` sets `maxPlayers = 100` (was 120).
 
 ## 1.1.0 (2026-11-05, release candidate for the first player test)
 

@@ -69,7 +69,7 @@ class BattleRoyaleZoneData: BattleRoyaleDataBase
 
 	// Static
 	// Index 0 is the final zone and index num_zones - 1 the first one; each table needs num_zones entries (general_settings.json)
-	// Chernarus, 100-120 players: first zone of 3000 m radius, final zone of 50 m, a full match lasts about 25 minutes
+	// Chernarus, 100 players: first zone of 3000 m radius, final zone of 50 m, a full match lasts about 25 minutes
     ref array<float> static_sizes = { 50, 150, 350, 750, 1350, 2100, 3000 };  // zone radius in meters
     ref array<int> static_timers = { 110, 135, 180, 225, 250, 270, 120 };  // zone duration in seconds, the zone locks at 80%; the first zone also waits (60 * round_duration_minutes) / 2 seconds before it starts
     ref array<int> min_players = { 10, 10, 10, 10, 10, 30, 60 };  // dynamic zones: the match starts in the first zone (last index first) whose value is below the player count, at the latest in zone num_zones - min_zone_num
