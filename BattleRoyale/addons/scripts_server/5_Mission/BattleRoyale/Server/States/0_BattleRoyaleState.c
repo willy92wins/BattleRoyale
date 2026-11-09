@@ -696,7 +696,9 @@ class BattleRoyaleState: Timeable
 			Error("Unknown player killed! Not in current state?");
 		}
 
-		BroadcastKillFeed(player, source);
+		bool bleed_out = IsBleedOutKill(player, source);
+		BroadcastKillFeed(player, source, bleed_out);
+		CreditKill(player, source, bleed_out);
 
 		if (!player || !source)
 		{
@@ -729,10 +731,18 @@ class BattleRoyaleState: Timeable
 				playerSource = PlayerBase.Cast( source );
 			}
 
-			if (player == source)	// deaths not caused by another object (starvation, dehydration)
+			if (player == source)	// deaths not caused by another object (starvation, dehydration, bleeding)
 			{
-				// Killed by environmental causes but the the player directly
-				json_data.Insert( "killer", "environment" );
+				if (bleed_out && player.br_last_player_hit_by && player.br_last_player_hit_by.GetIdentity())
+				{
+					json_data.Insert( "killer", player.br_last_player_hit_by.GetIdentity().GetPlainId() );
+					json_data.Insert( "cause", "bleeding" );
+				}
+				else
+				{
+					// Killed by environmental causes but the the player directly
+					json_data.Insert( "killer", "environment" );
+				}
 			}
 			else if ( source.IsInherited(Grenade_Base) || source.IsInherited(LandMineTrap) )
 			{
@@ -747,7 +757,6 @@ class BattleRoyaleState: Timeable
 				if (playerSource)
 				{
 					json_data.Insert( "killer", playerSource.GetIdentity().GetPlainId() );
-					GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "AddPlayerKill", new Param1<int>(1), true, playerSource.GetIdentity(), playerSource);
 					if (source.IsWeapon() || source.IsMeleeWeapon())
 					{
 						json_data.Insert( "weapon", source.GetType() );
@@ -776,7 +785,70 @@ class BattleRoyaleState: Timeable
 		}
 	}
 
-	protected void BroadcastKillFeed(PlayerBase victim, Object source)
+	//! Seconds after a hit from another player during which a bleed out is still that player's kill
+	static const int BLEED_OUT_CREDIT_SECONDS = 300;
+
+	//! True when the victim bled out less than BLEED_OUT_CREDIT_SECONDS after a hit from another player.
+	//! The engine names the victim itself as the source of a bleed out, as of any other death without a killer
+	protected bool IsBleedOutKill(PlayerBase victim, Object source)
+	{
+		if (!victim || (source && source != victim))
+			return false;
+
+		if (!victim.br_bleeding_at_death || victim.br_last_player_hit_name == "")
+			return false;
+
+		return GetGame().GetTime() - victim.br_last_player_hit_time <= BLEED_OUT_CREDIT_SECONDS * 1000;
+	}
+
+	//! Player of this match whose plain id is plain_id, null when gone
+	protected PlayerBase FindMatchPlayer(string plain_id)
+	{
+		if (plain_id == "")
+			return null;
+
+		for (int i = 0; i < m_Players.Count(); i++)
+		{
+			PlayerBase match_player = m_Players[i];
+			if (match_player && match_player.GetIdentity() && match_player.GetIdentity().GetPlainId() == plain_id)
+				return match_player;
+		}
+
+		return null;
+	}
+
+	//! Adds one to the HUD kill counter of the player the death is credited to: the one holding the weapon,
+	//! the one who set off the grenade or mine, or for a bleed out the last player who hit the victim
+	protected void CreditKill(PlayerBase victim, Object source, bool bleed_out)
+	{
+		PlayerBase killer;
+		if (bleed_out)
+		{
+			killer = victim.br_last_player_hit_by;
+		}
+		else if (source)
+		{
+			EntityAI source_ai = EntityAI.Cast(source);
+			if (source_ai)
+				killer = PlayerBase.Cast(source_ai.GetHierarchyParent());
+			if (!killer)
+				killer = PlayerBase.Cast(source);
+
+			Grenade_Base grenade = Grenade_Base.Cast(source);
+			LandMineTrap mine = LandMineTrap.Cast(source);
+			if (!killer && grenade)
+				killer = FindMatchPlayer(grenade.GetActivatorId());
+			else if (!killer && mine)
+				killer = FindMatchPlayer(mine.GetActivatorId());
+		}
+
+		if (!killer || killer == victim || !killer.GetIdentity())
+			return;
+
+		GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "AddPlayerKill", new Param1<int>(1), true, killer.GetIdentity(), killer);
+	}
+
+	protected void BroadcastKillFeed(PlayerBase victim, Object source, bool bleed_out)
 	{
 		string killer_name = "";
 		string victim_name = "";
@@ -811,16 +883,11 @@ class BattleRoyaleState: Timeable
 
 			if (killer_name == "" && activator_id != "")
 			{
-				for (int i = 0; i < m_Players.Count(); i++)
+				PlayerBase activator = FindMatchPlayer(activator_id);
+				if (activator)
 				{
-					PlayerBase activator = m_Players[i];
-					if (!activator || !activator.GetIdentity())
-						continue;
-					if (activator.GetIdentity().GetPlainId() != activator_id)
-						continue;
 					killer_name = activator.GetIdentity().GetName();
 					distance_m = vector.Distance(victim.GetPosition(), activator.GetPosition());
-					break;
 				}
 
 				if (killer_name == "" && s_MatchPlayerNames)
@@ -836,6 +903,14 @@ class BattleRoyaleState: Timeable
 				if (source.IsWeapon() || source.IsMeleeWeapon() || grenade || mine)
 					weapon_name = source_ai.GetDisplayName();
 			}
+		}
+
+		// A bleed out names the last player who hit the victim, with the weapon and distance of that hit
+		if (killer_name == "" && bleed_out)
+		{
+			killer_name = victim.br_last_player_hit_name;
+			weapon_name = victim.br_last_player_hit_weapon;
+			distance_m = victim.br_last_player_hit_distance;
 		}
 
 		GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "KillFeedEvent", new Param4<string, string, string, float>(killer_name, victim_name, weapon_name, distance_m), true);
