@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.2.0 (in progress, branch `v1.2`)
+## 1.2.0 (2026-11-09)
 
 ### Changed
 - Zone walls: each client builds a translucent wall from local panels along the zone edges within 500 m
@@ -25,6 +25,20 @@
 - No markers are added any more: Expansion's "You died here!" death marker is switched off whatever
   `CreateDeathMarker` says in `MapSettings.json`, and the 3D marker at the centre of the next zone is gone.
 - The Spanish phase text says "LA ZONA SE CIERRA".
+- `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
+
+### Verified
+- Build and lint gate green, with the same known false positives as 1.1.
+- DayZDiag 1.30, server and client, one player: yellow and red zone walls, yellow first zone on the spawn
+  map, kill counter under the player count, arrow without text, zone 1 of 3000 m, new loading screen, no
+  death marker after a death; no script errors on server or client.
+- Zone tables replayed offline with `zone_table_check.py`: 1495 s per full match, 1 fallback in 8000
+  generations.
+
+### Known issues
+- Not seen in game yet: the circles on the map opened with M, the orange or red phase text, and the kill
+  credit for bleed outs, grenades and mines (it needs two players).
+- Large matches (100 players) are still being tested.
 
 ## 1.1.0 (2026-11-05, release candidate for the first player test)
 
