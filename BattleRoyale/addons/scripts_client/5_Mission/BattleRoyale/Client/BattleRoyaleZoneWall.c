@@ -4,13 +4,15 @@
 //! and nothing goes over the network.
 class BattleRoyaleZoneWall
 {
-	static const string PANEL_MODEL = "Vigrid-BattleRoyale/Models/Shapes/zonewall.p3d";
-	static const float PANEL_WIDTH = 20;  //!< width of zonewall.p3d
+	static const string MODEL_LOCKED = "Vigrid-BattleRoyale/Models/Shapes/zonewall.p3d";  //!< red: the edge of the zone in force
+	static const string MODEL_OPEN = "Vigrid-BattleRoyale/Models/Shapes/zonewall_yellow.p3d";  //!< yellow: the edge of a zone that has not locked yet
+	static const float PANEL_WIDTH = 20;  //!< width of both models
 	static const float SPACING = 20;  //!< metres of edge per panel: the chord between two slot boundaries is a hair under the width
 	static const float SINK = 2;  //!< panels go this far below the lowest ground under them, so slopes leave no gap
 	static const float VIEW_RANGE = 500;  //!< panels further than this from the camera are not created
 	static const float REFRESH_SECONDS = 0.5;
 
+	protected string m_Model;
 	protected vector m_Center;
 	protected float m_Radius;
 	protected int m_Count;  //!< number of panel slots around the whole edge
@@ -20,8 +22,9 @@ class BattleRoyaleZoneWall
 	//! panel slot index -> local object
 	protected ref map<int, Object> m_Panels;
 
-	void BattleRoyaleZoneWall()
+	void BattleRoyaleZoneWall(string model)
 	{
+		m_Model = model;
 		m_Panels = new map<int, Object>;
 		m_Elapsed = REFRESH_SECONDS;
 	}
@@ -146,10 +149,10 @@ class BattleRoyaleZoneWall
 		transform[2] = dir;
 		transform[3] = middle - up * (SINK + bulge);
 
-		Object panel = GetGame().CreateStaticObjectUsingP3D(PANEL_MODEL, transform[3], "0 0 0", 1.0, true);
+		Object panel = GetGame().CreateStaticObjectUsingP3D(m_Model, transform[3], "0 0 0", 1.0, true);
 		if (!panel)
 		{
-			BattleRoyaleUtils.Warn("ZoneWall: cannot create " + PANEL_MODEL);
+			BattleRoyaleUtils.Warn("ZoneWall: cannot create " + m_Model);
 			m_ModelMissing = true;
 			return null;
 		}

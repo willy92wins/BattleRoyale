@@ -1,9 +1,9 @@
-"""Build the zone wall panel: a double-sided 20 x 15 m vertical quad, origin at the bottom centre.
+"""Build the zone wall panels: double-sided 20 x 15 m vertical quads, origin at the bottom centre.
 
-Writes, next to this script:
-  zonewall_ca.png   red texture, opaque at the bottom and fading out upwards (convert to .paa)
-  zonewall.rvmat    emissive red, Super shader with noZwrite like vanilla red glass
-  zonewall.p3d      MLOD, one visual LOD, no collision, no shadow (binarize before shipping)
+Writes, next to this script, for each variant (red zonewall, yellow zonewall_yellow):
+  <name>_ca.png   texture, opaque at the bottom and fading out upwards (convert to .paa)
+  <name>.rvmat    emissive colour, Super shader with noZwrite like vanilla red glass
+  <name>.p3d      MLOD, one visual LOD, no collision, no shadow (binarize before shipping)
 """
 import os
 import py3d
@@ -13,20 +13,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PREFIX = r"Vigrid-BattleRoyale\Models\Shapes"
 WIDTH, HEIGHT = 20.0, 15.0
 
-# Texture: rows top to bottom, alpha grows towards the ground
-tw, th = 64, 256
-img = Image.new("RGBA", (tw, th))
-for y in range(th):
-    t = y / (th - 1)  # 0 top, 1 bottom
-    alpha = int(255 * (0.04 + 0.66 * t ** 1.6))
-    for x in range(tw):
-        img.putpixel((x, y), (235, 45, 35, alpha))
-img.save(os.path.join(HERE, "zonewall_ca.png"))
-
-RVMAT = r"""ambient[]={1,0.15,0.1,1};
-diffuse[]={1,0.15,0.1,1};
+RVMAT = r"""ambient[]={@BASE@,1};
+diffuse[]={@BASE@,1};
 forcedDiffuse[]={0,0,0,0};
-emmisive[]={1.2,0.12,0.08,1};
+emmisive[]={@EMISSIVE@,1};
 specular[]={0,0,0,0};
 specularPower=1;
 PixelShaderID="Super";
@@ -40,50 +30,68 @@ class Stage5 { texture="#(argb,8,8,3)color(0,0,1,1,SMDI)"; uvSource="tex"; class
 class Stage6 { texture="#(ai,32,128,1)fresnel(1,0)"; uvSource="tex"; class uvTransform { aside[]={1,0,0}; up[]={0,1,0}; dir[]={0,0,0}; pos[]={0,0,0}; }; };
 class Stage7 { texture="dz\data\data\env_co.paa"; uvSource="tex"; class uvTransform { aside[]={1,0,0}; up[]={0,1,0}; dir[]={0,0,0}; pos[]={0,0,0}; }; };
 """
-with open(os.path.join(HERE, "zonewall.rvmat"), "w", newline="\r\n") as f:
-    f.write(RVMAT)
 
-model = py3d.P3D()
-lod = py3d.LOD()
-lod.resolution = 0.0
-hw = WIDTH / 2
-corners = [(-hw, 0.0, 0.0), (hw, 0.0, 0.0), (hw, HEIGHT, 0.0), (-hw, HEIGHT, 0.0)]
-uvs = [(0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
-for c in corners:
-    p = py3d.Point()
-    p.coords = c
-    p.flags = 0
-    p.mass = None
-    lod.points.append(p)
-lod.facenormals.append((0.0, 0.0, 1.0))   # index 0: face seen from -Z
-lod.facenormals.append((0.0, 0.0, -1.0))  # index 1: face seen from +Z
+# name, texture colour, rvmat ambient and diffuse, rvmat emissive
+VARIANTS = (
+    ("zonewall", (235, 45, 35), "1,0.15,0.1", "1.2,0.12,0.08"),
+    ("zonewall_yellow", (245, 200, 40), "1,0.75,0.1", "1.2,0.9,0.1"),
+)
 
-# Both sides: the vertex-order cross product points away from the side that sees the face
-for order, normal in (((0, 1, 2, 3), 0), ((0, 3, 2, 1), 1)):
-    face = py3d.Face(lod.points, lod.facenormals)
-    face.flags = 0
-    face.texture = PREFIX + r"\data\zonewall_ca.paa"
-    face.material = PREFIX + r"\data\zonewall.rvmat"
-    for i in order:
-        v = py3d.Vertex(lod.points, lod.facenormals)
-        v.point_index = i
-        v.normal_index = normal
-        v.uv = uvs[i]
-        face.vertices.append(v)
-    lod.faces.append(face)
+for name, texture_rgb, base, emissive in VARIANTS:
+    # Texture: rows top to bottom, alpha grows towards the ground
+    tw, th = 64, 256
+    img = Image.new("RGBA", (tw, th))
+    for y in range(th):
+        t = y / (th - 1)  # 0 top, 1 bottom
+        alpha = int(255 * (0.04 + 0.66 * t ** 1.6))
+        for x in range(tw):
+            img.putpixel((x, y), texture_rgb + (alpha,))
+    img.save(os.path.join(HERE, name + "_ca.png"))
 
-sel = py3d.Selection(lod.points, lod.faces)
-for p in lod.points:
-    sel.points[p] = 1
-for fc in lod.faces:
-    sel.faces[fc] = 1
-lod.selections["wall"] = sel
-lod.properties["lodnoshadow"] = "1"
-model.lods.append(lod)
+    with open(os.path.join(HERE, name + ".rvmat"), "w", newline="\r\n") as f:
+        f.write(RVMAT.replace("@BASE@", base).replace("@EMISSIVE@", emissive))
 
-out = os.path.join(HERE, "zonewall.p3d")
-with open(out, "wb") as f:
-    model.write(f)
-with open(out, "rb") as f:
-    back = py3d.P3D(f)
-print("written", out, "lods", len(back.lods), "points", len(back.lods[0].points), "faces", len(back.lods[0].faces))
+    model = py3d.P3D()
+    lod = py3d.LOD()
+    lod.resolution = 0.0
+    hw = WIDTH / 2
+    corners = [(-hw, 0.0, 0.0), (hw, 0.0, 0.0), (hw, HEIGHT, 0.0), (-hw, HEIGHT, 0.0)]
+    uvs = [(0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
+    for c in corners:
+        p = py3d.Point()
+        p.coords = c
+        p.flags = 0
+        p.mass = None
+        lod.points.append(p)
+    lod.facenormals.append((0.0, 0.0, 1.0))   # index 0: face seen from -Z
+    lod.facenormals.append((0.0, 0.0, -1.0))  # index 1: face seen from +Z
+
+    # Both sides: the vertex-order cross product points away from the side that sees the face
+    for order, normal in (((0, 1, 2, 3), 0), ((0, 3, 2, 1), 1)):
+        face = py3d.Face(lod.points, lod.facenormals)
+        face.flags = 0
+        face.texture = PREFIX + "\\data\\" + name + "_ca.paa"
+        face.material = PREFIX + "\\data\\" + name + ".rvmat"
+        for i in order:
+            v = py3d.Vertex(lod.points, lod.facenormals)
+            v.point_index = i
+            v.normal_index = normal
+            v.uv = uvs[i]
+            face.vertices.append(v)
+        lod.faces.append(face)
+
+    sel = py3d.Selection(lod.points, lod.faces)
+    for p in lod.points:
+        sel.points[p] = 1
+    for fc in lod.faces:
+        sel.faces[fc] = 1
+    lod.selections["wall"] = sel
+    lod.properties["lodnoshadow"] = "1"
+    model.lods.append(lod)
+
+    out = os.path.join(HERE, name + ".p3d")
+    with open(out, "wb") as f:
+        model.write(f)
+    with open(out, "rb") as f:
+        back = py3d.P3D(f)
+    print("written", out, "lods", len(back.lods), "points", len(back.lods[0].points), "faces", len(back.lods[0].faces))

@@ -1,7 +1,11 @@
 # Zone wall panel
 
-The repository does not version binary assets (`.gitignore`), so the three files the mod ships in
-`BattleRoyale/addons/models_shapes` are rebuilt from this folder:
+There are two variants with the same geometry: `zonewall` (red, the zone in force) and `zonewall_yellow`
+(the announced zone until it locks). The steps below name the red files; the yellow ones are the same
+with the `zonewall_yellow` stem.
+
+The repository does not version binary assets (`.gitignore`), so the three files per variant the mod
+ships in `BattleRoyale/addons/models_shapes` are rebuilt from this folder:
 
 1. `python make_zonewall.py` writes `zonewall_ca.png`, `zonewall.rvmat` and the MLOD `zonewall.p3d`.
 2. `ImageToPAA.exe zonewall_ca.png zonewall_ca.paa` (DayZ Tools, `Bin\ImageToPAA`).

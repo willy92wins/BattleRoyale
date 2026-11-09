@@ -12,7 +12,8 @@ class BattleRoyaleClient: BattleRoyaleBase
 
     protected ref ExpansionServerMarkerData m_ZoneCenterMapMarker;
 
-    protected ref BattleRoyaleZoneWall m_ZoneWall;
+    protected ref BattleRoyaleZoneWall m_ZoneWall;  //!< red, on the zone in force
+    protected ref BattleRoyaleZoneWall m_OpenZoneWall;  //!< yellow, on the announced zone until it locks
 
     //! Outside zone effect last queued: -1 unknown, 0 removed, 1 added; reset when the local player entity changes
     protected int i_OutsideZoneEffectState;
@@ -27,7 +28,8 @@ class BattleRoyaleClient: BattleRoyaleBase
         i_Kills = 0;
         i_SecondsRemaining = 0;
         i_OutsideZoneEffectState = -1;
-        m_ZoneWall = new BattleRoyaleZoneWall();
+        m_ZoneWall = new BattleRoyaleZoneWall( BattleRoyaleZoneWall.MODEL_LOCKED );
+        m_OpenZoneWall = new BattleRoyaleZoneWall( BattleRoyaleZoneWall.MODEL_OPEN );
 
         Init();
     }
@@ -156,14 +158,17 @@ class BattleRoyaleClient: BattleRoyaleBase
 		UpdateMatchPhase( gameplay, br_rpc );
 		gameplay.UpdateKillFeed();
 
-		// Wall along the edge of the current zone (before the first zone, the zone players must reach),
-		// gone once the final zone collapsed
-		BattleRoyalePlayArea wall_area = m_CurrentPlayArea;
-		if ( !wall_area )
-			wall_area = m_FuturePlayArea;
+		// Walls along the zone edges: red on the zone in force, yellow on the announced zone until it locks.
+		// Both are gone once the final zone collapsed
+		BattleRoyalePlayArea locked_area = m_CurrentPlayArea;
+		BattleRoyalePlayArea open_area = m_FuturePlayArea;
+		if ( IsZoneLocked() || IsZoneCollapsed( br_rpc ) )
+			open_area = null;
 		if ( IsZoneCollapsed( br_rpc ) )
-			wall_area = null;
-		m_ZoneWall.Update( delta, GetGame().GetCurrentCameraPosition(), wall_area );
+			locked_area = null;
+		vector wall_camera_pos = GetGame().GetCurrentCameraPosition();
+		m_ZoneWall.Update( delta, wall_camera_pos, locked_area );
+		m_OpenZoneWall.Update( delta, wall_camera_pos, open_area );
 
 #ifdef BR_MINIMAP
         vector camera_pos = GetGame().GetCurrentCameraPosition();
