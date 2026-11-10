@@ -69,6 +69,20 @@ modded class MissionServer
 		super.OnEvent(eventTypeId, params);
 	}
 
+	override void OnClientPrepareEvent(PlayerIdentity identity, out bool useDB, out vector pos, out float yaw, out int preloadTimeout)
+	{
+		super.OnClientPrepareEvent(identity, useDB, pos, yaw, preloadTimeout);
+
+		// Tell a late joiner before the world loads; the client then leaves on its own.
+		// Admin tool permissions are not loaded yet here, so only listed admins are exempt at this point.
+		BattleRoyaleServer br = BattleRoyaleServer.Cast( m_BattleRoyale );
+		if ( br && identity && br.IsMatchInProgress() && !br.IsListedAdmin( identity ) )
+		{
+			BattleRoyaleUtils.Info("Match in progress, notifying " + identity.GetName() + " during prepare.");
+			GetGame().RPCSingleParam( null, BR_RPC_MATCH_IN_PROGRESS, new Param1<int>( br.GetMatchMinutesLeft() ), true, identity );
+		}
+	}
+
 	override void EquipCharacter(MenuDefaultCharacterData char_data)
 	{
 		BattleRoyaleLobbyData m_DebugSettings = BattleRoyaleConfig.GetConfig().GetDebugData();

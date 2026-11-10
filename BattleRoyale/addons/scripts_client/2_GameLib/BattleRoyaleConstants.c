@@ -41,6 +41,8 @@ static const string BATTLEROYALE_SETTINGS_MISSION_FOLDER = "$mission:Vigrid-Batt
 //--- RPC namespaces
 static const string RPC_DAYZBR_NAMESPACE = "RPC-DayZBR"; //BattleRoyaleClient.c RPC calls
 static const string RPC_DAYZBRSERVER_NAMESPACE = "RPC-DayZBR-Server"; //BattleRoyaleServer.c RPC calls
+// Engine RPC (DayZGame.OnRPC, no target) sent while a client prepares, before its world loads; far above the ERPCs range
+static const int BR_RPC_MATCH_IN_PROGRESS = 74210001;
 
 
 //--- constant strings

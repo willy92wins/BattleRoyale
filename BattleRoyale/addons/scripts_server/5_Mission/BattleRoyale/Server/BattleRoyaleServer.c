@@ -260,11 +260,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 
 			//NOTE: calling this will immediately crash the server (as the player hasn't fully established his connection yet) GetGame().DisconnectPlayer(player.GetIdentity());
 
-			BattleRoyaleGameData m_GameSettings = BattleRoyaleConfig.GetConfig().GetGameData();
-			ref array<string> a_AdminsList = m_GameSettings.admins_steamid64;
-
-			bool listedAdmin = a_AdminsList && a_AdminsList.Find( player.GetIdentity().GetPlainId() ) != -1;
-			if ( listedAdmin || BRAdminAuthorizer.IsOperator( player.GetIdentity() ) )
+			if ( IsLateJoinAdmin( player.GetIdentity() ) )
 			{
 				BattleRoyaleUtils.Info("Admin " + player.GetIdentityName() + " has connected during non-debug state, allowing connection.");
 				BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
@@ -272,7 +268,8 @@ class BattleRoyaleServer: BattleRoyaleBase
 			}
 
 			Error("PLAYER CONNECTED DURING NON-DEBUG ZONE STATE!");
-			GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "MatchInProgress", new Param1<int>(0), true, player.GetIdentity());
+			// Backstop for a client that missed the notice sent during OnClientPrepareEvent
+			GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "MatchInProgress", new Param1<int>(GetMatchMinutesLeft()), true, player.GetIdentity());
 			ScheduleLateJoinKick(player.GetIdentity());
 
             return;
@@ -289,6 +286,106 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         if( match_uuid == "" )
         	GetCurrentState().MessagePlayerUntranslated( player, "STR_BR_MM_ERROR_REGISTERING_MATCH");
+    }
+
+    //! True while a match runs: players who connect now cannot join it
+    bool IsMatchInProgress()
+    {
+        BattleRoyaleDebugState debugState;
+        return !Class.CastTo(debugState, GetCurrentState());
+    }
+
+    //! Admins listed in general_settings.json; the only check available while a client prepares
+    bool IsListedAdmin(PlayerIdentity identity)
+    {
+        if (!identity)
+            return false;
+
+        BattleRoyaleGameData gameSettings = BattleRoyaleConfig.GetConfig().GetGameData();
+        return gameSettings && gameSettings.admins_steamid64 && gameSettings.admins_steamid64.Find(identity.GetPlainId()) != -1;
+    }
+
+    //! Admins may connect during a match; admin tool permissions are only known once the player is connected
+    bool IsLateJoinAdmin(PlayerIdentity identity)
+    {
+        if (IsListedAdmin(identity))
+            return true;
+
+        return BRAdminAuthorizer.IsOperator(identity);
+    }
+
+    //! Estimate, in whole minutes, of how long the current match still lasts: the zone timers, ignoring
+    //! pauses, zone travel offsets and a last round that only ends when one player or group is left
+    int GetMatchMinutesLeft()
+    {
+        BattleRoyaleConfig config = BattleRoyaleConfig.GetConfig();
+        BattleRoyaleGameData gameSettings = config.GetGameData();
+        BattleRoyaleZoneData zoneSettings = config.GetZoneData();
+        if (!gameSettings || !zoneSettings)
+            return 0;
+
+        int numZones = gameSettings.num_zones;
+        int roundSeconds = 60 * gameSettings.round_duration_minutes;
+        bool staticTimers = zoneSettings.shrink_type == 3 && zoneSettings.static_timers && zoneSettings.static_timers.Count() >= numZones;
+
+        // Rounds still to play after the current state; static timer index 0 is the final zone
+        int laterRoundsCount = numZones;
+        bool withLastRound = true;
+        int seconds = 0;
+
+        BattleRoyaleState state = GetCurrentState();
+        int phaseLeft = BattleRoyaleState.GetMatchPhaseSecondsLeft();
+
+        BattleRoyaleRound round;
+        BattleRoyaleLastRound lastRound;
+        if (Class.CastTo(round, state))
+        {
+            if (phaseLeft > 0)
+                seconds += phaseLeft;
+            else
+                seconds += round.i_RoundTimeInSeconds;
+
+            laterRoundsCount = numZones - Math.Floor(round.zone_num);
+        }
+        else if (Class.CastTo(lastRound, state))
+        {
+            seconds += lastRound.i_RoundTimeInSeconds;
+            laterRoundsCount = 0;
+            withLastRound = false;
+        }
+        else if (state && (state.GetName() == "Win State" || state.GetName() == "Restart State"))
+        {
+            seconds += 60;
+            laterRoundsCount = 0;
+            withLastRound = false;
+        }
+        else
+        {
+            // Spawn selection, preparation or start: the first zone waits half a round before it starts
+            seconds += gameSettings.spawn_selection_duration + gameSettings.spawn_selection_extra_time + 120 + roundSeconds / 2;
+        }
+
+        for (int i = 0; i < laterRoundsCount; i++)
+        {
+            if (staticTimers)
+                seconds += zoneSettings.static_timers[i];
+            else
+                seconds += roundSeconds;
+        }
+
+        // The last round after every zone round runs the final zone timer again
+        if (withLastRound)
+        {
+            if (staticTimers)
+                seconds += zoneSettings.static_timers[0];
+            else
+                seconds += roundSeconds;
+        }
+
+        int minutes = (seconds + 59) / 60;
+        if (minutes < 1)
+            minutes = 1;
+        return minutes;
     }
 
     void ScheduleLateJoinKick(PlayerIdentity identity)

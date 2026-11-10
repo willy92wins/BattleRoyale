@@ -5,6 +5,22 @@ modded class DayZGame
         return BATTLEROYALE_VERSION;
     }
 
+#ifndef SERVER
+    override void OnRPC(PlayerIdentity sender, Object target, int rpc_type, ParamsReadContext ctx)
+    {
+        // Sent by the server while this client prepares, before the world loads
+        if (!target && rpc_type == BR_RPC_MATCH_IN_PROGRESS)
+        {
+            Param1<int> data = new Param1<int>(0);
+            if (ctx.Read(data))
+                BattleRoyaleRPC.HandleMatchInProgress(data.param1);
+            return;
+        }
+
+        super.OnRPC(sender, target, rpc_type, ctx);
+    }
+#endif
+
     override void OnEvent(EventType eventTypeId, Param params)
     {
         switch (eventTypeId)

@@ -44,8 +44,7 @@ class BattleRoyaleRPC
 		s_PendingMainMenuMessage = "";
 		s_MatchInProgressAbortScheduled = false;
 
-		if ( m_Instance )
-			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(m_Instance.AbortToMainMenu);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(LeaveToMainMenu);
 	}
 
 	private static ref BattleRoyaleRPC m_Instance;
@@ -403,7 +402,6 @@ class BattleRoyaleRPC
 	}
 
 	// Match already in progress: leave to the main menu and show the reason there
-
 	void MatchInProgress(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
 		Param1<int> data;
@@ -413,24 +411,46 @@ class BattleRoyaleRPC
 			return;
 		}
 		if ( type == CallType.Client )
-		{
-			if ( s_MatchInProgressAbortScheduled )
-				return;
-			s_MatchInProgressAbortScheduled = true;
-			s_PendingMainMenuMessage = "#STR_BR_MATCH_IN_PROGRESS";
-			// The system queue also ticks while the client is still loading; the GUI queue does not
-			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(AbortToMainMenu, 1000, false);
-		}
+			HandleMatchInProgress( data.param1 );
 	}
 
-	void AbortToMainMenu()
+	//! Shared by the CF RPC and the engine RPC sent during the connection, whichever arrives first
+	static void HandleMatchInProgress(int minutes_left)
 	{
-		// Cleared by the main menu: the rejected session is already over, never abort a later one
+		if ( s_MatchInProgressAbortScheduled )
+			return;
+		s_MatchInProgressAbortScheduled = true;
+
+		if ( minutes_left > 0 )
+			s_PendingMainMenuMessage = string.Format( Widget.TranslateString( "#STR_BR_MATCH_IN_PROGRESS" ), minutes_left );
+		else
+			s_PendingMainMenuMessage = Widget.TranslateString( "#STR_BR_MATCH_IN_PROGRESS_NO_TIME" );
+
+		// The system queue also ticks while the client is still loading; the GUI queue does not
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(LeaveToMainMenu, 1000, false);
+	}
+
+	static void LeaveToMainMenu()
+	{
+		// Cleared by the main menu: the rejected session is already over, never leave a later one
 		if ( !s_MatchInProgressAbortScheduled )
 			return;
 
-		if ( GetGame() && GetGame().GetMission() )
-			GetGame().GetMission().AbortMission();
+		DayZGame game = DayZGame.Cast( GetGame() );
+		if ( !game )
+			return;
+
+		Mission mission = game.GetMission();
+		if ( game.GetGameState() == DayZGameState.IN_GAME && mission && mission.IsMissionGameplay() )
+		{
+			mission.AbortMission();
+			return;
+		}
+
+		// Still connecting or loading: same exit as the vanilla login screen
+		game.SetGameState( DayZGameState.MAIN_MENU );
+		game.SetLoadState( DayZLoadState.MAIN_MENU_START );
+		game.GetCallQueue( CALL_CATEGORY_SYSTEM ).Call( game.DisconnectSessionForce );
 	}
 }
 #endif
