@@ -139,6 +139,13 @@ modded class MainMenu
 		}
 		ClosePopup(); //if init is called twice, close any popup that exists
 
+		string pending_message = BattleRoyaleRPC.GetPendingMainMenuMessage();
+		if ( pending_message != "" )
+		{
+			CreatePopup( pending_message, "#STR_BR_OK", new ClosePopupButtonCallback( this ) );
+			BattleRoyaleRPC.ClearPendingMainMenuMessage();
+		}
+
 		BR_OverrideUI();
 
 		m_PlayButtonLabel.SetText("#main_menu_play");

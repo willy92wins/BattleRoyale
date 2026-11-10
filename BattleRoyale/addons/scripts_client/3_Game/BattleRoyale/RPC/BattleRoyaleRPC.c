@@ -20,6 +20,7 @@ class BattleRoyaleRPC
 
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetMatchPhase", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "KillFeedEvent", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "MatchInProgress", this );
 
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
 	}
@@ -27,6 +28,24 @@ class BattleRoyaleRPC
 	void ~BattleRoyaleRPC()
 	{
 
+	}
+
+	// Pending main menu message for a late join, shown once by MainMenu after AbortMission
+	static string s_PendingMainMenuMessage = "";
+	static bool s_MatchInProgressAbortScheduled = false;
+
+	static string GetPendingMainMenuMessage()
+	{
+		return s_PendingMainMenuMessage;
+	}
+
+	static void ClearPendingMainMenuMessage()
+	{
+		s_PendingMainMenuMessage = "";
+		s_MatchInProgressAbortScheduled = false;
+
+		if ( m_Instance )
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(m_Instance.AbortToMainMenu);
 	}
 
 	private static ref BattleRoyaleRPC m_Instance;
@@ -381,6 +400,37 @@ class BattleRoyaleRPC
 		distance = m_KillFeedDistance[slot];
 		time = m_KillFeedTime[slot];
 		return true;
+	}
+
+	// Match already in progress: leave to the main menu and show the reason there
+
+	void MatchInProgress(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param1<int> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ MATCHINPROGRESS RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+		{
+			if ( s_MatchInProgressAbortScheduled )
+				return;
+			s_MatchInProgressAbortScheduled = true;
+			s_PendingMainMenuMessage = "#STR_BR_MATCH_IN_PROGRESS";
+			// The system queue also ticks while the client is still loading; the GUI queue does not
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(AbortToMainMenu, 1000, false);
+		}
+	}
+
+	void AbortToMainMenu()
+	{
+		// Cleared by the main menu: the rejected session is already over, never abort a later one
+		if ( !s_MatchInProgressAbortScheduled )
+			return;
+
+		if ( GetGame() && GetGame().GetMission() )
+			GetGame().GetMission().AbortMission();
 	}
 }
 #endif

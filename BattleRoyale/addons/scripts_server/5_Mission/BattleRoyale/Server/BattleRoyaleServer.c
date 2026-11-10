@@ -272,6 +272,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 			}
 
 			Error("PLAYER CONNECTED DURING NON-DEBUG ZONE STATE!");
+			GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "MatchInProgress", new Param1<int>(0), true, player.GetIdentity());
 			ScheduleLateJoinKick(player.GetIdentity());
 
             return;

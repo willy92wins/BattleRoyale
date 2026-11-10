@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Late joiners are now told at once that a match is in progress: the server sends a `MatchInProgress` RPC, the client leaves to the main menu and shows the reason there once, and the 30 s kick stays as a safety net.
+
 ## 1.2.0 (2026-11-09)
 
 ### Changed
