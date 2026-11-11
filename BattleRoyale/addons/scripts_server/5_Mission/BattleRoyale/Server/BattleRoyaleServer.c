@@ -551,6 +551,10 @@ class BattleRoyaleServer: BattleRoyaleBase
     ref array<PlayerBase> temp_disconnecting;
     override void OnPlayerTick(PlayerBase player, float timeslice)
     {
+        // Spectator anchor bodies are not match players
+        if (m_Spectators && m_Spectators.IsAnchor(player))
+            return;
+
         if(!temp_disconnecting)
         {
             temp_disconnecting = new array<PlayerBase>();
