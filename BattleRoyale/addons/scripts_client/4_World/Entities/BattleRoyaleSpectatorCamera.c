@@ -13,13 +13,24 @@ class BattleRoyaleSpectatorCamera: Camera
 	void BattleRoyaleSpectatorCamera()
 	{
 		SetEventMask(EntityEvent.FRAME);
+#ifndef SERVER
+		BattleRoyaleUtils.Info("Spectator camera created");
+#endif
 	}
 
 	override void EOnFrame(IEntity other, float timeSlice)
 	{
 #ifndef SERVER
+		// The engine creates this camera for the spectator but does not switch the view to it
 		if (Camera.GetCurrentCamera() != this)
-			return;
+		{
+			if (!BattleRoyaleRPC.s_Spectating)
+				return;
+
+			SetActive(true);
+			if (Camera.GetCurrentCamera() != this)
+				return;
+		}
 
 		HandleInput(timeSlice);
 
