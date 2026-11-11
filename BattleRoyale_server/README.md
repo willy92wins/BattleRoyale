@@ -34,6 +34,9 @@ in one of two ways (`lobby_settings.json`): more than `minimum_players` (10) are
 them are ready (F1), or by autostart, where the number of ready players needed falls from `maxPlayers`
 to 2 over `autostart_delay` (750 s) after the first player joined. F2 is the unstuck key at the start of
 a match; `enable_unstuck` in `general_settings.json` turns it off (on by default).
+Dead players watch the players still alive until the match ends (left and right click change player,
+the person view key switches first and third person); `enable_spectator` turns it off and
+`spectator_delay_seconds` (5) sets the wait after a death, both in `general_settings.json`.
 
 ## 1. Mods and load order
 

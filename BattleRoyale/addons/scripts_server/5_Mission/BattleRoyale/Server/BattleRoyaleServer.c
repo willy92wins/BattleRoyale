@@ -13,10 +13,13 @@ class BattleRoyaleServer: BattleRoyaleBase
 
     protected ref map<string, ref Timer> m_LateJoinTimers;
 
+    protected ref BattleRoyaleSpectators m_Spectators;
+
     void BattleRoyaleServer()
     {
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "PlayerReadyUp", this);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "PlayerUnstuck", this);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "SpectateCycle", this);
 #ifdef VPPADMINTOOLS
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "NextState", this, SingleplayerExecutionType.Server);
 #endif
@@ -72,6 +75,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         }
 
         m_LateJoinTimers = new map<string, ref Timer>;
+        m_Spectators = new BattleRoyaleSpectators;
 
         //load config (this may error because GetBattleRoyale would return false)
         BattleRoyaleGameData m_GameData = config_data.GetGameData();
@@ -503,6 +507,13 @@ class BattleRoyaleServer: BattleRoyaleBase
 
             GetCurrentState().RemovePlayer(player);
         }
+
+        // Also when the state already removed the player (killed while unconscious on disconnect)
+        if (m_Spectators)
+        {
+            m_Spectators.RetargetWatchersOf(player);
+            m_Spectators.OnIdentityDisconnected(identity);
+        }
     }
 
     override void OnPlayerKilled(PlayerBase killed, Object killer)
@@ -515,7 +526,26 @@ class BattleRoyaleServer: BattleRoyaleBase
 
             //remove player from the state (this would take place in on-disconnect, but some players would choose not to disconnect)
             GetCurrentState().RemovePlayer(killed);
+
+            // Dead players of a running match watch the ones still alive
+            if (m_Spectators && i_CurrentStateIndex > 2 && i_CurrentStateIndex < m_States.Count() - 2)
+                m_Spectators.OnPlayerDied(killed);
         }
+
+        // Whoever watched the dead player moves on, even if the state already removed them
+        if (m_Spectators)
+            m_Spectators.RetargetWatchersOf(killed);
+    }
+
+    //! Spectator asks for the next (1) or previous (-1) alive player
+    void SpectateCycle(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        Param1<int> data;
+        if (!ctx.Read(data))
+            return;
+
+        if (type == CallType.Server && m_Spectators)
+            m_Spectators.Cycle(sender, data.param1);
     }
 
     ref array<PlayerBase> temp_disconnecting;

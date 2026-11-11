@@ -139,6 +139,8 @@ modded class MainMenu
 		}
 		ClosePopup(); //if init is called twice, close any popup that exists
 
+		BattleRoyaleRPC.ResetSpectating();
+
 		string pending_message = BattleRoyaleRPC.GetPendingMainMenuMessage();
 		if ( pending_message != "" )
 		{

@@ -21,6 +21,7 @@ class BattleRoyaleRPC
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetMatchPhase", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "KillFeedEvent", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "MatchInProgress", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SpectateTarget", this );
 
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
 	}
@@ -28,6 +29,19 @@ class BattleRoyaleRPC
 	void ~BattleRoyaleRPC()
 	{
 
+	}
+
+	// Spectator state of a dead player, read by BattleRoyaleSpectatorCamera; the network id is 0/0 while there is no target
+	static bool s_Spectating = false;
+	static int s_SpectateTargetLow = 0;
+	static int s_SpectateTargetHigh = 0;
+	static vector s_SpectateTargetHint = "0 0 0";
+
+	static void ResetSpectating()
+	{
+		s_Spectating = false;
+		s_SpectateTargetLow = 0;
+		s_SpectateTargetHigh = 0;
 	}
 
 	// Pending main menu message for a late join, shown once by MainMenu after AbortMission
@@ -399,6 +413,66 @@ class BattleRoyaleRPC
 		distance = m_KillFeedDistance[slot];
 		time = m_KillFeedTime[slot];
 		return true;
+	}
+
+	// The server switched this dead player to spectating, or changed the watched player
+	void SpectateTarget(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param5<int, int, vector, string, int> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ SPECTATETARGET RPC");
+			return;
+		}
+		if ( type != CallType.Client )
+			return;
+
+		bool first = !s_Spectating;
+		s_Spectating = true;
+		s_SpectateTargetLow = data.param1;
+		s_SpectateTargetHigh = data.param2;
+		s_SpectateTargetHint = data.param3;
+
+		string message = string.Format( Widget.TranslateString( "#STR_BR_SPECTATE_WATCHING" ), data.param4, data.param5 );
+		float time = 3;
+		if ( first )
+		{
+			RestoreAfterDeath();
+			string viewKey = InputUtils.GetButtonNameFromInput( "UAPersonView", EInputDeviceType.MOUSE_AND_KEYBOARD );
+			message = message + " - " + string.Format( Widget.TranslateString( "#STR_BR_SPECTATE_HELP" ), viewKey );
+			time = 8;
+		}
+		ExpansionNotification( DAYZBR_MSG_TITLE, message, DAYZBR_MSG_IMAGE, COLOR_EXPANSION_NOTIFICATION_INFO, time ).Create();
+	}
+
+	//! Undoes what the vanilla death simulation did on this client (DayZPlayerImplement.SimulateDeath):
+	//! darkening and dead screen, locked controls with the cursor shown, and muted sound
+	static void RestoreAfterDeath()
+	{
+		Man player = GetGame().GetPlayer();
+		if ( player )
+			player.StopDeathDarkeningEffect();
+
+		GetGame().GetUIManager().ScreenFadeOut( 1.0 );
+
+		Input input = GetGame().GetInput();
+		if ( !input.HasGameFocus( INPUT_DEVICE_MOUSE ) && !GetGame().GetUIManager().GetMenu() )
+		{
+			input.ChangeGameFocus( -1, INPUT_DEVICE_MOUSE );
+			input.ChangeGameFocus( -1, INPUT_DEVICE_KEYBOARD );
+			input.ChangeGameFocus( -1, INPUT_DEVICE_GAMEPAD );
+			GetGame().GetUIManager().ShowUICursor( false );
+		}
+
+		DayZGame game = DayZGame.Cast( GetGame() );
+		if ( game )
+		{
+			game.GetSoundScene().SetSoundVolume( game.m_volume_sound, 1 );
+			game.GetSoundScene().SetSpeechExVolume( game.m_volume_speechEX, 1 );
+			game.GetSoundScene().SetMusicVolume( game.m_volume_music, 1 );
+			game.GetSoundScene().SetVOIPVolume( game.m_volume_VOIP, 1 );
+			game.GetSoundScene().SetRadioVolume( game.m_volume_radio, 1 );
+		}
 	}
 
 	// Match already in progress: leave to the main menu and show the reason there
