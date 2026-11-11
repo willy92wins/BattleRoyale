@@ -455,6 +455,10 @@ class BattleRoyaleRPC
 
 		GetGame().GetUIManager().ScreenFadeOut( 1.0 );
 
+		// The dead player's stamina bar and quickbar have nothing to show while watching someone else
+		if ( GetGame().GetMission() && GetGame().GetMission().GetHud() )
+			GetGame().GetMission().GetHud().Show( false );
+
 		Input input = GetGame().GetInput();
 		if ( !input.HasGameFocus( INPUT_DEVICE_MOUSE ) && !GetGame().GetUIManager().GetMenu() )
 		{
