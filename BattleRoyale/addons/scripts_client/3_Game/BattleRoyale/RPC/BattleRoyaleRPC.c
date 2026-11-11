@@ -37,11 +37,41 @@ class BattleRoyaleRPC
 	static int s_SpectateTargetHigh = 0;
 	static vector s_SpectateTargetHint = "0 0 0";
 
+	// Overlay that tells a spectator apart from a living player in first person
+	static ref Widget s_SpectatorOverlay;
+
 	static void ResetSpectating()
 	{
 		s_Spectating = false;
 		s_SpectateTargetLow = 0;
 		s_SpectateTargetHigh = 0;
+
+		if ( s_SpectatorOverlay )
+		{
+			s_SpectatorOverlay.Unlink();
+			s_SpectatorOverlay = null;
+		}
+	}
+
+	static void UpdateSpectatorOverlay(string name, int alive)
+	{
+		if ( !s_SpectatorOverlay )
+			s_SpectatorOverlay = GetGame().GetWorkspace().CreateWidgets( "Vigrid-BattleRoyale/Scripts/Client/layouts/br_spectator.layout" );
+		if ( !s_SpectatorOverlay )
+			return;
+
+		TextWidget title = TextWidget.Cast( s_SpectatorOverlay.FindAnyWidget( "SpectatorTitle" ) );
+		if ( title )
+			title.SetText( Widget.TranslateString( "#STR_BR_SPECTATE_TITLE" ) + " - " + string.Format( Widget.TranslateString( "#STR_BR_SPECTATE_WATCHING" ), name, alive ) );
+
+		TextWidget help = TextWidget.Cast( s_SpectatorOverlay.FindAnyWidget( "SpectatorHelp" ) );
+		if ( help )
+		{
+			string viewKey = InputUtils.GetButtonNameFromInput( "UAPersonView", EInputDeviceType.MOUSE_AND_KEYBOARD );
+			help.SetText( string.Format( Widget.TranslateString( "#STR_BR_SPECTATE_HELP" ), viewKey ) );
+		}
+
+		s_SpectatorOverlay.Show( true );
 	}
 
 	// Pending main menu message for a late join, shown once by MainMenu after AbortMission
@@ -433,16 +463,11 @@ class BattleRoyaleRPC
 		s_SpectateTargetHigh = data.param2;
 		s_SpectateTargetHint = data.param3;
 
-		string message = string.Format( Widget.TranslateString( "#STR_BR_SPECTATE_WATCHING" ), data.param4, data.param5 );
-		float time = 3;
 		if ( first )
-		{
 			RestoreAfterDeath();
-			string viewKey = InputUtils.GetButtonNameFromInput( "UAPersonView", EInputDeviceType.MOUSE_AND_KEYBOARD );
-			message = message + " - " + string.Format( Widget.TranslateString( "#STR_BR_SPECTATE_HELP" ), viewKey );
-			time = 8;
-		}
-		ExpansionNotification( DAYZBR_MSG_TITLE, message, DAYZBR_MSG_IMAGE, COLOR_EXPANSION_NOTIFICATION_INFO, time ).Create();
+
+		BattleRoyaleUtils.Info( string.Format( "SpectateTarget: %1 %2 %3 %4", data.param1, data.param2, data.param3, data.param4 ) );
+		UpdateSpectatorOverlay( data.param4, data.param5 );
 	}
 
 	//! Undoes what the vanilla death simulation did on this client (DayZPlayerImplement.SimulateDeath):

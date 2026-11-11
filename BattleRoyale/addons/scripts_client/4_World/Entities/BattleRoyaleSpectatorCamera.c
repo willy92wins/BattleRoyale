@@ -7,12 +7,14 @@ class BattleRoyaleSpectatorCamera: Camera
 
 	protected float m_UpdateAccumulator;
 	protected float m_MissingTarget;
+	protected float m_FrameTimeSlice;
+	protected float m_DiagAccumulator;
 	protected float m_OrbitYaw;
 	protected float m_OrbitPitch = -15;
 
 	void BattleRoyaleSpectatorCamera()
 	{
-		SetEventMask(EntityEvent.FRAME);
+		SetEventMask(EntityEvent.FRAME | EntityEvent.POSTFRAME);
 #ifndef SERVER
 		BattleRoyaleUtils.Info("Spectator camera created");
 #endif
@@ -20,7 +22,14 @@ class BattleRoyaleSpectatorCamera: Camera
 
 	override void EOnFrame(IEntity other, float timeSlice)
 	{
+		m_FrameTimeSlice = timeSlice;
+	}
+
+	// Placed after the frame update, as the player camera system writes the view during the frame
+	override void EOnPostFrame(IEntity other, int extra)
+	{
 #ifndef SERVER
+		float timeSlice = m_FrameTimeSlice;
 		// The engine creates this camera for the spectator but does not switch the view to it
 		if (Camera.GetCurrentCamera() != this)
 		{
@@ -58,6 +67,13 @@ class BattleRoyaleSpectatorCamera: Camera
 				m_MissingTarget = 0;
 				GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "SpectateCycle", new Param1<int>(0), true);
 			}
+		}
+
+		m_DiagAccumulator += timeSlice;
+		if (m_DiagAccumulator > 2)
+		{
+			m_DiagAccumulator = 0;
+			BattleRoyaleUtils.Info(string.Format("Spectator camera: current %1, pos %2, target %3, hint %4", Camera.GetCurrentCamera() == this, GetPosition(), target != null, BattleRoyaleRPC.s_SpectateTargetHint));
 		}
 
 		// The server streams the world around this position
