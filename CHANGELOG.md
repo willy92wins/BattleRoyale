@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Notifications no longer catch mouse clicks: a notification over the inventory or the map swallowed
+  the clicks meant for what was under it.
+
 ## 1.2.0 (2026-11-09)
 
 ### Changed
