@@ -466,7 +466,6 @@ class BattleRoyaleRPC
 		if ( first )
 			RestoreAfterDeath();
 
-		BattleRoyaleUtils.Info( string.Format( "SpectateTarget: %1 %2 %3 %4", data.param1, data.param2, data.param3, data.param4 ) );
 		UpdateSpectatorOverlay( data.param4, data.param5 );
 	}
 
