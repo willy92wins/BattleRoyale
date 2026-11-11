@@ -68,7 +68,6 @@ class SpawnSelectionMenu extends UIScriptedMenu
 		super.OnShow();
 
 		PPEffects.SetBlurMenu(1);
-		GetGame().GetInput().ChangeGameFocus(1);
 		SetFocus(layoutRoot);
 	}
 
@@ -78,7 +77,6 @@ class SpawnSelectionMenu extends UIScriptedMenu
 		super.OnHide();
 
 		PPEffects.SetBlurMenu(0);
-		GetGame().GetInput().ResetGameFocus();
 	}
 
 	override Widget Init()
