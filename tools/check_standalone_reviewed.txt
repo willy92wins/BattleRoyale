@@ -1,0 +1,9 @@
+# Reviewed ambiguous homonyms for `tools/check_standalone.py --strict` (gate V1).
+#
+# One entry per line:   path:line:name  # reason
+#   path  mod-relative path with forward slashes, as printed by --strict
+#   line  line of the use
+#   name  member name reported as ambiguous_homonym
+# The reason after '#' is mandatory and must say why the receiver is not an
+# Expansion class (e.g. "receiver is array<string>, vanilla Insert").
+# Entries are added only after a human review; a stale entry is reported.
