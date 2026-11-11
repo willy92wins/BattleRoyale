@@ -1,10 +1,13 @@
 # Changelog
 
-## Unreleased
+## 1.2.1 (2026-11-11)
 
 ### Fixed
 - Notifications no longer catch mouse clicks: a notification over the inventory or the map swallowed
   the clicks meant for what was under it.
+- Closing the spawn selection no longer resets the input focus of the whole game.
+- The player name label of the lobby, in the centre of the screen, is hidden when the match starts.
+- `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
 
 ## 1.2.0 (2026-11-09)
 
