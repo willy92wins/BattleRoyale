@@ -276,7 +276,6 @@ class BattleRoyaleState: Timeable
 		{
 			PlayerBase player = GetPlayers()[i];
 			player.SetBRPosition( position );
-			GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetTopPosition", new Param1<int>( position ), true, player.GetIdentity() );
 		}
     }
 
