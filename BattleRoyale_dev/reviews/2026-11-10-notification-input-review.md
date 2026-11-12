@@ -1,0 +1,11 @@
+**UNSOUND.**
+
+- **P1 — Módulo incorrecto; fallo de compilación esperado.** El [override está en `5_Mission`](/C:/Users/guill/Repos/BattleRoyale/BattleRoyale/addons/scripts_client/5_Mission/GUI/HUD/ExpansionNotificationView.c:5), pero [Expansion declara la clase en `4_World`](/C:/Users/guill/Repos/br-ref/exp_core_scripts/4_World/DayZExpansion_Core/Systems/Notifications/ExpansionNotificationView.c:14). `modded class` debe compilar en el módulo original. Mover el archivo a `scripts_client/4_World`. El repositorio documenta el mismo fallo con [UiHintPanel](/C:/Users/guill/Repos/BattleRoyale/BattleRoyale/addons/scripts_client/3_Game/GUI/Hints/UiHintPanel.c:2). La firma, `super`, `GetLayoutRoot()`, `SetFlags()` y los guards son correctos; `#ifndef SERVER` oculta este problema en una comprobación exclusivamente del servidor.
+
+- **P2 — Etiqueta central persistente, preexistente.** [IngameHud.c:37](/C:/Users/guill/Repos/BattleRoyale/BattleRoyale/addons/scripts_client/5_Mission/GUI/IngameHud.c:37) deja de actualizar la etiqueta del jugador al empezar la partida, sin ocultarla ni eliminarla. Su [raíz vanilla](/C:/Users/guill/OneDrive/Documentos/DayZ%20Projects/gui/layouts/new_ui/hud/hud_player_tag.layout:1) carece de `IGNOREPOINTER`: queda otro candidato central para interceptar clics, aunque su tamaño declarado es solo **1×1 píxel**. Ocultar/limpiar la etiqueta al comenzar y marcar su raíz.
+
+- **P3 — Pérdida global de cierre mediante clic.** Modificar la clase base afecta a todas las notificaciones Expansion, incluidos otros tipos y mensajes ajenos a BR, también fuera de partida. Desactiva el comportamiento de [OnMouseButtonUp:167](/C:/Users/guill/Repos/br-ref/exp_core_scripts/4_World/DayZExpansion_Core/Systems/Notifications/ExpansionNotificationView.c:167). Si ese alcance es intencionado, es aceptable: los temporizadores permanecen y no aparece trabajo adicional por frame.
+
+La causa propuesta es plausible para los toasts: el RPC usa TOAST y su raíz captura el puntero. Comprobé los layouts del PBO instalado: hijos y HUD contenedor ya ignoran el puntero. No encontré adquisición explícita de foco en esa ruta.
+
+Revisión estática, sin cambios ni compilación/validación en juego.

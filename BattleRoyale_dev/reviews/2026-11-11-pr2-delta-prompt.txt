@@ -1,0 +1,10 @@
+ADVERSARIAL read-only delta review. Repository: DayZ mod BattleRoyale (Enforce Script, DayZ 1.30).
+
+Your previous adversarial review of PR #2 is BattleRoyale_dev/reviews/2026-11-11-pr2-adversarial.md (GREEN-with-fixes). The fixes are in commit fbdb10c (git show fbdb10c -- BattleRoyale/addons). Review ONLY that delta and whether it closes your findings:
+- SpawnSelectionMenu.c: removed the manual ChangeGameFocus(1) in OnShow and ResetGameFocus() in OnHide; it now relies on UIScriptedMenu LockControls/UnlockControls (vanilla C:\Users\guill\OneDrive\Documentos\DayZ Projects\scripts\3_game\tools\uiscriptedmenu.c:80-135, 173-187). Check every path that opens/closes this menu (MissionGameplay.c ~360-420) for a stuck lock or stuck cursor, including closing during a disconnect, the menu being replaced by another menu, and the time running out.
+- IngameHud.c: sets IGNOREPOINTER on the player tag root when cached, and hides the tag once match_started is true. Check that nothing shows it again or nulls it unsafely (vanilla 5_mission/gui/ingamehud.c ShowPlayerTag ~1099-1140).
+- Your P3 about global click-to-dismiss loss was kept on purpose: in a BR server Expansion notifications are the BR's own, and a toast from any source over the inventory would block clicks the same way.
+
+In-game evidence (DayZDiag, run 4614e56b): both sides compiled without script errors; the spawn menu showed (OnShow) and hid (OnHide); the match started and ended with the winner toast; the player HUD rendered after the menu.
+
+Output: GREEN (merge) or RED, with any finding P1-P3 as path:line + failure scenario + fix. Be brief.

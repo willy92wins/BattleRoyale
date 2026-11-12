@@ -52,7 +52,13 @@ modded class IngameHud
 				m_BrTagFrame = m_PlayerTag.FindAnyWidget( "TagFrame" );
 				if ( m_BrTagFrame )
 					m_BrTagFrame.SetSize( 300, 25 );
+				m_PlayerTag.SetFlags( WidgetFlags.IGNOREPOINTER );
 			}
+		}
+		else if ( m_PlayerTag && m_PlayerTag.IsVisible() )
+		{
+			// Tags stop updating when the match starts: hide the last one instead of leaving it frozen on screen
+			m_PlayerTag.Show( false );
 		}
 	}
 

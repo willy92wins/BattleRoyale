@@ -1,0 +1,14 @@
+Read-only review. Repository: DayZ mod BattleRoyale (Enforce Script). Commit under review: e4c67b7 (git show e4c67b7).
+
+Bug reported by players: in-match notifications sometimes block mouse clicks / input on what is underneath them.
+
+Claimed root cause: the server sends messages via RPC "NotificationMessage" (BattleRoyale/addons/scripts_client/3_Game/BattleRoyale/RPC/BattleRoyaleRPC.c:266-294), shown with ExpansionNotification(...).Create(), default type TOAST. Expansion's toast layout root (WrapSpacerWidgetClass ExpansionNotificationViewToast) has "ignorepointer 0" and ExpansionNotificationView.OnMouseButtonUp dismisses on click; all children have ignorepointer 1. All BattleRoyale HUD layouts (gui/layouts/hud/*.layout) already have ignorepointer 1 on every widget.
+Expansion Core source reference: C:\Users\guill\Repos\br-ref\exp_core_scripts\4_World\DayZExpansion_Core\Systems\Notifications\ExpansionNotificationView.c (ShowNotification at ~line 64, OnMouseButtonUp ~167). EXPANSIONUI is a script #define in Expansion's 0_core_preload.
+Vanilla API: P:\scripts is at C:\Users\guill\OneDrive\Documentos\DayZ Projects\scripts (1_core/proto/enwidgets.c: WidgetFlags.IGNOREPOINTER, Widget.SetFlags).
+
+Check:
+1. Does the modded class compile and override correctly (signature, module order: BR scripts_client 5_Mission vs Expansion 4_World, #ifdef guards)?
+2. Is the root cause plausible and complete? Any other client widget in this mod or in Expansion notifications that could still catch the pointer or take input focus during a match (e.g. something centered on screen)?
+3. Any regression (e.g. something that relies on click-to-dismiss, other notification types, performance)?
+
+Answer with a verdict (SOUND / SOUND-with-fixes / UNSOUND) and findings P1-P3 with path:line. Be concise.

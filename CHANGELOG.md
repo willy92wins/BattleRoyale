@@ -5,6 +5,15 @@
 - Dead players become spectators instead of leaving after 15 s: the camera follows a player still alive, in first person (at the eyes, along the weapon) or third person (orbit with the mouse), switched with the vanilla person view key; left and right click change player. `enable_spectator` and `spectator_delay_seconds` in `general_settings.json`.
 - Late joiners are now told at once that a match is in progress, with an estimate of the minutes left: the server notifies them while they connect, before the world loads (and again on connect as a backstop), the client leaves to the main menu and shows the reason there once, and the 30 s kick stays as a safety net. While the client prepares only admins listed in `admins_steamid64` are exempt: admins known only to COT or VPP must be listed there to enter during a match.
 
+## 1.2.1 (2026-11-11)
+
+### Fixed
+- Notifications no longer catch mouse clicks: a notification over the inventory or the map swallowed
+  the clicks meant for what was under it.
+- Closing the spawn selection no longer resets the input focus of the whole game.
+- The player name label of the lobby, in the centre of the screen, is hidden when the match starts.
+- `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
+
 ## 1.2.0 (2026-11-09)
 
 ### Changed

@@ -1,0 +1,21 @@
+ADVERSARIAL read-only review. Try hard to break this change; do not rubber-stamp it.
+
+Repository: DayZ mod BattleRoyale (Enforce Script), DayZ 1.30. Change under review: git diff 2645503..ffd2276 (PR #2, branch fix/notification-input). Base 2645503 is the released 1.2.0.
+
+Goal of the change: players reported that notifications sometimes block clicks / gameplay on what is underneath. The change adds BattleRoyale/addons/scripts_client/4_World/GUI/ExpansionNotificationView.c, a modded ExpansionNotificationView that sets WidgetFlags.IGNOREPOINTER on the layout root in ShowNotification.
+
+Evidence already gathered (verify, do not trust):
+- Server messages reach the client through RPC "NotificationMessage" (scripts_client/3_Game/BattleRoyale/RPC/BattleRoyaleRPC.c:266-294) and are shown with ExpansionNotification(...).Create(), default type TOAST.
+- Expansion source: C:\Users\guill\Repos\br-ref\exp_core_scripts\4_World\DayZExpansion_Core\Systems\Notifications\ (View.c, HUD.c, Module.c). Shipped layouts extracted to C:\Users\guill\AppData\Local\Temp\claude\72e0954b065197d7\b22c7164-6cf9-4431-86ad-4560671c1ff7\scratchpad\exp\ (toast root ignorepointer 0, all children and HUD containers ignorepointer 1).
+- EXPANSIONUI is a script #define in Expansion's 0_core_preload, under #ifdef DabsFramework.
+- Vanilla scripts: C:\Users\guill\OneDrive\Documentos\DayZ Projects\scripts (1_core/proto/enwidgets.c WidgetFlags, Widget.SetFlags). Vanilla gui layouts: C:\Users\guill\OneDrive\Documentos\DayZ Projects\gui.
+- In DayZDiag the 4_World version compiles and a toast is shown; the 5_Mission version failed with Unknown type. A click through a toast was NOT tested.
+- A previous non-adversarial review is in BattleRoyale_dev/reviews/2026-11-10-notification-input-review.md (P2 there: the player tag from IngameHud.c:37).
+
+Attack angles:
+1. Is this really the cause of "notifications in the CENTER of the screen block clicks/gameplay"? The toasts are top-left. Find every widget or menu this mod (or Expansion paths it triggers) puts in or near the screen centre during lobby/match/spectate/win, and check whether any of them catches the pointer, takes focus, changes game focus (ChangeGameFocus/LockControls/ShowUICursor/SetKeyboardHandle) or leaves input locked. Include the spawn selection menu, win screen, spectator, popups, the phase/zone damage panels, IngameHud overrides and the hint panel.
+2. Does setting IGNOREPOINTER on the root actually make the engine pass clicks to widgets beneath (e.g. inventory, map) given the HUD containers? Is ShowNotification the right hook (is the root ever re-created or flags reset after it)? Can GetLayoutRoot be null there?
+3. Regressions: other Expansion notification types or features that rely on click-to-dismiss or on OnMouseButtonUp; server-side compilation (#ifndef SERVER guard); load order with COT/VPP; performance.
+4. Anything the minimal fix misses that a player would still hit.
+
+Output: verdict GREEN (merge as is) / GREEN-with-fixes / RED, then findings P1-P3, each with path:line, a concrete failure scenario, and a proposed fix. Be concise. Say what you could not verify.
