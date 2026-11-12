@@ -194,6 +194,12 @@ class BattleRoyaleState: Timeable
             return;
 
     	BattleRoyaleUtils.Info(string.Format("BattleRoyaleState::RemovePlayer: %1", player.BR_GetPlayerName()));
+
+        // The eliminated player keeps the placement held before this removal; the count change
+        // below only updates the players still in the state
+        if (!b_IsDebug && player.GetIdentity())
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetTopPosition", new Param1<int>( player.GetBRPosition() ), true, player.GetIdentity() );
+
         m_Players.RemoveItem(player);
         OnPlayerCountChanged();
     }

@@ -13,6 +13,7 @@ class BattleRoyaleRPC
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetCountdownSeconds", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetTopPosition", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "ShowWinScreen", this );
 
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "NotificationMessage", this );
@@ -142,7 +143,6 @@ class BattleRoyaleRPC
 				BattleRoyaleUtils.Trace(string.Format("SetPlayerCount: %1 %2", data.param1, data.param2));
 			nb_players = data.param1;
 			nb_groups = data.param2;
-			top_position = data.param1;
 
 			// The overlay shows the players alive, which change without a new spectate target
 			if ( s_Spectating && s_SpectatorOverlay )
@@ -300,6 +300,22 @@ class BattleRoyaleRPC
 	// Set the top position
 
 	int top_position = 0;
+
+	void SetTopPosition(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param1<int> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ SETTOPPOSITION RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+		{
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetTopPosition: %1", data.param1));
+			top_position = data.param1;
+		}
+	}
 
 	// Show the win screen
 
