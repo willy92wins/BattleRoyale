@@ -46,7 +46,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         BattleRoyaleUtils.Trace("BattleRoyaleServer() Init()");
 #ifdef VPPADMINTOOLS
-        GetPermissionManager().AddPermissionType({ "MenuBattleRoyaleManager", "BattleRoyale:Next", "BattleRoyale:Pause", "BattleRoyale:Resume", "BattleRoyale:SpawnAirdrop" });
+        GetPermissionManager().AddPermissionType({ "MenuBattleRoyaleManager", "BattleRoyale:Next", "BattleRoyale:Pause", "BattleRoyale:Resume" });
 #endif
 
         BattleRoyaleConfig config_data = BattleRoyaleConfig.GetConfig();

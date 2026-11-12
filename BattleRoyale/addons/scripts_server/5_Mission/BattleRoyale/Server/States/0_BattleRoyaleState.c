@@ -274,14 +274,6 @@ class BattleRoyaleState: Timeable
 		}
     }
 
-    //CreateNotification( ref StringLocaliser title, ref StringLocaliser text, string icon, int color, float time, PlayerIdentity identity ) ()
-    void MessagePlayers(string message, float time = DAYZBR_MSG_TIME, string param1 = "", string param2 = "", string param3 = "", string param4 = "", string param5 = "")
-    {
-		BattleRoyaleUtils.Info(string.Format("MessagePlayers: %1", message));
-        StringLocaliser text = new StringLocaliser( message );
-        ExpansionNotification(DAYZBR_MSG_TITLE, text, DAYZBR_MSG_IMAGE, COLOR_EXPANSION_NOTIFICATION_INFO, time).Create();
-    }
-
     void MessagePlayer(PlayerBase player, string message, float time = DAYZBR_MSG_TIME, string param1 = "", string param2 = "", string param3 = "", string param4 = "", string param5 = "")
     {
         if(player)

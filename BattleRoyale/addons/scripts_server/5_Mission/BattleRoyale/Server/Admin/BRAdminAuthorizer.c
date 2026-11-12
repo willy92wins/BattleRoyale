@@ -35,8 +35,6 @@ class BRAdminAuthorizer
 			return true;
 		if (HasFrameworkGrant(sender, "Resume"))
 			return true;
-		if (HasFrameworkGrant(sender, "SpawnAirdrop"))
-			return true;
 
 		return false;
 	}

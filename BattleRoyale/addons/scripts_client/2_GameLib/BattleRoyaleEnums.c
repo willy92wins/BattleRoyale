@@ -8,7 +8,7 @@ enum BattleRoyaleCOTStateMachineRPC
     Resume,
     AddFakePlayer,
     AddFakeGroup,
-    SpawnAirdrop,
+    SpawnAirdrop, // Reserved: the airdrop was removed; kept so later ids do not move.
     SpawnHorde,
     SpawnChemicals,
 
