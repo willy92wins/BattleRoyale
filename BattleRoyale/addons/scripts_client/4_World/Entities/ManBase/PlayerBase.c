@@ -72,4 +72,25 @@ modded class PlayerBase
 			hic.SetDisabled( disabled );
 		}
     }
+
+    //! Name captured when the player connected; still valid after the identity is gone
+    protected string m_BR_PlayerName;
+
+    //! Server side, from MissionServer.InvokeOnConnect
+    void BR_SetPlayerName( string name )
+    {
+        m_BR_PlayerName = name;
+    }
+
+    //! Player name for logs and messages. On a client it is the identity name; on the server it is
+    //! the name stored at connection, so it stays available after a disconnect
+    string BR_GetPlayerName()
+    {
+#ifndef SERVER
+        PlayerIdentity identity = GetIdentity();
+        if ( identity )
+            return identity.GetName();
+#endif
+        return m_BR_PlayerName;
+    }
 }
