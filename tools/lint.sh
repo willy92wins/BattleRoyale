@@ -6,7 +6,7 @@ ROOT="${1:-.}"; OUT="${2:-build/lint}"; mkdir -p "$OUT"
 V="C:/Users/guill/DayZ-Modding-Knowledge-Pack/tools/dayz-script-validator/scripts/script_validator.py"
 VR="C:/Users/guill/OneDrive/Documentos/DayZ Projects/scripts"
 REF="C:/Users/guill/Repos/br-ref"
-X=(--external-scripts "$REF/expansion_scripts" --external-scripts "$REF/exp_core_scripts" --external-scripts "$REF/cf_scripts" --external-scripts "$REF/cot/scripts" --external-scripts "$REF/vpp/VPPAdminTools" --external-scripts "$REF/dabs_scripts" --external-scripts "$REF/navigation_scripts")
+X=(--external-scripts "$REF/cf_scripts" --external-scripts "$REF/cot/scripts" --external-scripts "$REF/vpp/VPPAdminTools" --external-scripts "$REF/dabs_scripts")
 A="$ROOT/BattleRoyale/addons"
 lint() {
   python "$V" "$1" --vanilla-root "$VR" "${X[@]}" --external-scripts "$A/scripts_client" > "$OUT/$2.json" 2> "$OUT/$2.err"

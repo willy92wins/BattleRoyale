@@ -47,24 +47,23 @@ Online Tools (COT), VPPAdminTools or none.
 |---|---|---|---|---|
 | 1 | `@CF` | 1559212036 | `Jacob_Mango_V3.bikey` | always |
 | 2 | `@Dabs Framework` | 2545327648 | `dab.bikey` | always |
-| 3 | `@DayZ-Expansion-Core` | 2291785308 | `Expansion.bikey` | always |
-| 4 | `@DayZ-Expansion` | 2116151222 | `Expansion.bikey` | always |
-| 5 | `@DayZ-Expansion-Navigation` | 2792984722 | `Expansion.bikey` | always |
-| 6 | `@Community-Online-Tools` | 1564026768 | `Jacob_Mango_V3.bikey` | optional, admin tool |
-| 7 | `@VPPAdminTools` | 1828439124 | `VPP.bikey` | optional, admin tool |
-| 8 | `@BattleRoyale` | 3834219016 | the key shipped in `@BattleRoyale\keys` | always |
-| 9 | `@BattleRoyale-VPP` | 3834226297 | the same key as `@BattleRoyale` | only with `@VPPAdminTools` |
+| 3 | `@Community-Online-Tools` | 1564026768 | `Jacob_Mango_V3.bikey` | optional, admin tool |
+| 4 | `@VPPAdminTools` | 1828439124 | `VPP.bikey` | optional, admin tool |
+| 5 | `@BattleRoyale` | 3834219016 | the key shipped in `@BattleRoyale\keys` | always |
+| 6 | `@BattleRoyale-VPP` | 3834226297 | the same key as `@BattleRoyale` | only with `@VPPAdminTools` |
+
+DayZ Expansion is not needed: the map opens with the map key without a map item and shows the zones.
 
 Without an admin tool:
 
 ```
--mod=@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@BattleRoyale
+-mod=@CF;@Dabs Framework;@BattleRoyale
 ```
 
 With COT, nothing else is needed:
 
 ```
--mod=@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@Community-Online-Tools;@BattleRoyale
+-mod=@CF;@Dabs Framework;@Community-Online-Tools;@BattleRoyale
 ```
 
 With VPPAdminTools, `@VPPAdminTools` goes before `@BattleRoyale` (VPP sets its `VPPADMINTOOLS` define
@@ -72,7 +71,7 @@ in a script, which only reaches the mods compiled after it; without it the Battl
 are not registered and every VPP admin action is denied), and `@BattleRoyale-VPP` goes after both:
 
 ```
--mod=@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@VPPAdminTools;@BattleRoyale;@BattleRoyale-VPP
+-mod=@CF;@Dabs Framework;@VPPAdminTools;@BattleRoyale;@BattleRoyale-VPP
 ```
 
 `@BattleRoyale` holds both the client and the server script PBOs, so nothing is needed in
@@ -103,8 +102,8 @@ players with an action permission (`BattleRoyale.StateMachine.Update` in COT, `B
 ## 2. Signature keys
 
 The stock config uses `verifySignatures = 2`: the server only accepts PBOs signed with a key found in
-`<server>\keys\`. Copy into that folder the `.bikey` of every mod (table above; `Expansion.bikey` and
-`Jacob_Mango_V3.bikey` are shared, one copy is enough) and the key of the BattleRoyale build, which
+`<server>\keys\`. Copy into that folder the `.bikey` of every mod (table above; `Jacob_Mango_V3.bikey` is
+shared by CF and COT, one copy is enough) and the key of the BattleRoyale build, which
 also signs `@BattleRoyale-VPP`. The 1.0 PBOs are re-signed with the project's own key (audit EXT-18),
 so the key of 0.1.0 does not apply. The key names above are those of the current Workshop versions:
 check each mod's `keys` folder after an update.
@@ -170,7 +169,7 @@ The mod shuts the server down when a match ends (`9_BattleRoyaleRestart.c`). Sta
 
 ```powershell
 cd D:\DayZServer\BattleRoyale_server\tools
-.\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@Community-Online-Tools;@BattleRoyale'
+.\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Dabs Framework;@Community-Online-Tools;@BattleRoyale'
 ```
 
 This example uses the COT list; pass the `-mod=` list of section 1 that matches your admin tool.
