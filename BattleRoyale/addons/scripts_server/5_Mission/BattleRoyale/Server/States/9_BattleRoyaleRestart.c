@@ -5,15 +5,23 @@ class BattleRoyaleRestart: BattleRoyaleState
 
     //! Seconds between entering this state and the server exit; the win screen before it already lasts its own time
     protected static const int SHUTDOWN_DELAY_SECONDS = 3;
+    //! With the Vigrid API on, score webhooks may still be in flight (10 s HTTP timeout and retries), so the exit waits longer
+    protected static const int SHUTDOWN_DELAY_SECONDS_WITH_API = 10;
 
     override void Activate()
     {
         super.Activate();
-        BroadcastMatchPhase(EBRMatchPhase.RESTARTING, SHUTDOWN_DELAY_SECONDS);
+
+        int delay = SHUTDOWN_DELAY_SECONDS;
+        BattleRoyaleServerData server_data = BattleRoyaleConfig.GetConfig().GetServerData();
+        if (server_data && server_data.enable_vigrid_api)
+            delay = SHUTDOWN_DELAY_SECONDS_WITH_API;
+
+        BroadcastMatchPhase(EBRMatchPhase.RESTARTING, delay);
 
         BattleRoyaleUtils.Trace("[Restart State] Restarting!");
 
-        m_ShutdownTimer = AddTimer(SHUTDOWN_DELAY_SECONDS, this, "Shutdown", NULL, false);
+        m_ShutdownTimer = AddTimer(delay, this, "Shutdown", NULL, false);
     }
 
     override string GetName()
