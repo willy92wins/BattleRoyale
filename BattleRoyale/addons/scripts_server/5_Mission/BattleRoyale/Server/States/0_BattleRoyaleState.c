@@ -715,11 +715,6 @@ class BattleRoyaleState: Timeable
 
 		if( player.GetIdentity() )
 		{
-			map<string, string> json_data = new map<string, string>();
-			json_data.Insert( "victim", player.GetIdentity().GetPlainId() );
-			json_data.Insert( "victim_position", player.GetPosition().ToString() );
-			vector killer_position = "0 0 0";
-
 			BattleRoyaleServerData m_ServerData = BattleRoyaleConfig.GetConfig().GetServerData();
 			BattleRoyaleServer br_instance = BattleRoyaleServer.GetInstance();
 
@@ -728,64 +723,66 @@ class BattleRoyaleState: Timeable
 				BattleRoyaleUtils.Trace("ScoreWebhook: Sending player score");
 				ScoreWebhook scoreWebhook = new ScoreWebhook( m_ServerData.webhook_jwt_token );
 				scoreWebhook.Send( br_instance.match_uuid, player.GetIdentity().GetPlainId(), player.GetBRPosition() );
-			}
 
-			// Does the source is a carrier and the carrier a Player?
-			PlayerBase playerSource = PlayerBase.Cast( EntityAI.Cast( source ).GetHierarchyParent() );
-			if (!playerSource)
-			{
-				// If not, does the source is a Player?
-				playerSource = PlayerBase.Cast( source );
-			}
+				map<string, string> json_data = new map<string, string>();
+				json_data.Insert( "victim", player.GetIdentity().GetPlainId() );
+				json_data.Insert( "victim_position", player.GetPosition().ToString() );
+				vector killer_position = "0 0 0";
 
-			if (player == source)	// deaths not caused by another object (starvation, dehydration, bleeding)
-			{
-				if (bleed_out && player.br_last_player_hit_by && player.br_last_player_hit_by.GetIdentity())
+				// Does the source is a carrier and the carrier a Player?
+				PlayerBase playerSource = PlayerBase.Cast( EntityAI.Cast( source ).GetHierarchyParent() );
+				if (!playerSource)
 				{
-					json_data.Insert( "killer", player.br_last_player_hit_by.GetIdentity().GetPlainId() );
-					json_data.Insert( "cause", "bleeding" );
+					// If not, does the source is a Player?
+					playerSource = PlayerBase.Cast( source );
 				}
-				else
-				{
-					// Killed by environmental causes but the the player directly
-					json_data.Insert( "killer", "environment" );
-				}
-			}
-			else if ( source.IsInherited(Grenade_Base) || source.IsInherited(LandMineTrap) )
-			{
-				string killer = "";
-				EnScript.GetClassVar(source, "m_ActivatorId", -1, killer);
-				json_data.Insert( "killer", killer );
-				json_data.Insert( "weapon", source.GetType() );
-			}
-			else {
-				json_data.Insert( "killer_position", source.GetPosition().ToString() );
 
-				if (playerSource)
+				if (player == source)	// deaths not caused by another object (starvation, dehydration, bleeding)
 				{
-					json_data.Insert( "killer", playerSource.GetIdentity().GetPlainId() );
-					if (source.IsWeapon() || source.IsMeleeWeapon())
+					if (bleed_out && player.br_last_player_hit_by && player.br_last_player_hit_by.GetIdentity())
 					{
-						json_data.Insert( "weapon", source.GetType() );
-						if ( !source.IsMeleeWeapon() )
+						json_data.Insert( "killer", player.br_last_player_hit_by.GetIdentity().GetPlainId() );
+						json_data.Insert( "cause", "bleeding" );
+					}
+					else
+					{
+						// Killed by environmental causes but the the player directly
+						json_data.Insert( "killer", "environment" );
+					}
+				}
+				else if ( source.IsInherited(Grenade_Base) || source.IsInherited(LandMineTrap) )
+				{
+					string killer = "";
+					EnScript.GetClassVar(source, "m_ActivatorId", -1, killer);
+					json_data.Insert( "killer", killer );
+					json_data.Insert( "weapon", source.GetType() );
+				}
+				else {
+					json_data.Insert( "killer_position", source.GetPosition().ToString() );
+
+					if (playerSource)
+					{
+						json_data.Insert( "killer", playerSource.GetIdentity().GetPlainId() );
+						if (source.IsWeapon() || source.IsMeleeWeapon())
 						{
-							json_data.Insert( "distance", vector.Distance( player.GetPosition(), playerSource.GetPosition() ).ToString() );
+							json_data.Insert( "weapon", source.GetType() );
+							if ( !source.IsMeleeWeapon() )
+							{
+								json_data.Insert( "distance", vector.Distance( player.GetPosition(), playerSource.GetPosition() ).ToString() );
+							}
+						}
+						else
+						{
+							json_data.Insert( "weapon", "fist" );
 						}
 					}
 					else
 					{
-						json_data.Insert( "weapon", "fist" );
+						//rest, Animals, Zombies
+						json_data.Insert( "killer", source.GetType() );
 					}
 				}
-				else
-				{
-					//rest, Animals, Zombies
-					json_data.Insert( "killer", source.GetType() );
-				}
-			}
 
-			if ( m_ServerData.enable_vigrid_api )
-			{
 				EventWebhook eventWebhook = new EventWebhook( m_ServerData.webhook_jwt_token );
 				eventWebhook.Send( br_instance.match_uuid, "player.kill", JsonFileLoader<map<string, string>>.JsonMakeData( json_data ) );
 			}
