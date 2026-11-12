@@ -19,7 +19,7 @@ ALLOWED = {
     "scripts_client": {
         (LAYOUT, "5_mission/cot/gui/brmastercontrolsmodule.c"): 1,
         (LAYOUT, "5_mission/gui/hud/battleroyalekillfeed.c"): 1,
-        (LAYOUT, "5_mission/gui/map/battleroyalemapmarkerzone.c"): 2,
+        (LAYOUT, "5_mission/gui/mapmenu.c"): 1,
         (LAYOUT, "5_mission/gui/spawnselectionmenu.c"): 1,
         (LAYOUT, "5_mission/mission/mainmenu.c"): 2,
         (LAYOUT, "5_mission/mission/missiongameplay.c"): 3,

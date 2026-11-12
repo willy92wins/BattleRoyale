@@ -23,7 +23,6 @@ static const string BATTLEROYALE_VERSION = "1.2.2";
 //--- Zone edge colours on the map, the same as the zone walls: red for the zone in force, yellow for an announced zone that has not locked yet
 static const int BR_ZONE_COLOR_LOCKED = 0xFFEB2D23;
 static const int BR_ZONE_COLOR_OPEN = 0xFFF5C828;
-static const string BR_MAP_ZONES_LAYOUT = "Vigrid-BattleRoyale/GUI/layouts/map/royale_map_zones.layout";
 
 
 //--- Feedback link opened by the buttons that extra_changefeedbackurl redirects; empty hides the pause menu button

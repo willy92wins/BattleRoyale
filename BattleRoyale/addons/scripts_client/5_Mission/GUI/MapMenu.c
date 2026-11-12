@@ -3,6 +3,8 @@
 //! Once the announced zone locks it is the zone in force and turns red.
 modded class MapMenu
 {
+	protected const string BR_MAP_ZONES_LAYOUT = "Vigrid-BattleRoyale/GUI/layouts/map/royale_map_zones.layout";
+
 	protected CanvasWidget m_BR_ZoneCanvas;
 
 	// What the canvas shows; it is only redrawn when the zones or the map view change
