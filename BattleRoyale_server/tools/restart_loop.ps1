@@ -82,7 +82,7 @@ param(
     [ValidateRange(1, 65535)]
     [int]$Port = 2302,
     [ValidateRange(0, 86400)]
-    [int]$RestartDelaySeconds = 10,
+    [int]$RestartDelaySeconds = 2,
     [ValidateRange(1, 100)]
     [int]$KeepPrevious = 3,
     [string[]]$ExtraArgs = @('-dologs', '-adminlog', '-freezecheck')
