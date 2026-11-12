@@ -68,7 +68,7 @@ static const int COLOR_BR_ERROR = ARGB( 255, 231, 76, 60 );
 
 //--- notification messages
 static const float DAYZBR_MSG_TIME = 7;
-static const string DAYZBR_MSG_IMAGE = "set:expansion_iconset image:icon_info";
+static const string DAYZBR_MSG_IMAGE = "set:dayz_gui image:icon_flag";
 static const string DAYZBR_MSG_TITLE = "DayZ Battle Royale";
 
 
