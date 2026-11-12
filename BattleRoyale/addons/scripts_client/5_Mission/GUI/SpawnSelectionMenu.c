@@ -228,9 +228,22 @@ class SpawnSelectionMenu extends UIScriptedMenu
 		{
 			m_HeatMapCanvas.Clear();
 
-			for (int i = 0; i < m_HeatMapCellColor.Count(); i++)
+			if (m_HeatMapCellColor.Count() > 0 && f_HeatMapCellSize > 0)
 			{
-				RenderFilledSquare(m_HeatMapCanvas, m_MapWidget, m_HeatMapCellX[i], m_HeatMapCellZ[i], f_HeatMapCellSize, m_HeatMapCellColor[i]);
+				// Every square has the same world size, so its screen size and the map size are converted once for the whole redraw
+				float map_w, map_h;
+				m_MapWidget.GetScreenSize(map_w, map_h);
+
+				vector screen_origin = m_MapWidget.MapToScreen(Vector(0, 0, 0));
+				vector screen_edge_x = m_MapWidget.MapToScreen(Vector(f_HeatMapCellSize, 0, 0));
+				vector screen_edge_z = m_MapWidget.MapToScreen(Vector(0, 0, f_HeatMapCellSize));
+				float square_w = vector.Distance(screen_origin, screen_edge_x);
+				float square_h = vector.Distance(screen_origin, screen_edge_z);
+
+				for (int i = 0; i < m_HeatMapCellColor.Count(); i++)
+				{
+					RenderFilledSquare(m_HeatMapCanvas, m_MapWidget, m_HeatMapCellX[i], m_HeatMapCellZ[i], f_HeatMapCellSize, square_w, square_h, map_w, map_h, m_HeatMapCellColor[i]);
+				}
 			}
 		}
 	}
@@ -466,12 +479,16 @@ class SpawnSelectionMenu extends UIScriptedMenu
 	 * @param world_x     The X-coordinate of the square's center in world space.
 	 * @param world_z     The Z-coordinate of the square's center in world space.
 	 * @param size        The size of the square in world units.
+	 * @param square_w    The width of the square in screen pixels, converted once by the caller for all squares of a redraw.
+	 * @param square_h    The height of the square in screen pixels, converted once by the caller for all squares of a redraw.
+	 * @param clip_w      When above 0 with clip_h, a square fully outside [0, clip_w] x [0, clip_h] draws nothing.
+	 * @param clip_h      Height of the clip rectangle.
 	 * @param color       The color of the square, specified as an ARGB integer. Defaults to -1 (white).
 	 *
-	 * The method calculates the square's position and dimensions in screen space
-	 * and renders it as a series of horizontal lines to fill the area.
+	 * The method calculates the square's position in screen space
+	 * and renders it as one thick horizontal line that fills the area.
 	 */
-	void RenderFilledSquare(CanvasWidget canvas, MapWidget world_map, float world_x, float world_z, float size, int color = -1)
+	void RenderFilledSquare(CanvasWidget canvas, MapWidget world_map, float world_x, float world_z, float size, float square_w, float square_h, float clip_w, float clip_h, int color = -1)
 	{
 		if (!world_map || size <= 0 || !canvas)
 		{
@@ -486,32 +503,21 @@ class SpawnSelectionMenu extends UIScriptedMenu
 		vector worldCenter = Vector(world_x, 0, world_z);
 		vector screenCenter = world_map.MapToScreen(worldCenter);
 
-		// Create edge points in world coordinates for accurate size calculation
-		vector worldEdgeX = Vector(world_x + size, 0, world_z);
-		vector worldEdgeZ = Vector(world_x, 0, world_z + size);
-
-		// Convert edges to screen coordinates
-		vector screenEdgeX = world_map.MapToScreen(worldEdgeX);
-		vector screenEdgeZ = world_map.MapToScreen(worldEdgeZ);
-
-		// Calculate width and height in screen pixels
-		float screenWidth = vector.Distance(screenCenter, screenEdgeX);
-		float screenHeight = vector.Distance(screenCenter, screenEdgeZ);
-
 		// Calculate the corners of the square in screen space
 		float cx = screenCenter[0] - screen_x;
 		float cy = screenCenter[1] - screen_y;
 
-		float left = cx - screenWidth/2;
-		float right = cx + screenWidth/2;
-		float top = cy - screenHeight/2;
-		float bottom = cy + screenHeight/2;
+		float left = cx - square_w/2;
+		float right = cx + square_w/2;
+		float top = cy - square_h/2;
+		float bottom = cy + square_h/2;
 
-		// Draw the filled square using horizontal lines
-		for (float y = top; y <= bottom; y += 1)
-		{
-			canvas.DrawLine(left, y, right, y, 1, color);
-		}
+		// A square fully outside the map widget draws nothing
+		if (clip_w > 0 && clip_h > 0 && (right < 0 || bottom < 0 || left > clip_w || top > clip_h))
+			return;
+
+		// One thick horizontal line fills the square; at least one pixel wide so a sub-pixel square still shows
+		canvas.DrawLine(left, cy, right, cy, Math.Max(square_h, 1.0), color);
 	}
 
 	void UpdateHeatMap(array<vector> spawnPoints)
