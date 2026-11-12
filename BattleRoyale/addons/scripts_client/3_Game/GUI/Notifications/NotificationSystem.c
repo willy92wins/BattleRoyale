@@ -1,16 +1,18 @@
-//! Deferred notifications are shown in the order they arrived.
-//! Vanilla Update moves the LAST element of m_DeferredArray on screen when one expires, so a burst
-//! past MAX_NOTIFICATIONS would show newest first; inserting at the front keeps the oldest last.
+//! A new notification is always shown at once, as with the previous notification system.
+//! Vanilla defers notifications past MAX_NOTIFICATIONS and starts their timer only when they show, so a
+//! deferred "zone closes in 10 seconds" could appear after the zone closed. Here the oldest visible
+//! notification is removed instead, the same way vanilla Update removes an expired one.
 modded class NotificationSystem
 {
 	override protected void AddNotif(NotificationRuntimeData data)
 	{
-		if (m_TimeArray.Count() < MAX_NOTIFICATIONS)
+		while (m_TimeArray.Count() >= MAX_NOTIFICATIONS)
 		{
-			super.AddNotif(data);
-			return;
+			NotificationRuntimeData oldest = m_TimeArray.Get(0);
+			m_OnNotificationRemoved.Invoke(oldest);
+			m_TimeArray.Remove(0);
 		}
 
-		m_DeferredArray.InsertAt(data, 0);
+		super.AddNotif(data);
 	}
 }
