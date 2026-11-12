@@ -62,7 +62,7 @@
     Extra command line parameters for DayZServer_x64.exe.
 
 .EXAMPLE
-    .\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Dabs Framework;@DayZ-Expansion-Core;@DayZ-Expansion;@DayZ-Expansion-Navigation;@Community-Online-Tools;@BattleRoyale'
+    .\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Dabs Framework;@Community-Online-Tools;@BattleRoyale'
 
 .EXAMPLE
     .\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Dabs Framework' -WhatIf

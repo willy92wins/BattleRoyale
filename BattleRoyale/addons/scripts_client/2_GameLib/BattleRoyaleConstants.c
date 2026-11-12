@@ -67,7 +67,7 @@ static const int COLOR_BR_ERROR = ARGB( 255, 231, 76, 60 );
 
 //--- notification messages
 static const float DAYZBR_MSG_TIME = 7;
-static const string DAYZBR_MSG_IMAGE = "set:expansion_iconset image:icon_info";
+static const string DAYZBR_MSG_IMAGE = "set:dayz_gui image:icon_flag";
 static const string DAYZBR_MSG_TITLE = "DayZ Battle Royale";
 
 
@@ -87,7 +87,7 @@ static const float DAYZBR_ZS_MIN_ANGLE = 0; //degrees
 static const float DAYZBR_ZS_MAX_ANGLE = 360; //non-inclusive
 
 
-//---- DayZ Expansion Loading Screens
+//---- loading screens
 static const string DAYZBR_LOADING_SCREENS_PATH     = "Vigrid-BattleRoyale/Data/LoadingScreens.json";
 static const string DAYZBR_LOADING_MESSAGES_PATH    = "Vigrid-BattleRoyale/Data/LoadingMessages.json";
 static const int DAYZBR_LOADING_BAR_COLOR           = ARGB( 255, 0, 0, 0 );     //! A = Alpha (opacity) / R = Red / G = Green / B = Blue

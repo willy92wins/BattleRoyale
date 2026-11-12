@@ -84,8 +84,6 @@ modded class MainMenu
 		if(!m_Logo.LoadImageFile( 0, BATTLEROYALE_LOGO_IMAGE ))
 			Error("Failed to load imageset image");
 
-		//m_NewsfeedPanel.Show( false ); //--- don't show dayz expansion news feed
-
 		//m_ChooseServer.Show( false ); // Don't show choose server
 		m_TutorialButton.Show( false ); // Don't show tutorial button
 		//m_MessageButton.Show( false ); // Don't show credits button

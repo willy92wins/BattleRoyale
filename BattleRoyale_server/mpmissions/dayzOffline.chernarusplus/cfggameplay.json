@@ -103,9 +103,9 @@
 	},
 	"MapData":
 	{
-		"ignoreMapOwnership": false,
-		"ignoreNavItemsOwnership": false,
-		"displayPlayerPosition": false,
+		"ignoreMapOwnership": true,
+		"ignoreNavItemsOwnership": true,
+		"displayPlayerPosition": true,
 		"displayNavInfo": true
 	},
 	"VehicleData":

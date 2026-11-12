@@ -1,7 +1,6 @@
 #ifdef SERVER
 modded class MissionServer
 {
-	//--- TODO: look at dayzexpansion missionserver
 	//TODO: look at dayz missionserver
 	//TODO: look at old BR missionserver
 	override void OnInit()

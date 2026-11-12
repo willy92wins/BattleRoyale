@@ -578,8 +578,7 @@ class BRNavOnly
 
 
 class RealRepoTest(unittest.TestCase):
-    EXPECTED = ("ExpansionMapMenu", "ExpansionMapWidgetBase", "ExpansionNotification",
-                "GetIdentityName", "ExpansionArray", "ExpansionNotificationView")
+    """The mod no longer depends on Expansion: the real worktree must check clean."""
 
     def test_real_worktree(self):
         if not os.path.isdir(os.path.join(REPO_ROOT, "BattleRoyale")):
@@ -589,11 +588,9 @@ class RealRepoTest(unittest.TestCase):
         proc = subprocess.run([sys.executable, "-I", script, REPO_ROOT, "--json"],
                               capture_output=True, text=True, timeout=300)
         elapsed = time.monotonic() - t0
-        self.assertEqual(proc.returncode, 1, proc.stderr)
         report = json.loads(proc.stdout)
-        found = matches(report, "symbol")
-        for name in self.EXPECTED:
-            self.assertIn(name, found)
+        self.assertEqual(proc.returncode, 0, [f["match"] for f in report["errors"]])
+        self.assertEqual(report["errors"], [])
         self.assertLess(elapsed, 60.0)
 
 

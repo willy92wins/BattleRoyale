@@ -288,8 +288,10 @@ class BattleRoyaleState: Timeable
             if(identity)
             {
             	BattleRoyaleUtils.Info(string.Format("MessagePlayer: %1 %2", identity.GetName(), message));
-                StringLocaliser text = new StringLocaliser( message );
-                ExpansionNotification(DAYZBR_MSG_TITLE, text, DAYZBR_MSG_IMAGE, COLOR_EXPANSION_NOTIFICATION_INFO, time).Create(identity);
+                StringLocaliser title = new StringLocaliser( "" );
+                title.Set( -1, DAYZBR_MSG_TITLE, false );
+                StringLocaliser text = new StringLocaliser( message, param1, param2, param3, param4, param5 );
+                NotificationSystem.Create( title, text, DAYZBR_MSG_IMAGE, COLOR_BR_INFO, time, identity );
             }
         }
     }

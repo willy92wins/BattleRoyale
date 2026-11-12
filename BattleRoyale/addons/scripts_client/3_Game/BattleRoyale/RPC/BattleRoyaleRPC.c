@@ -356,7 +356,12 @@ class BattleRoyaleRPC
 				translated_message.Replace("UNSTUCK_KEY", InputUtils.GetButtonNameFromInput("UADayZBRUnstuck", EInputDeviceType.MOUSE_AND_KEYBOARD));
 			}
 
-			ExpansionNotification(DAYZBR_MSG_TITLE, translated_message, DAYZBR_MSG_IMAGE, COLOR_EXPANSION_NOTIFICATION_INFO, data.param2).Create();
+			// Created locally; the text is already translated
+			StringLocaliser title = new StringLocaliser("");
+			title.Set(-1, DAYZBR_MSG_TITLE, false);
+			StringLocaliser text = new StringLocaliser("");
+			text.Set(-1, translated_message, false);
+			NotificationSystem.Create(title, text, DAYZBR_MSG_IMAGE, COLOR_BR_INFO, data.param2);
 		}
 	}
 
