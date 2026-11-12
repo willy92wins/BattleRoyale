@@ -579,13 +579,13 @@ class SpawnSelectionMenu extends UIScriptedMenu
 		{
 			string playerId = player.GetIdentity().GetId();
 
-			BattleRoyaleUtils.Trace(string.Format("Player: %1", player.GetIdentityName()));
+			BattleRoyaleUtils.Trace(string.Format("Player: %1", player.BR_GetPlayerName()));
 			if (m_TeammateSpawnPoints.Contains(playerId))
 			{
-				BattleRoyaleUtils.Trace(string.Format("Player already in map: %1", player.GetIdentityName()));
+				BattleRoyaleUtils.Trace(string.Format("Player already in map: %1", player.BR_GetPlayerName()));
 				m_TeammateSpawnPoints.Set(playerId, pos);
 			} else {
-				BattleRoyaleUtils.Trace(string.Format("Player not in map: %1", player.GetIdentityName()));
+				BattleRoyaleUtils.Trace(string.Format("Player not in map: %1", player.BR_GetPlayerName()));
 				m_TeammateSpawnPoints.Insert(playerId, pos);
 			}
 			m_TeammateSpawnPointsColor.Set(playerId, color);

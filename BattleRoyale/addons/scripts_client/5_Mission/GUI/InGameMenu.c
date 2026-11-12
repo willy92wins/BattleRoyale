@@ -24,9 +24,8 @@ modded class InGameMenu
 
         if ( GetDayZGame() )
         {
-            string expansion_version = GetDayZGame().GetExpansionClientVersion();
             string dayzbr_version = GetDayZGame().GetBattleRoyaleClientVersion();
-            version_widget.SetText( "Client #main_menu_version" + " " + version + " | " + expansion_version + " | " + dayzbr_version );
+            version_widget.SetText( "Client #main_menu_version" + " " + version + " | " + dayzbr_version );
         }
         else
         {

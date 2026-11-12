@@ -92,13 +92,13 @@ default.
 - VPPAdminTools with `@BattleRoyale-VPP`: the BattleRoyale button of the VPP toolbar needs
   `MenuBattleRoyaleManager`, and its Next State button needs `BattleRoyale:Next`. Grant them to a group
   in the VPP Permission Editor: VPP does not add new permissions to existing groups. The menu has no
-  pause, resume or airdrop button; `BattleRoyale:Pause`, `BattleRoyale:Resume` and
-  `BattleRoyale:SpawnAirdrop` are registered but have no VPP button yet.
+  pause or resume button; `BattleRoyale:Pause` and `BattleRoyale:Resume` are registered but have no
+  VPP button yet.
 - No admin tool: nobody can skip, pause or resume a match.
 
 Players listed in `admins_steamid64` (`general_settings.json`) can join while a match runs, and so can
 players with an action permission (`BattleRoyale.StateMachine.Update` in COT, `BattleRoyale:Next`,
-`:Pause`, `:Resume` or `:SpawnAirdrop` in VPP). The list itself gives no admin action.
+`:Pause` or `:Resume` in VPP). The list itself gives no admin action.
 
 ## 2. Signature keys
 

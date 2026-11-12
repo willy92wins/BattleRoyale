@@ -23,6 +23,9 @@ class BattleRoyaleHud
     protected static const int DISTANCE_HARD = 2;
     protected static const int DISTANCE_UNREACHABLE = 3;
 
+    //! The zone arrow icon (dayz_gui icon_arrow) points down at rest; this turns it to point up at angle 0
+    protected static const float ZONE_ARROW_ICON_OFFSET = 180;
+
     protected Widget m_Root;
 
     protected Widget m_PlayerCountPanel;
@@ -194,7 +197,7 @@ class BattleRoyaleHud
         if ( Math.AbsFloat( angle - m_LastArrowAngle ) >= 0.5 )
         {
             m_LastArrowAngle = angle;
-            m_DistanceZoneArrow.SetRotation( 0, 0, angle );
+            m_DistanceZoneArrow.SetRotation( 0, 0, angle + ZONE_ARROW_ICON_OFFSET );
         }
 
         // -1 stands for inside the zone, where the arrow shows no text; otherwise whole metres to the zone
@@ -219,12 +222,12 @@ class BattleRoyaleHud
         int countdown_color = ARGB(255, 255, 255, 255);
 
         if ( color_state != DISTANCE_INSIDE )
-            distance_color = COLOR_EXPANSION_NOTIFICATION_ERROR;
+            distance_color = COLOR_BR_ERROR;
 
         if ( color_state == DISTANCE_HARD )
-            countdown_color = COLOR_EXPANSION_NOTIFICATION_ORANGE;
+            countdown_color = COLOR_BR_WARNING;
         else if ( color_state == DISTANCE_UNREACHABLE )
-            countdown_color = COLOR_EXPANSION_NOTIFICATION_ERROR;
+            countdown_color = COLOR_BR_ERROR;
 
         m_DistanceZoneArrow.SetColor( distance_color );
         m_DistanceTextWidget.SetColor( distance_color );

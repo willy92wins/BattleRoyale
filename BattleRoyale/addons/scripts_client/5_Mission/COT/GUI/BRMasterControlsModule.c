@@ -84,12 +84,6 @@ class BRMasterControlsModule: JMRenderableModuleBase
         rpc.Send( GetGame().GetPlayer(), BattleRoyaleCOTStateMachineRPC.AddFakeGroup, true, NULL );
     }
 
-    void SpawnAirdrop()
-    {
-        ScriptRPC rpc = new ScriptRPC();
-        rpc.Send( GetGame().GetPlayer(), BattleRoyaleCOTStateMachineRPC.SpawnAirdrop, true, NULL );
-    }
-
     void SpawnHorde()
     {
         ScriptRPC rpc = new ScriptRPC();

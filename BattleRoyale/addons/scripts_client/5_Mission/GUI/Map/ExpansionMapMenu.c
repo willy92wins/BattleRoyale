@@ -5,8 +5,6 @@ modded class ExpansionMapMenu
     protected ref BattleRoyaleMapMarkerZone m_CurrentZone;
     protected ref BattleRoyaleMapMarkerZone m_NextZone;
 
-    protected ref map<string, ref BattleRoyaleMapMarkerPlayerArrow> m_NetworkPlayerMarkers;
-
     override Widget Init()
     {
         BattleRoyaleBase DayZBR = GetBR();

@@ -120,7 +120,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 		{
 			if( player.GetSpawnPos() == vector.Zero ) // Player didn't select a spawn point
 			{
-				BattleRoyaleUtils.Trace("Player " + player.GetIdentityName() + " didn't select a spawn point, checking party members");
+				BattleRoyaleUtils.Trace("Player " + player.BR_GetPlayerName() + " didn't select a spawn point, checking party members");
 #ifdef Carim
 				set<PlayerBase> groupMembers = GetGroup(player);
 				if(groupMembers)
@@ -129,7 +129,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 					{
 						if( member != player && member.GetSpawnPos() != vector.Zero ) // Found a party member who selected a spawn point
 						{
-							BattleRoyaleUtils.Trace("Assigning spawn point of " + member.GetIdentityName() + " to " + player.GetIdentityName());
+							BattleRoyaleUtils.Trace("Assigning spawn point of " + member.BR_GetPlayerName() + " to " + player.BR_GetPlayerName());
 							player.SetSpawnPos(member.GetSpawnPos());
 							break;
 						}
@@ -278,7 +278,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 				}
 
 				m_LastSpawnAcceptMs.Set(steamid, nowMs);
-				BattleRoyaleUtils.Trace("Player " + pbTarget.GetIdentityName() + " selected spawn point: " + data.param1.ToString());
+				BattleRoyaleUtils.Trace("Player " + pbTarget.BR_GetPlayerName() + " selected spawn point: " + data.param1.ToString());
 
 				if (b_ShowHeatMap)
 				{
@@ -302,12 +302,12 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 				BattleRoyaleUtils.Trace("Test if player is in a group");
 				if(GetGroup(pbTarget))
 				{
-					BattleRoyaleUtils.Trace("Player " + pbTarget.GetIdentityName() + " is in a group, sharing spawn point with group");
+					BattleRoyaleUtils.Trace("Player " + pbTarget.BR_GetPlayerName() + " is in a group, sharing spawn point with group");
 
 					set<PlayerBase> groupMembers = GetGroup(pbTarget);
 					foreach (PlayerBase member : groupMembers)
 					{
-						BattleRoyaleUtils.Trace("Sharing spawn point with " + member.GetIdentityName());
+						BattleRoyaleUtils.Trace("Sharing spawn point with " + member.BR_GetPlayerName());
 						if (member != pbTarget)
 						{
 							GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "ShowSpawnPoint", new Param3<PlayerBase, vector, int>(pbTarget, data.param1, GetSpawnColor(pbTarget.GetIdentity().GetId())), true, member.GetIdentity(), member);
@@ -316,7 +316,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 				}
 				else
 				{
-					BattleRoyaleUtils.Trace("Player " + pbTarget.GetIdentityName() + " is not in a group, not sharing spawn point");
+					BattleRoyaleUtils.Trace("Player " + pbTarget.BR_GetPlayerName() + " is not in a group, not sharing spawn point");
 				}
 #endif
 			}
@@ -400,7 +400,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 			// Get a random spawn point
 			vector random_spawn = heatmap_points.GetRandomElement();
 			// Assign it to the player
-			BattleRoyaleUtils.Trace("Assigning random spawn point to " + player.GetIdentityName());
+			BattleRoyaleUtils.Trace("Assigning random spawn point to " + player.BR_GetPlayerName());
 			player.SetSpawnPos(random_spawn);
 
 			// If in a group, assign to all group members who haven't selected a spawn
@@ -410,7 +410,7 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 				{
 					if( member != player && member.GetSpawnPos() == vector.Zero ) // Found a party member who didn't select a spawn point
 					{
-						BattleRoyaleUtils.Trace("Assigning random spawn point to " + member.GetIdentityName());
+						BattleRoyaleUtils.Trace("Assigning random spawn point to " + member.BR_GetPlayerName());
 						member.SetSpawnPos(random_spawn);
 					}
 				}

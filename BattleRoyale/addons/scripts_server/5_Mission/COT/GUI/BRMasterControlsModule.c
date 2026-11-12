@@ -19,9 +19,6 @@ modded class BRMasterControlsModule
             case BattleRoyaleCOTStateMachineRPC.Resume:
                 RPC_Resume( ctx, sender, target );
             break;
-            case BattleRoyaleCOTStateMachineRPC.SpawnAirdrop:
-                RPC_SpawnAirdrop( ctx, sender, target );
-            break;
         }
     }
 
@@ -47,14 +44,6 @@ modded class BRMasterControlsModule
             return;
 
         BRAdminController.Resume();
-    }
-
-    private void RPC_SpawnAirdrop( ParamsReadContext ctx, PlayerIdentity senderRPC, Object target )
-    {
-        if (!BRAdminAuthorizer.IsAllowed(senderRPC, "SpawnAirdrop"))
-            return;
-
-        BRAdminController.SpawnAirdrop(senderRPC);
     }
 }
 #endif // JM_COT

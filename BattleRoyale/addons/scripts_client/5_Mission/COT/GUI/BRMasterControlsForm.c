@@ -23,12 +23,6 @@ class BRMasterControlsForm: JMFormBase
             UIActionManager.CreateButton( wrapper, "Pause", this, "StateMachine_Pause" );
             UIActionManager.CreateButton( wrapper, "Resume", this, "StateMachine_Resume" );
 
-        wrapper = UIActionManager.CreateGridSpacer( m_ActionsWrapper, 1, 4 );
-            UIActionManager.CreateText( wrapper, "Event Manager" );
-#ifdef EXPANSIONMODMISSIONS
-            UIActionManager.CreateButton( wrapper, "Spawn Airdrop", this, "SpawnAirdrop" );
-#endif
-
 #ifdef DIAG
         wrapper = UIActionManager.CreateGridSpacer( m_ActionsWrapper, 1, 4 );
             UIActionManager.CreateText( wrapper, "DIAG DEBUG" );
@@ -70,11 +64,6 @@ class BRMasterControlsForm: JMFormBase
     void AddFakeGroup(UIEvent eid, UIActionBase action)
     {
         m_Module.AddFakeGroup();
-    }
-
-    void SpawnAirdrop(UIEvent eid, UIActionBase action)
-    {
-        m_Module.SpawnAirdrop();
     }
 
     void SpawnHorde(UIEvent eid, UIActionBase action)

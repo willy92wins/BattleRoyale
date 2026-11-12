@@ -22,6 +22,9 @@ modded class MissionServer
 	override void InvokeOnConnect( PlayerBase player, PlayerIdentity identity )
 	{
 		BattleRoyaleUtils.Trace("InvokeOnConnect()");
+		if (player && identity)
+			player.BR_SetPlayerName(identity.GetName());
+
 		super.InvokeOnConnect(player, identity);
 
 		if(player)

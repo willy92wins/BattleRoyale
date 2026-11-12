@@ -59,6 +59,12 @@ static const float BATTLEROYALE_HEALTH_REGEN_MODIFIER = 10; //multiplier from ba
 static const float BATTLEROYALE_BLOOD_REGEN_MODIFIER = 10; //multiplier from base game values on blood regen speed
 
 
+//--- colours
+static const int COLOR_BR_INFO = ARGB( 255, 52, 152, 219 );
+static const int COLOR_BR_WARNING = ARGB( 255, 243, 156, 18 );
+static const int COLOR_BR_ERROR = ARGB( 255, 231, 76, 60 );
+
+
 //--- notification messages
 static const float DAYZBR_MSG_TIME = 7;
 static const string DAYZBR_MSG_IMAGE = "set:expansion_iconset image:icon_info";

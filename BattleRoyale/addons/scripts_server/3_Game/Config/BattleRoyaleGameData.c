@@ -38,7 +38,7 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 
     bool artillery_sound = true;  // Play the artillery sound when the zone shrinks
 
-	// Airdrop settings
+	// Airdrop settings: ignored since 1.3.0 (the airdrop was removed); kept so older JSON files load
     bool airdrop_enabled = true;  // Enable airdrops
     int airdrop_ignore_last_zones = 3;  // Number of last zones to ignore for airdrops
 
