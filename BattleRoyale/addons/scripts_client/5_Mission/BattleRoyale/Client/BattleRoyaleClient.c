@@ -202,8 +202,13 @@ class BattleRoyaleClient: BattleRoyaleBase
 			br_previous_input_state = br_rpc.input_state;
 		}
 
-		// Set top position
-		player.position_top = br_rpc.top_position;
+		// Set top position; a placement arriving after the death screen was built refreshes its text
+		if (player.position_top != br_rpc.top_position)
+		{
+			player.position_top = br_rpc.top_position;
+			if (br_rpc.top_position > 0)
+				player.BR_RefreshDeadScreenPosition();
+		}
 
 		UpdateZoneHud( gameplay, player, br_rpc );
     }

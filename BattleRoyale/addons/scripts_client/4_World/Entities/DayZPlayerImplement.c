@@ -4,6 +4,13 @@ modded class DayZPlayerImplement
 {
 	int position_top = -1;
 
+	//! Death screen text built for this life, without the placement line
+	protected string m_BR_DeadScreenMessage;
+	//! The death screen was handed to ScreenFadeIn before the placement arrived
+	protected bool m_BR_DeadScreenAwaitingPosition;
+	//! Session that built the death screen; a screen from a previous match is never refreshed
+	protected int m_BR_DeadScreenSession;
+
 	//! Bumped when a mission starts or finishes; a pending leave from an older session does nothing
 	protected static int s_BR_SessionSerial;
 	//! Player whose LeaveServer call is queued, if any
@@ -44,14 +51,22 @@ modded class DayZPlayerImplement
 		if (show && IsPlayerSelected())
 		{
 			string message = "";
+			m_BR_DeadScreenMessage = "";
+			m_BR_DeadScreenAwaitingPosition = false;
+			m_BR_DeadScreenSession = s_BR_SessionSerial;
 			if (!GetGame().GetMission().IsPlayerRespawning())
 			{
 				message = Widget.TranslateString(funny_strings.GetRandomElement());
+				m_BR_DeadScreenMessage = message;
 
-				// The position is only known once the server sent it
+				// The position is only known once the server sent it; a later arrival refreshes this text
 				if (position_top > 0)
 				{
 					message = string.Format(Widget.TranslateString("#STR_BR_DEATH_POSITION"), position_top) + "\r\n" + message;
+				}
+				else
+				{
+					m_BR_DeadScreenAwaitingPosition = true;
 				}
 			}
 
@@ -59,6 +74,7 @@ modded class DayZPlayerImplement
 		}
 		else
 		{
+			m_BR_DeadScreenAwaitingPosition = false;
 			super.ShowDeadScreen(show, duration);
 		}
 
@@ -70,6 +86,37 @@ modded class DayZPlayerImplement
 			s_BR_PendingLeave = this;
 			GetGame().GetCallQueue(CALL_CATEGORY_GUI).CallLater(LeaveServer, 15000, false);
 		}
+	}
+
+	//! Adds the placement to the death screen already handed to ScreenFadeIn, when it arrived after that screen was built
+	void BR_RefreshDeadScreenPosition()
+	{
+		if (!m_BR_DeadScreenAwaitingPosition)
+			return;
+
+		if (m_BR_DeadScreenSession != s_BR_SessionSerial)
+			return;
+
+		if (position_top <= 0)
+			return;
+
+		if (!IsPlayerSelected())
+			return;
+
+		// A spectator already had the death screen faded out by RestoreAfterDeath
+		if (BattleRoyaleRPC.s_Spectating)
+			return;
+
+		if (!GetGame().GetUIManager())
+			return;
+
+		if (!GetGame().GetUIManager().ScreenFadeVisible())
+			return;
+
+		string message = string.Format(Widget.TranslateString("#STR_BR_DEATH_POSITION"), position_top) + "\r\n" + m_BR_DeadScreenMessage;
+		GetGame().GetUIManager().ScreenFadeIn(0, message, FadeColors.DARK_RED, FadeColors.WHITE);
+		m_BR_DeadScreenMessage = message;
+		m_BR_DeadScreenAwaitingPosition = false;
 	}
 
 	void LeaveServer()
