@@ -17,6 +17,7 @@ modded class PlayerBase
 
 	int br_position = -1;
 	string player_steamid = "";
+	bool br_in_current_state = false;
 
 	vector spawn_pos = vector.Zero;
 

@@ -586,7 +586,7 @@ class BattleRoyaleServer: BattleRoyaleBase
             temp_disconnecting = new array<PlayerBase>();
         }
 
-        if(GetCurrentState().ContainsPlayer(player))
+        if(player.br_in_current_state)
         {
             GetCurrentState().OnPlayerTick(player, timeslice);
 
