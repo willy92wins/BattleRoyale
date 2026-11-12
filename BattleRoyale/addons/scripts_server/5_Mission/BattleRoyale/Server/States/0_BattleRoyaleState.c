@@ -71,6 +71,10 @@ class BattleRoyaleState: Timeable
     	BattleRoyaleUtils.Debug(string.Format("BattleRoyaleState::Activate: %1", GetName()));
         //Note: this is called AFTER players are added
         b_IsActive = true;
+
+        // Lobby states do not send positions; every match state sends them once, with the players it received
+        if (!b_IsDebug)
+            OnPlayerCountChanged();
     }
 
     protected void RememberMatchPlayers()
@@ -253,10 +257,12 @@ class BattleRoyaleState: Timeable
 				nb_groups = -1;
 			else
 				nb_groups = groups_count;
-			UpdateTopPosition( groups_count );
+			if (!b_IsDebug)
+				UpdateTopPosition( groups_count );
 #else
 			nb_groups = -2;
-			UpdateTopPosition( nb_players );
+			if (!b_IsDebug)
+				UpdateTopPosition( nb_players );
 #endif
 
 			//BattleRoyaleUtils.Trace(string.Format("OnPlayerCountChanged: %1 %2", nb_players, nb_groups));

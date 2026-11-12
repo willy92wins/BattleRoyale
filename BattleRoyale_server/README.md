@@ -165,7 +165,7 @@ The mod shuts the server down when a match ends (`9_BattleRoyaleRestart.c`). Sta
    world of each of the last 3 matches can still be restored;
 3. starts `DayZServer_x64.exe` with `-config`, `-port`, `-profiles`, `-mod`, `-serverMod` and
    `-dologs -adminlog -freezecheck`;
-4. when the server exits, waits 10 s and starts again. Ctrl+C stops the loop (a running server keeps
+4. when the server exits, waits 2 s and starts again. Ctrl+C stops the loop (a running server keeps
    running in its own window).
 
 ```powershell
