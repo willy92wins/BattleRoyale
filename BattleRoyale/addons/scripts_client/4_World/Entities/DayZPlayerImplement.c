@@ -4,6 +4,27 @@ modded class DayZPlayerImplement
 {
 	int position_top = -1;
 
+	//! Bumped when a mission starts or finishes; a pending leave from an older session does nothing
+	protected static int s_BR_SessionSerial;
+	//! Player whose LeaveServer call is queued, if any
+	protected static DayZPlayerImplement s_BR_PendingLeave;
+	protected int m_BR_LeaveSession = -1;
+
+	//! Called by the mission when it starts and when it finishes
+	static void BR_OnSessionChanged()
+	{
+		s_BR_SessionSerial++;
+		BR_CancelLeaveServer();
+	}
+
+	static void BR_CancelLeaveServer()
+	{
+		if (s_BR_PendingLeave)
+			GetGame().GetCallQueue(CALL_CATEGORY_GUI).Remove(s_BR_PendingLeave.LeaveServer);
+
+		s_BR_PendingLeave = null;
+	}
+
 	override void ShowDeadScreen(bool show, float duration)
 	{
         array<string> funny_strings = {
@@ -41,15 +62,25 @@ modded class DayZPlayerImplement
 			super.ShowDeadScreen(show, duration);
 		}
 
-		// 15s timer before leaving server
+		// 15s timer before leaving server, bound to the current session
 		if (show)
 		{
+			BR_CancelLeaveServer();
+			m_BR_LeaveSession = s_BR_SessionSerial;
+			s_BR_PendingLeave = this;
 			GetGame().GetCallQueue(CALL_CATEGORY_GUI).CallLater(LeaveServer, 15000, false);
 		}
 	}
 
 	void LeaveServer()
 	{
+		if (s_BR_PendingLeave == this)
+			s_BR_PendingLeave = null;
+
+		// The session that scheduled the leave has ended; a new one must not be dropped
+		if (m_BR_LeaveSession != s_BR_SessionSerial || !GetGame().GetMission())
+			return;
+
 		// Spectating dead players stay until the match ends
 		if (BattleRoyaleRPC.s_Spectating)
 			return;

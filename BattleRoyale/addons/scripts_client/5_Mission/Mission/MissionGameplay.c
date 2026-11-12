@@ -57,9 +57,22 @@ modded class MissionGameplay
 		BattleRoyaleUtils.Trace("MissionGameplay::OnInit");
 		super.OnInit();
 
+#ifndef NO_GUI
+		DayZPlayerImplement.BR_OnSessionChanged();
+#endif
+
 		m_BattleRoyale = new BattleRoyaleClient;
 
 		InitBRhud();
+	}
+
+	override void OnMissionFinish()
+	{
+#ifndef NO_GUI
+		DayZPlayerImplement.BR_OnSessionChanged();
+#endif
+
+		super.OnMissionFinish();
 	}
 
 	override BattleRoyaleClient GetBattleRoyale()
