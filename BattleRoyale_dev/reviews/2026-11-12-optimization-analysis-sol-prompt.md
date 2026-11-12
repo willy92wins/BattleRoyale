@@ -1,0 +1,5 @@
+Adversarial review of a static performance analysis of the BattleRoyale DayZ 1.30 mod (workspace = git worktree at the analysed commit plus one commit adding the report). Report: BattleRoyale_dev/reports/2026-11-12-optimization-analysis.md.
+
+For each point OPT-01..OPT-12: open every cited path:line and check that the quoted code exists there and does what the report says; check the claimed frequency/N (how often it really runs at 100 players); check that the proposed fix keeps behaviour (RPC semantics, player-visible result) and is safe in Enforce Script (no ternary, ref only on members, single declaration per scope); and verify any vanilla API it relies on in P:\scripts\ (read-only; if unreachable, say so). Also answer: what could be wrong in the premise of this analysis, and which real hot path did it miss?
+
+Output (final message, English): a table per point with verdict CONFIRMED / OVERSTATED / WRONG / UNSAFE-FIX, one-line reason with path:line, and a recommended order of implementation. Then MISSED HOT PATHS and WHAT I COULD NOT VERIFY. Read-only: do not edit files or run git commands that change state.

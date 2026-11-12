@@ -10,6 +10,9 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected float m_FrameTimeSlice;
 	protected float m_OrbitYaw;
 	protected float m_OrbitPitch = -15;
+	protected int m_HeadBoneIndex = -1;
+	protected string m_HeadBoneTargetType;
+	protected Human m_HeadBoneTarget;
 
 	void BattleRoyaleSpectatorCamera()
 	{
@@ -97,8 +100,25 @@ class BattleRoyaleSpectatorCamera: Camera
 
 	protected void FollowFirstPerson(Human target)
 	{
+		// All player skeletons share the bone layout, so the by-name lookup is only needed once per target class
+		if (m_HeadBoneIndex == -1)
+		{
+			m_HeadBoneIndex = target.GetBoneIndexByName("Head");
+			m_HeadBoneTargetType = target.GetType();
+			m_HeadBoneTarget = target;
+		}
+		else if (target != m_HeadBoneTarget)
+		{
+			if (m_HeadBoneTargetType != target.GetType())
+			{
+				m_HeadBoneIndex = target.GetBoneIndexByName("Head");
+				m_HeadBoneTargetType = target.GetType();
+			}
+			m_HeadBoneTarget = target;
+		}
+
 		vector head[4];
-		target.GetBoneTransformWS(target.GetBoneIndexByName("Head"), head);
+		target.GetBoneTransformWS(m_HeadBoneIndex, head);
 
 		vector body[4];
 		target.GetTransform(body);

@@ -9,12 +9,14 @@ class BattleRoyaleSpectators
 	protected ref map<string, PlayerBase> m_Targets;  //!< spectator identity id -> watched player
 	protected ref map<string, float> m_LastRequest;  //!< spectator identity id -> tick time of the last accepted request
 	protected ref map<string, PlayerBase> m_Anchors;  //!< spectator identity id -> anchor body
+	protected ref map<string, PlayerIdentity> m_Identities;  //!< spectator identity id -> identity resolved once, reused until disconnect
 
 	void BattleRoyaleSpectators()
 	{
 		m_Targets = new map<string, PlayerBase>;
 		m_LastRequest = new map<string, float>;
 		m_Anchors = new map<string, PlayerBase>;
+		m_Identities = new map<string, PlayerIdentity>;
 
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(UpdateAnchors, 1000, true);
 	}
@@ -86,7 +88,19 @@ class BattleRoyaleSpectators
 		}
 
 		foreach (string watcherId : watchers)
-			Watch(watcherId, NextAlive(player, 1));
+		{
+			PlayerIdentity watcherIdentity = null;
+			if (m_Identities.Contains(watcherId))
+				watcherIdentity = m_Identities.Get(watcherId);
+			if (!watcherIdentity)
+				watcherIdentity = FindIdentity(watcherId);
+			if (!watcherIdentity)
+			{
+				m_Targets.Remove(watcherId);
+				continue;
+			}
+			Watch(watcherIdentity, NextAlive(player, 1));
+		}
 	}
 
 	void OnIdentityDisconnected(PlayerIdentity identity)
@@ -97,6 +111,7 @@ class BattleRoyaleSpectators
 		m_Targets.Remove(identity.GetId());
 		m_LastRequest.Remove(identity.GetId());
 		m_Anchors.Remove(identity.GetId());
+		m_Identities.Remove(identity.GetId());
 	}
 
 	//! Asked by the client: next (1) or previous (-1) alive player, or 0 to resend the current one
@@ -107,6 +122,7 @@ class BattleRoyaleSpectators
 
 		// One request every 0.4 s per spectator; the rest are dropped
 		string id = identity.GetId();
+		m_Identities.Set(id, identity);
 		float now = GetGame().GetTickTime();
 		if (m_LastRequest.Contains(id) && now - m_LastRequest.Get(id) < 0.4)
 			return;
@@ -117,9 +133,9 @@ class BattleRoyaleSpectators
 		{
 			BattleRoyaleState state = BattleRoyaleServer.GetInstance().GetCurrentState();
 			if (current && current.IsAlive() && state && state.ContainsPlayer(current))
-				Watch(id, current);
+				Watch(identity, current);
 			else
-				Watch(id, NextAlive(current, 1));
+				Watch(identity, NextAlive(current, 1));
 			return;
 		}
 
@@ -128,7 +144,7 @@ class BattleRoyaleSpectators
 		else
 			direction = -1;
 
-		Watch(id, NextAlive(current, direction));
+		Watch(identity, NextAlive(current, direction));
 	}
 
 	protected void Start(string identityId)
@@ -136,6 +152,7 @@ class BattleRoyaleSpectators
 		PlayerIdentity identity = FindIdentity(identityId);
 		if (!identity)
 			return;
+		m_Identities.Set(identityId, identity);
 
 		// The player may have reconnected with a living character in the meantime
 		PlayerBase own = PlayerBase.Cast(identity.GetPlayer());
@@ -164,17 +181,16 @@ class BattleRoyaleSpectators
 		GetGame().SelectSpectator(identity, "BattleRoyaleSpectatorCamera", HeadPosition(target));
 		BattleRoyaleUtils.Info("Spectator started for " + identity.GetName());
 
-		Watch(identityId, target);
+		Watch(identity, target);
 	}
 
-	protected void Watch(string identityId, PlayerBase target)
+	protected void Watch(PlayerIdentity identity, PlayerBase target)
 	{
-		PlayerIdentity identity = FindIdentity(identityId);
 		if (!identity)
-		{
-			m_Targets.Remove(identityId);
 			return;
-		}
+
+		string identityId = identity.GetId();
+		m_Identities.Set(identityId, identity);
 
 		if (!target)
 		{

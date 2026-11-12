@@ -176,6 +176,7 @@ class BattleRoyaleState: Timeable
     {
     	BattleRoyaleUtils.Info(string.Format("BattleRoyaleState::AddPlayer: %1", player.BR_GetPlayerName()));
         m_Players.Insert( player );
+        player.br_in_current_state = true;
         OnPlayerCountChanged();
     }
 
@@ -195,6 +196,7 @@ class BattleRoyaleState: Timeable
 
     	BattleRoyaleUtils.Info(string.Format("BattleRoyaleState::RemovePlayer: %1", player.BR_GetPlayerName()));
         m_Players.RemoveItem(player);
+        player.br_in_current_state = false;
         OnPlayerCountChanged();
     }
 
@@ -213,6 +215,11 @@ class BattleRoyaleState: Timeable
                 if (VitalsNeedHeal(leaving))
                     leaving.Heal();
             }
+        }
+        foreach (PlayerBase removed_player: result_array)
+        {
+            if (removed_player)
+                removed_player.br_in_current_state = false;
         }
         m_Players.Clear();
         OnPlayerCountChanged();
@@ -645,23 +652,23 @@ class BattleRoyaleState: Timeable
 		{
 			// Return the first zone based on number of registered players
 			int last_try_zone = 1;
-			BattleRoyaleUtils.Trace("Number of players registered: " + num_players);
+			if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Number of players registered: " + num_players);
 			for(int i_zone = 1; i_zone < m_GameSettings.num_zones; i_zone++)
 			{
-				BattleRoyaleUtils.Trace("Try zone: " + i_zone);
+				if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Try zone: " + i_zone);
 				last_try_zone = i_zone;
-				BattleRoyaleUtils.Trace("Min player for zone: " + BattleRoyaleZone.GetZone(i_zone).GetZoneMinPlayers());
+				if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Min player for zone: " + BattleRoyaleZone.GetZone(i_zone).GetZoneMinPlayers());
 				if(BattleRoyaleZone.GetZone(i_zone).GetZoneMinPlayers() < num_players)
 				{
-					BattleRoyaleUtils.Trace("It's a match! " + i_zone);
+					if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("It's a match! " + i_zone);
 					break;
 				}
 				if(i_zone == m_GameSettings.num_zones - m_ZoneSettings.min_zone_num)
 				{
-					BattleRoyaleUtils.Trace("Reach the minimum! " + i_zone);
+					if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Reach the minimum! " + i_zone);
 					break;
 				}
-				BattleRoyaleUtils.Trace("No chance we continue...");
+				if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("No chance we continue...");
 			}
 
 			return last_try_zone;
@@ -715,11 +722,6 @@ class BattleRoyaleState: Timeable
 
 		if( player.GetIdentity() )
 		{
-			map<string, string> json_data = new map<string, string>();
-			json_data.Insert( "victim", player.GetIdentity().GetPlainId() );
-			json_data.Insert( "victim_position", player.GetPosition().ToString() );
-			vector killer_position = "0 0 0";
-
 			BattleRoyaleServerData m_ServerData = BattleRoyaleConfig.GetConfig().GetServerData();
 			BattleRoyaleServer br_instance = BattleRoyaleServer.GetInstance();
 
@@ -728,64 +730,66 @@ class BattleRoyaleState: Timeable
 				BattleRoyaleUtils.Trace("ScoreWebhook: Sending player score");
 				ScoreWebhook scoreWebhook = new ScoreWebhook( m_ServerData.webhook_jwt_token );
 				scoreWebhook.Send( br_instance.match_uuid, player.GetIdentity().GetPlainId(), player.GetBRPosition() );
-			}
 
-			// Does the source is a carrier and the carrier a Player?
-			PlayerBase playerSource = PlayerBase.Cast( EntityAI.Cast( source ).GetHierarchyParent() );
-			if (!playerSource)
-			{
-				// If not, does the source is a Player?
-				playerSource = PlayerBase.Cast( source );
-			}
+				map<string, string> json_data = new map<string, string>();
+				json_data.Insert( "victim", player.GetIdentity().GetPlainId() );
+				json_data.Insert( "victim_position", player.GetPosition().ToString() );
+				vector killer_position = "0 0 0";
 
-			if (player == source)	// deaths not caused by another object (starvation, dehydration, bleeding)
-			{
-				if (bleed_out && player.br_last_player_hit_by && player.br_last_player_hit_by.GetIdentity())
+				// Does the source is a carrier and the carrier a Player?
+				PlayerBase playerSource = PlayerBase.Cast( EntityAI.Cast( source ).GetHierarchyParent() );
+				if (!playerSource)
 				{
-					json_data.Insert( "killer", player.br_last_player_hit_by.GetIdentity().GetPlainId() );
-					json_data.Insert( "cause", "bleeding" );
+					// If not, does the source is a Player?
+					playerSource = PlayerBase.Cast( source );
 				}
-				else
-				{
-					// Killed by environmental causes but the the player directly
-					json_data.Insert( "killer", "environment" );
-				}
-			}
-			else if ( source.IsInherited(Grenade_Base) || source.IsInherited(LandMineTrap) )
-			{
-				string killer = "";
-				EnScript.GetClassVar(source, "m_ActivatorId", -1, killer);
-				json_data.Insert( "killer", killer );
-				json_data.Insert( "weapon", source.GetType() );
-			}
-			else {
-				json_data.Insert( "killer_position", source.GetPosition().ToString() );
 
-				if (playerSource)
+				if (player == source)	// deaths not caused by another object (starvation, dehydration, bleeding)
 				{
-					json_data.Insert( "killer", playerSource.GetIdentity().GetPlainId() );
-					if (source.IsWeapon() || source.IsMeleeWeapon())
+					if (bleed_out && player.br_last_player_hit_by && player.br_last_player_hit_by.GetIdentity())
 					{
-						json_data.Insert( "weapon", source.GetType() );
-						if ( !source.IsMeleeWeapon() )
+						json_data.Insert( "killer", player.br_last_player_hit_by.GetIdentity().GetPlainId() );
+						json_data.Insert( "cause", "bleeding" );
+					}
+					else
+					{
+						// Killed by environmental causes but the the player directly
+						json_data.Insert( "killer", "environment" );
+					}
+				}
+				else if ( source.IsInherited(Grenade_Base) || source.IsInherited(LandMineTrap) )
+				{
+					string killer = "";
+					EnScript.GetClassVar(source, "m_ActivatorId", -1, killer);
+					json_data.Insert( "killer", killer );
+					json_data.Insert( "weapon", source.GetType() );
+				}
+				else {
+					json_data.Insert( "killer_position", source.GetPosition().ToString() );
+
+					if (playerSource)
+					{
+						json_data.Insert( "killer", playerSource.GetIdentity().GetPlainId() );
+						if (source.IsWeapon() || source.IsMeleeWeapon())
 						{
-							json_data.Insert( "distance", vector.Distance( player.GetPosition(), playerSource.GetPosition() ).ToString() );
+							json_data.Insert( "weapon", source.GetType() );
+							if ( !source.IsMeleeWeapon() )
+							{
+								json_data.Insert( "distance", vector.Distance( player.GetPosition(), playerSource.GetPosition() ).ToString() );
+							}
+						}
+						else
+						{
+							json_data.Insert( "weapon", "fist" );
 						}
 					}
 					else
 					{
-						json_data.Insert( "weapon", "fist" );
+						//rest, Animals, Zombies
+						json_data.Insert( "killer", source.GetType() );
 					}
 				}
-				else
-				{
-					//rest, Animals, Zombies
-					json_data.Insert( "killer", source.GetType() );
-				}
-			}
 
-			if ( m_ServerData.enable_vigrid_api )
-			{
 				EventWebhook eventWebhook = new EventWebhook( m_ServerData.webhook_jwt_token );
 				eventWebhook.Send( br_instance.match_uuid, "player.kill", JsonFileLoader<map<string, string>>.JsonMakeData( json_data ) );
 			}
