@@ -303,7 +303,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         return spawn_pos;
     }
 
-    //! True when pos lies within the lobby radius; 2D distance, as the lobby states check it
+    //! True when pos lies within the lobby radius (2D distance, as the lobby states check it) and not under the terrain
     bool IsInLobbyArea(vector pos)
     {
         BattleRoyaleDebug lobby = BattleRoyaleDebug.Cast( GetState(0) );
@@ -312,7 +312,10 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         vector center = lobby.GetCenter();
         float distance = vector.Distance( Vector( pos[0], 0, pos[2] ), Vector( center[0], 0, center[2] ) );
-        return distance <= lobby.GetRadius();
+        if (distance > lobby.GetRadius())
+            return false;
+
+        return pos[1] >= GetGame().SurfaceY( pos[0], pos[2] ) - 0.5;
     }
 
     //! True while a match runs: players who connect now cannot join it
