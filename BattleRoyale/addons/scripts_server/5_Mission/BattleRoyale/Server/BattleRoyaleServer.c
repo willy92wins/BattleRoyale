@@ -240,15 +240,13 @@ class BattleRoyaleServer: BattleRoyaleBase
         //Dirty way to sync server settings with the client | this should be converted into a generic "sync settings" function
         BattleRoyaleConfig config_data = BattleRoyaleConfig.GetConfig();
 
-        BattleRoyaleDebug m_Debug = BattleRoyaleDebug.Cast( GetState(0) );
-        vector debug_pos = m_Debug.GetCenter();
-
-        vector spawn_pos = "0 0 0";
-        spawn_pos[0] = Math.RandomFloatInclusive((debug_pos[0] - 5), (debug_pos[0] + 5));
-        spawn_pos[2] = Math.RandomFloatInclusive((debug_pos[2] - 5), (debug_pos[2] + 5));
-        spawn_pos[1] = GetGame().SurfaceY(spawn_pos[0], spawn_pos[2]);
-
-        player.SetPosition( spawn_pos );
+        // Characters created during a lobby state already stand in the lobby (OnClientPrepareEvent).
+        // The rest (created during a match, or before a restart reached the lobby) are moved there.
+        if ( !IsInLobbyArea( player.GetPosition() ) )
+        {
+            BattleRoyaleUtils.Trace("Player " + player.BR_GetPlayerName() + " created outside the lobby, teleporting");
+            player.SetPosition( GetLobbySpawnPosition() );
+        }
 
 		float dir = Math.RandomFloat(0, 360);
 		vector playerDir = vector.YawToVector(dir);
@@ -290,6 +288,31 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         if( match_uuid == "" )
         	GetCurrentState().MessagePlayerUntranslated( player, "STR_BR_MM_ERROR_REGISTERING_MATCH");
+    }
+
+    //! Random point on the ground within 5 m of the lobby center
+    vector GetLobbySpawnPosition()
+    {
+        BattleRoyaleDebug lobby = BattleRoyaleDebug.Cast( GetState(0) );
+        vector center = lobby.GetCenter();
+
+        vector spawn_pos = "0 0 0";
+        spawn_pos[0] = Math.RandomFloatInclusive((center[0] - 5), (center[0] + 5));
+        spawn_pos[2] = Math.RandomFloatInclusive((center[2] - 5), (center[2] + 5));
+        spawn_pos[1] = GetGame().SurfaceY(spawn_pos[0], spawn_pos[2]);
+        return spawn_pos;
+    }
+
+    //! True when pos lies within the lobby radius; 2D distance, as the lobby states check it
+    bool IsInLobbyArea(vector pos)
+    {
+        BattleRoyaleDebug lobby = BattleRoyaleDebug.Cast( GetState(0) );
+        if (!lobby)
+            return false;
+
+        vector center = lobby.GetCenter();
+        float distance = vector.Distance( Vector( pos[0], 0, pos[2] ), Vector( center[0], 0, center[2] ) );
+        return distance <= lobby.GetRadius();
     }
 
     //! True while a match runs: players who connect now cannot join it
