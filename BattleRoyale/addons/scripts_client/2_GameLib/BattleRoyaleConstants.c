@@ -69,6 +69,7 @@ static const int COLOR_BR_ERROR = ARGB( 255, 231, 76, 60 );
 static const float DAYZBR_MSG_TIME = 7;
 static const string DAYZBR_MSG_IMAGE = "set:dayz_gui image:icon_flag";
 static const string DAYZBR_MSG_TITLE = "DayZ Battle Royale";
+static const string DAYZBR_MSG_SOUND = "KitchenTimer_Ring_End_SoundSet";  //!< vanilla, DZ/sounds/hpp/config.cpp
 
 
 //--- broken debug zone values

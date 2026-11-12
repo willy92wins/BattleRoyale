@@ -64,7 +64,8 @@ class BattleRoyaleMiniMap
 			Error("[BattleRoyaleMiniMap] minimap widgets not found in the HUD layout");
 
 		m_ZoomLevel = ZOOM_LEVEL_DEFAULT;
-		SetVisible(true);
+		// Hidden until the player shows it with its key
+		SetVisible(false);
 	}
 
 	bool IsVisible()

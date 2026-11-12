@@ -1,6 +1,6 @@
 //! Notifications are display only: the root of each notification element takes mouse clicks
 //! (click to dismiss), so a notification over the inventory or the map swallows the clicks meant for what is under it.
-//! Battle royale notifications also get their colour on the icon.
+//! Battle royale notifications also get their colour on the icon and a short vanilla sound.
 modded class NotificationUI
 {
 	override void AddNotification(NotificationRuntimeData data)
@@ -23,6 +23,10 @@ modded class NotificationUI
 			Widget icon = notification.FindAnyWidget("Image");
 			if (icon)
 				icon.SetColor(data.GetColor());
+
+			EffectSound sound = SEffectManager.PlaySound(DAYZBR_MSG_SOUND, GetGame().GetCurrentCameraPosition());
+			if (sound)
+				sound.SetAutodestroy(true);
 		}
 	}
 }

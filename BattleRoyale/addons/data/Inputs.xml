@@ -28,7 +28,7 @@
             <btn name="kF3" />
         </input>
         <input name="UADayZBRToggleMiniMap">
-            <btn name="kSubstract" />
+            <btn name="kJ" />
         </input>
         <input name="UADayZBRMiniMapZoom">
             <btn name="kAdd" />
