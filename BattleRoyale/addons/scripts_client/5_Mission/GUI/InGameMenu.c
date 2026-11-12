@@ -6,8 +6,9 @@ modded class InGameMenu
     {
         Widget result = super.Init();
 
-        //BR logo
-        if(!m_Logo.LoadImageFile( 0, BATTLEROYALE_LOGO_IMAGE ))
+        // BR logo in place of the vanilla DayZ logo
+        ImageWidget logo = ImageWidget.Cast( layoutRoot.FindAnyWidget( "dayz_logo" ) );
+        if( !logo || !logo.LoadImageFile( 0, BATTLEROYALE_LOGO_IMAGE ) )
             Error("Failed to load imageset image");
 
         SetServerInfoVisibility( false ); //Don't ever show what server you're on for DayZBR
