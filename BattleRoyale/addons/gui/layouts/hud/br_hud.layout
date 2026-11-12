@@ -73,7 +73,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
              vexactpos 0
              hexactsize 1
              vexactsize 1
-             image0 "set:expansion_iconset image:icon_group"
+             image0 "set:dayz_gui image:notification_friend"
              mode blend
              "src alpha" 1
              "no wrap" 1
@@ -116,7 +116,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
              vexactpos 0
              hexactsize 1
              vexactsize 1
-             imageTexture "DayZExpansion\\Core\\GUI\\icons\\hud\\persona_64x64.edds"
+             image0 "set:dayz_gui image:icon_player"
              mode blend
              "src alpha" 1
              "no wrap" 1
@@ -164,7 +164,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
            vexactpos 0
            hexactsize 1
            vexactsize 1
-           imageTexture "DayZExpansion\\Core\\GUI\\icons\\hud\\skull_1_64x64.edds"
+           image0 "set:ccgui_enforce image:Icon40Attack"
            mode blend
            "src alpha" 1
            "no wrap" 1
@@ -220,7 +220,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
            vexactpos 0
            hexactsize 1
            vexactsize 1
-           imageTexture "DayZExpansion\\Core\\GUI\\icons\\hud\\arrow_64x64.edds"
+           image0 "set:dayz_gui image:icon_arrow"
            mode blend
            "src alpha" 1
            "no wrap" 1

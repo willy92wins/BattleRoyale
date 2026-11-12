@@ -3,8 +3,9 @@ class LoadingScreenBackground
 	string MapName;
 	ref array<string> Path;
 
+	//! Index returned last time, so the next call picks another one
 	[NonSerialized()]
-	ref ExpansionArray<string> m_Path;
+	int m_LastIndex = -1;
 
 	void LoadingScreenBackground(string map_name, array<string> texture_path)
 	{
@@ -12,12 +13,19 @@ class LoadingScreenBackground
 		Path = texture_path;
 	}
 
+	//! Random entry of Path, other than the previous one when there are two or more; empty when Path is empty
 	string GetRandomPath()
 	{
-        if (!m_Path)
-            m_Path = new ExpansionArray<string>(Path);
+		if (!Path || Path.Count() == 0)
+			return "";
 
-        return m_Path.GetQuasiRandomElementAvoidRepetition();
+		int count = Path.Count();
+		int index = Math.RandomInt(0, count);
+		if (count > 1 && index == m_LastIndex)
+			index = (index + 1 + Math.RandomInt(0, count - 1)) % count;
+
+		m_LastIndex = index;
+		return Path[index];
 	}
 };
 

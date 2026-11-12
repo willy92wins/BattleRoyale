@@ -111,9 +111,8 @@ modded class MainMenu
 
 		if ( GetDayZGame() )
 		{
-			string expansion_version = GetDayZGame().GetExpansionClientVersion();
 			string dayzbr_version = GetDayZGame().GetBattleRoyaleClientVersion();
-			m_Version.SetText( "Client #main_menu_version" + " " + version + " | " + expansion_version + " | " + dayzbr_version );
+			m_Version.SetText( "Client #main_menu_version" + " " + version + " | " + dayzbr_version );
 		}
 		else
 		{
