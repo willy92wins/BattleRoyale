@@ -83,6 +83,16 @@ modded class MissionServer
 			BattleRoyaleUtils.Info("Match in progress, notifying " + identity.GetName() + " during prepare.");
 			GetGame().RPCSingleParam( null, BR_RPC_MATCH_IN_PROGRESS, new Param1<int>( br.GetMatchMinutesLeft() ), true, identity );
 		}
+
+		// Lobby states: create a new character directly in the lobby, so the client loads one world area.
+		// Characters are never saved (PlayerBase.Save), so skipping the database loses nothing.
+		// During a match the database path stays, and OnPlayerConnected moves the player if needed.
+		if ( br && !br.IsMatchInProgress() )
+		{
+			useDB = false;
+			pos = br.GetLobbySpawnPosition();
+			yaw = Math.RandomFloat(0, 360);
+		}
 	}
 
 	override void EquipCharacter(MenuDefaultCharacterData char_data)
