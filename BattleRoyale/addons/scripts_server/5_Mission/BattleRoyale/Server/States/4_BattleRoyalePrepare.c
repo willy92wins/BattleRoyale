@@ -366,6 +366,7 @@ class BattleRoyalePrepare: BattleRoyaleState
         if (m_SpawnsSettings.spawn_in_villages)
         {
             vector village_pos = "0 0 0";
+            bool village_pos_fresh = false;
             BattleRoyaleUtils.Trace("Spawn in zone " + GetDynamicStartingZone(i_NumStartingPlayers));
             ref BattleRoyalePlayArea spawn_area = BattleRoyaleZone.GetZone(GetDynamicStartingZone(i_NumStartingPlayers)).GetArea();
             int spawn_checks = 0;
@@ -383,6 +384,7 @@ class BattleRoyalePrepare: BattleRoyaleState
                 {
                     BattleRoyaleUtils.Trace("Found village " + village.Name);
                     village_pos = "0 0 0";
+                    village_pos_fresh = false;
                     vector search_for_village = "0 0 0";
 
                     if( village.Name == last_village_spawn )
@@ -427,11 +429,12 @@ class BattleRoyalePrepare: BattleRoyaleState
                         }
                         cached_points.Insert(search_for_village);
                         village_pos = search_for_village;
+                        village_pos_fresh = true;
                         break;
                     }
                     }
 
-                    if( village_pos == "0 0 0" || !IsAcceptedSpawn(village_pos) )
+                    if( village_pos == "0 0 0" || (!village_pos_fresh && !IsAcceptedSpawn(village_pos)) )
                     {
                         if (cached_points && cached_index >= 0 && cached_index < cached_points.Count())
                             cached_points.Remove(cached_index);
@@ -628,13 +631,18 @@ class BattleRoyalePrepare: BattleRoyaleState
         return loose;
     }
 
-    protected vector ResolveFinalSpawn(vector position)
+    // already_validated: position passed IsAcceptedSpawn in this same call chain, with no
+    // teleport, sleep or world change in between, so it is not checked again here.
+    protected vector ResolveFinalSpawn(vector position, bool already_validated = false)
     {
+        if (already_validated && position != vector.Zero)
+            return position;
+
         if (IsAcceptedSpawn(position))
             return position;
 
         vector reserve = GetValidatedReserve();
-        if (IsAcceptedSpawn(reserve))
+        if (reserve != vector.Zero)
         {
             Error("Spawn candidate rejected; using validated reserve " + reserve.ToString());
             return reserve;
@@ -653,7 +661,7 @@ class BattleRoyalePrepare: BattleRoyaleState
     protected bool Teleport(PlayerBase process_player)
     {
         ref Param2<vector, NamedLocation> random_pos = GetRandomSpawnPosition();
-        vector position = ResolveFinalSpawn(random_pos.param1);
+        vector position = ResolveFinalSpawn(random_pos.param1, true);
         NamedLocation village = random_pos.param2;
         if (position == vector.Zero)
         {
@@ -664,7 +672,7 @@ class BattleRoyalePrepare: BattleRoyaleState
             return false;
         }
 
-        return TeleportPlayer(process_player, position, village);
+        return TeleportPlayer(process_player, position, village, true);
     }
 
     protected void TeleportGroup(set<PlayerBase> group)
@@ -696,8 +704,8 @@ class BattleRoyalePrepare: BattleRoyaleState
                     }
                 }
 
-                accepted = ResolveFinalSpawn(accepted);
-                if (!TeleportPlayer(player, accepted, village))
+                accepted = ResolveFinalSpawn(accepted, true);
+                if (!TeleportPlayer(player, accepted, village, true))
                 {
                     string grouped_steamid = "unknown";
                     if (player && player.GetIdentity())
@@ -709,12 +717,24 @@ class BattleRoyalePrepare: BattleRoyaleState
         }
     }
 
-    protected bool TeleportPlayer(PlayerBase player, vector position, NamedLocation village = NULL)
+    // spawn_resolved: position came from ResolveFinalSpawn in this same call chain, with no
+    // teleport, sleep or world change in between. It either passed IsAcceptedSpawn there or is
+    // the deliberate last-resort point, so only the cheap bounds checks run again here. The
+    // expanded first-zone bound is used, not the strict one, matching IsAcceptedSpawn.
+    protected bool TeleportPlayer(PlayerBase player, vector position, NamedLocation village = NULL, bool spawn_resolved = false)
     {
         if (!player || !player.GetIdentity())
             return false;
 
-        if (!IsAcceptedSpawn(position))
+        if (spawn_resolved && position != vector.Zero)
+        {
+            if (!IsOnMap(position) || !IsInsideExpandedFirstZone(position))
+            {
+                Error("TeleportPlayer refused a position outside the first zone or the map for " + player.GetIdentity().GetPlainId());
+                return false;
+            }
+        }
+        else if (!IsAcceptedSpawn(position))
         {
             if (!IsOnMap(position) || !IsInsideFirstZone(position))
             {
@@ -800,7 +820,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 
 					BattleRoyaleUtils.Trace("Try to spawn player " + process_player.BR_GetPlayerName() + " at " + position + " with a radius of " + f_SpawnSelectionRadius);
 
-					vector random_position = ResolveFinalSpawn(GetRandomSafePosition(position, f_SpawnSelectionRadius));
+					vector random_position = ResolveFinalSpawn(GetRandomSafePosition(position, f_SpawnSelectionRadius), true);
 
 					if ( random_position == vector.Zero )
 					{
@@ -810,7 +830,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 					else
 					{
 						BattleRoyaleUtils.Trace("Found a safe position " + random_position);
-						TeleportPlayer(process_player, random_position);
+						TeleportPlayer(process_player, random_position, NULL, true);
 					}
 				}
                 SleepPlayerBatch();
