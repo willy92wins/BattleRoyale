@@ -22,7 +22,7 @@ ALLOWED = {
         (LAYOUT, "5_mission/gui/mapmenu.c"): 1,
         (LAYOUT, "5_mission/gui/spawnselectionmenu.c"): 1,
         (LAYOUT, "5_mission/mission/mainmenu.c"): 2,
-        (LAYOUT, "5_mission/mission/missiongameplay.c"): 3,
+        (LAYOUT, "5_mission/mission/missiongameplay.c"): 2,
     },
     "scripts_server": {
         (PARAM, "5_mission/battleroyale/server/states/1_battleroyaledebug.c"): 1,

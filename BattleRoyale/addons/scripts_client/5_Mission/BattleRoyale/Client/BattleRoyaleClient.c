@@ -169,10 +169,8 @@ class BattleRoyaleClient: BattleRoyaleBase
 		m_ZoneWall.Update( delta, wall_camera_pos, locked_area );
 		m_OpenZoneWall.Update( delta, wall_camera_pos, open_area );
 
-#ifdef BR_MINIMAP
-        vector camera_pos = GetGame().GetCurrentCameraPosition();
-        gameplay.UpdateMiniMap( camera_pos );
-#endif
+		// The minimap outlines the same zones as the walls
+		gameplay.UpdateMiniMap( delta, locked_area, open_area );
 
 		// Everything below needs the local player. Without one there is no distance to show, and hiding it also
 		// turns the phase text back to white
