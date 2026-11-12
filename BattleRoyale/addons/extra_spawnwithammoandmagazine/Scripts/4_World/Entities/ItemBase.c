@@ -1,20 +1,34 @@
 #ifdef SERVER
 modded class ItemBase
 {
+	protected static bool m_BRSpawnAmmoConfigResolved;
+	protected static bool m_BRDisableSpawnWithAmmo;
+	protected static int m_BRMinSpawnAmmo;
+	protected static int m_BRMaxSpawnAmmo;
+
 	// Thanks to @incinatus for this
 	override void EEOnCECreate()
 	{
 		super.EEOnCECreate();
 
-		bool config_disable_spawn_with_ammo = GetGame().ServerConfigGetInt( "BRDisableSpawnWithAmmo" ) == 1;
+		// Server config does not change at runtime: read the spawn settings once
+		if( !m_BRSpawnAmmoConfigResolved )
+		{
+			m_BRDisableSpawnWithAmmo = GetGame().ServerConfigGetInt( "BRDisableSpawnWithAmmo" ) == 1;
+			m_BRMinSpawnAmmo = GetGame().ServerConfigGetInt( "BRMinSpawnAmmo" );
+			m_BRMaxSpawnAmmo = GetGame().ServerConfigGetInt( "BRMaxSpawnAmmo" );
+			m_BRSpawnAmmoConfigResolved = true;
+		}
+
+		bool config_disable_spawn_with_ammo = m_BRDisableSpawnWithAmmo;
 		if( IsWeapon() && !config_disable_spawn_with_ammo )
 		{
 //			if( Flaregun.Cast(this) ) return;  // Skip flaregun
 
 			int min_spawn = 1;
 			int max_spawn = 2;
-			int config_min_spawn = GetGame().ServerConfigGetInt( "BRMinSpawnAmmo" );
-			int config_max_spawn = GetGame().ServerConfigGetInt( "BRMaxSpawnAmmo" );
+			int config_min_spawn = m_BRMinSpawnAmmo;
+			int config_max_spawn = m_BRMaxSpawnAmmo;
 
 			// Override min/max spawn if set in server config
 			// If min is set below 0, set it to 0
