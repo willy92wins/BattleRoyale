@@ -210,7 +210,8 @@ modded class MissionGameplay
 			if (GetUApi().GetInputByID(UADayZBRUnstuck).LocalPress()) {
 				BattleRoyaleClient.Cast( m_BattleRoyale ).Unstuck();
 			}
-			if (m_BattleRoyaleMiniMap) {
+			// The minimap keys act only in gameplay: no menu, inventory or settings open
+			if (m_BattleRoyaleMiniMap && !m_UIManager.GetMenu()) {
 				if (GetUApi().GetInputByID(UADayZBRToggleMiniMap).LocalPress()) {
 					m_BattleRoyaleMiniMap.ToggleVisible();
 				}

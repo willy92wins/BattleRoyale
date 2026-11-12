@@ -53,7 +53,11 @@ class BattleRoyaleMapCanvas
 			return 0;
 
 		// 64 to 96 segments keep the error under a pixel up to a radius of about 1800 px
-		int segments = Math.Clamp(Math.Round(Math.Max(screenWidth, screenHeight) / 8), 64, 96);
+		// A clipped oval is a zoomed-in view of a large zone, so it may use up to 512 to keep the edge accurate
+		int max_segments = 96;
+		if (clip)
+			max_segments = 512;
+		int segments = Math.Clamp(Math.Round(Math.Max(screenWidth, screenHeight) / 8), 64, max_segments);
 		float angleIncrement = 360.0 / segments;
 		int drawn = 0;
 
