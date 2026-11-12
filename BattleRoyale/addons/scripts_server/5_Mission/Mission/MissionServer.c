@@ -83,6 +83,33 @@ modded class MissionServer
 			BattleRoyaleUtils.Info("Match in progress, notifying " + identity.GetName() + " during prepare.");
 			GetGame().RPCSingleParam( null, BR_RPC_MATCH_IN_PROGRESS, new Param1<int>( br.GetMatchMinutesLeft() ), true, identity );
 		}
+
+		// Lobby states: create a new character directly in the lobby, so the client loads one world area.
+		// Characters are never saved (PlayerBase.Save), so skipping the database loses nothing.
+		// During a match the database path stays, and OnPlayerConnected moves the player if needed.
+		if ( br && identity && !br.IsMatchInProgress() && !BR_IsLoggingOut( identity ) )
+		{
+			useDB = false;
+			pos = br.GetLobbySpawnPosition();
+			yaw = Math.RandomFloat(0, 360);
+		}
+	}
+
+	//! True while a body of this player is still in the vanilla logout lists, so the engine may reconnect to it
+	protected bool BR_IsLoggingOut(PlayerIdentity identity)
+	{
+		string steamid = identity.GetPlainId();
+		foreach (PlayerBase logout_player, LogoutInfo logout_info : m_LogoutPlayers)
+		{
+			if (logout_player && logout_player.player_steamid == steamid)
+				return true;
+		}
+		foreach (PlayerBase new_logout_player, LogoutInfo new_logout_info : m_NewLogoutPlayers)
+		{
+			if (new_logout_player && new_logout_player.player_steamid == steamid)
+				return true;
+		}
+		return false;
 	}
 
 	override void EquipCharacter(MenuDefaultCharacterData char_data)
@@ -132,7 +159,7 @@ modded class MissionServer
 		//if body in debug zone, then delete it, else call super handlebody
 		if(player)
 		{
-			BattleRoyaleDebug m_Debug;
+			BattleRoyaleDebugState m_Debug;
 			BattleRoyaleState m_CurrentState = BattleRoyaleServer.Cast( m_BattleRoyale ).GetCurrentState();
 			if(Class.CastTo(m_Debug, m_CurrentState))
 			{
@@ -158,7 +185,7 @@ modded class MissionServer
 		if( player )
 		{
 			//if player is inside the debug zone, delete the body (to prevent debug body spam)
-			BattleRoyaleDebug m_Debug;
+			BattleRoyaleDebugState m_Debug;
 			BattleRoyaleState m_CurrentState = BattleRoyaleServer.Cast( m_BattleRoyale ).GetCurrentState();
 			if( Class.CastTo( m_Debug, m_CurrentState ) )
 			{
