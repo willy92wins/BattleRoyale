@@ -105,22 +105,23 @@ class BattleRoyaleMiniMap
 		return m_ZoomLevel;
 	}
 
-	//! MapWidget scale of each zoom level; a smaller scale shows less ground
+	//! MapWidget scale of each zoom level; a smaller scale shows less ground.
+	//! Measured on the 200 px panel: scale 0.1 spans about 60 m, so these span about 150 m, 300 m, 600 m and 1.2 km
 	static float GetZoomScale(int level)
 	{
 		switch (level)
 		{
 			case 0:
-				return 0.05;
+				return 0.25;
 			case 1:
-				return 0.1;
+				return 0.5;
 			case 2:
-				return 0.2;
+				return 1.0;
 			case 3:
-				return 0.4;
+				return 2.0;
 		}
 
-		return 0.1;
+		return 0.5;
 	}
 
 	/**
