@@ -176,6 +176,7 @@ class BattleRoyaleState: Timeable
     {
     	BattleRoyaleUtils.Info(string.Format("BattleRoyaleState::AddPlayer: %1", player.BR_GetPlayerName()));
         m_Players.Insert( player );
+        player.br_in_current_state = true;
         OnPlayerCountChanged();
     }
 
@@ -195,6 +196,7 @@ class BattleRoyaleState: Timeable
 
     	BattleRoyaleUtils.Info(string.Format("BattleRoyaleState::RemovePlayer: %1", player.BR_GetPlayerName()));
         m_Players.RemoveItem(player);
+        player.br_in_current_state = false;
         OnPlayerCountChanged();
     }
 
@@ -213,6 +215,11 @@ class BattleRoyaleState: Timeable
                 if (VitalsNeedHeal(leaving))
                     leaving.Heal();
             }
+        }
+        foreach (PlayerBase removed_player: result_array)
+        {
+            if (removed_player)
+                removed_player.br_in_current_state = false;
         }
         m_Players.Clear();
         OnPlayerCountChanged();
