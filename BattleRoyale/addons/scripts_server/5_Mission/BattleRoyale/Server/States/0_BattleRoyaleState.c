@@ -645,23 +645,23 @@ class BattleRoyaleState: Timeable
 		{
 			// Return the first zone based on number of registered players
 			int last_try_zone = 1;
-			BattleRoyaleUtils.Trace("Number of players registered: " + num_players);
+			if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Number of players registered: " + num_players);
 			for(int i_zone = 1; i_zone < m_GameSettings.num_zones; i_zone++)
 			{
-				BattleRoyaleUtils.Trace("Try zone: " + i_zone);
+				if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Try zone: " + i_zone);
 				last_try_zone = i_zone;
-				BattleRoyaleUtils.Trace("Min player for zone: " + BattleRoyaleZone.GetZone(i_zone).GetZoneMinPlayers());
+				if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Min player for zone: " + BattleRoyaleZone.GetZone(i_zone).GetZoneMinPlayers());
 				if(BattleRoyaleZone.GetZone(i_zone).GetZoneMinPlayers() < num_players)
 				{
-					BattleRoyaleUtils.Trace("It's a match! " + i_zone);
+					if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("It's a match! " + i_zone);
 					break;
 				}
 				if(i_zone == m_GameSettings.num_zones - m_ZoneSettings.min_zone_num)
 				{
-					BattleRoyaleUtils.Trace("Reach the minimum! " + i_zone);
+					if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Reach the minimum! " + i_zone);
 					break;
 				}
-				BattleRoyaleUtils.Trace("No chance we continue...");
+				if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("No chance we continue...");
 			}
 
 			return last_try_zone;

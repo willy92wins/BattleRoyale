@@ -366,7 +366,7 @@ class BattleRoyalePrepare: BattleRoyaleState
         if (m_SpawnsSettings.spawn_in_villages)
         {
             vector village_pos = "0 0 0";
-            BattleRoyaleUtils.Trace("Spawn in zone " + GetDynamicStartingZone(i_NumStartingPlayers));
+            if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Spawn in zone " + GetDynamicStartingZone(i_NumStartingPlayers));
             ref BattleRoyalePlayArea spawn_area = BattleRoyaleZone.GetZone(GetDynamicStartingZone(i_NumStartingPlayers)).GetArea();
             int spawn_checks = 0;
             for(int village_spawn_try = 1; village_spawn_try <= 40 && spawn_checks < 600; village_spawn_try++)
