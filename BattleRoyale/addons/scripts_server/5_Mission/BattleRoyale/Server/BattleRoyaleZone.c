@@ -161,8 +161,8 @@ class BattleRoyaleZone
         float d = (Math.Pow(x - center[0], 2) + Math.Pow(z - center[2], 2));
         float radius_pow = Math.Pow(GetArea().GetRadius(), 2);
 
-        BattleRoyaleUtils.Trace(d);
-        BattleRoyaleUtils.Trace(radius_pow);
+        if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace(d);
+        if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace(radius_pow);
 
         return (d < radius_pow);
     }
