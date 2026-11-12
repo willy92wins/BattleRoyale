@@ -1,0 +1,94 @@
+FrameWidgetClass SpectatorRoot {
+ ignorepointer 1
+ position 0 0
+ size 1 1
+ hexactpos 1
+ vexactpos 1
+ hexactsize 0
+ vexactsize 0
+ {
+  PanelWidgetClass SpectatorTop {
+   ignorepointer 1
+   color 0 0 0 0.549
+   position 0 0
+   size 1 72
+   hexactpos 1
+   vexactpos 1
+   hexactsize 0
+   vexactsize 1
+   style rover_sim_colorable
+   {
+    TextWidgetClass SpectatorTitle {
+     ignorepointer 1
+     position 0 0
+     size 1 1
+     hexactpos 1
+     vexactpos 1
+     hexactsize 0
+     vexactsize 0
+     style Bold
+     font "gui/fonts/etelkatextpro"
+     "exact text" 1
+     "exact text size" 26
+     "outline size" 1
+     "outline color" 0 0 0 1
+     "text halign" center
+     "text valign" center
+    }
+   }
+  }
+  PanelWidgetClass SpectatorBottom {
+   ignorepointer 1
+   color 0 0 0 0.549
+   position 0 0
+   size 1 48
+   valign bottom_ref
+   hexactpos 1
+   vexactpos 1
+   hexactsize 0
+   vexactsize 1
+   style rover_sim_colorable
+   {
+    TextWidgetClass SpectatorHelp {
+     ignorepointer 1
+     position 0 0
+     size 1 1
+     hexactpos 1
+     vexactpos 1
+     hexactsize 0
+     vexactsize 0
+     font "gui/fonts/etelkatextpro"
+     "exact text" 1
+     "exact text size" 18
+     "outline size" 1
+     "outline color" 0 0 0 1
+     "text halign" center
+     "text valign" center
+    }
+   }
+  }
+  PanelWidgetClass SpectatorLeft {
+   ignorepointer 1
+   color 0 0 0 0.549
+   position 0 72
+   size 24 1
+   hexactpos 1
+   vexactpos 1
+   hexactsize 1
+   vexactsize 0
+   style rover_sim_colorable
+  }
+  PanelWidgetClass SpectatorRight {
+   ignorepointer 1
+   color 0 0 0 0.549
+   position 0 72
+   size 24 1
+   halign right_ref
+   hexactpos 1
+   vexactpos 1
+   hexactsize 1
+   vexactsize 0
+   style rover_sim_colorable
+  }
+ }
+}

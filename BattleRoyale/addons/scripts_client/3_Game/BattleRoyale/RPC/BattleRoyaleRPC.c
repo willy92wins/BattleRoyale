@@ -20,6 +20,8 @@ class BattleRoyaleRPC
 
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetMatchPhase", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "KillFeedEvent", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "MatchInProgress", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SpectateTarget", this );
 
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
 	}
@@ -27,6 +29,67 @@ class BattleRoyaleRPC
 	void ~BattleRoyaleRPC()
 	{
 
+	}
+
+	// Spectator state of a dead player, read by BattleRoyaleSpectatorCamera; the network id is 0/0 while there is no target
+	static bool s_Spectating = false;
+	static int s_SpectateTargetLow = 0;
+	static int s_SpectateTargetHigh = 0;
+	static vector s_SpectateTargetHint = "0 0 0";
+	static string s_SpectateTargetName = "";
+
+	// Overlay that tells a spectator apart from a living player in first person
+	static ref Widget s_SpectatorOverlay;
+
+	static void ResetSpectating()
+	{
+		s_Spectating = false;
+		s_SpectateTargetLow = 0;
+		s_SpectateTargetHigh = 0;
+
+		if ( s_SpectatorOverlay )
+		{
+			s_SpectatorOverlay.Unlink();
+			s_SpectatorOverlay = null;
+		}
+	}
+
+	static void UpdateSpectatorOverlay(string name, int alive)
+	{
+		if ( !s_SpectatorOverlay )
+			s_SpectatorOverlay = GetGame().GetWorkspace().CreateWidgets( "Vigrid-BattleRoyale/Scripts/Client/layouts/br_spectator.layout" );
+		if ( !s_SpectatorOverlay )
+			return;
+
+		TextWidget title = TextWidget.Cast( s_SpectatorOverlay.FindAnyWidget( "SpectatorTitle" ) );
+		if ( title )
+			title.SetText( Widget.TranslateString( "#STR_BR_SPECTATE_TITLE" ) + " - " + string.Format( Widget.TranslateString( "#STR_BR_SPECTATE_WATCHING" ), name, alive ) );
+
+		TextWidget help = TextWidget.Cast( s_SpectatorOverlay.FindAnyWidget( "SpectatorHelp" ) );
+		if ( help )
+		{
+			string viewKey = InputUtils.GetButtonNameFromInput( "UAPersonView", EInputDeviceType.MOUSE_AND_KEYBOARD );
+			help.SetText( string.Format( Widget.TranslateString( "#STR_BR_SPECTATE_HELP" ), viewKey ) );
+		}
+
+		s_SpectatorOverlay.Show( true );
+	}
+
+	// Pending main menu message for a late join, shown once by MainMenu after AbortMission
+	static string s_PendingMainMenuMessage = "";
+	static bool s_MatchInProgressAbortScheduled = false;
+
+	static string GetPendingMainMenuMessage()
+	{
+		return s_PendingMainMenuMessage;
+	}
+
+	static void ClearPendingMainMenuMessage()
+	{
+		s_PendingMainMenuMessage = "";
+		s_MatchInProgressAbortScheduled = false;
+
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(LeaveToMainMenu);
 	}
 
 	private static ref BattleRoyaleRPC m_Instance;
@@ -80,6 +143,10 @@ class BattleRoyaleRPC
 				BattleRoyaleUtils.Trace(string.Format("SetPlayerCount: %1 %2", data.param1, data.param2));
 			nb_players = data.param1;
 			nb_groups = data.param2;
+
+			// The overlay shows the players alive, which change without a new spectate target
+			if ( s_Spectating && s_SpectatorOverlay )
+				UpdateSpectatorOverlay( s_SpectateTargetName, nb_players );
 		}
 	}
 
@@ -381,6 +448,117 @@ class BattleRoyaleRPC
 		distance = m_KillFeedDistance[slot];
 		time = m_KillFeedTime[slot];
 		return true;
+	}
+
+	// The server switched this dead player to spectating, or changed the watched player
+	void SpectateTarget(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param5<int, int, vector, string, int> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ SPECTATETARGET RPC");
+			return;
+		}
+		if ( type != CallType.Client )
+			return;
+
+		bool first = !s_Spectating;
+		s_Spectating = true;
+		s_SpectateTargetLow = data.param1;
+		s_SpectateTargetHigh = data.param2;
+		s_SpectateTargetHint = data.param3;
+		s_SpectateTargetName = data.param4;
+
+		if ( first )
+			RestoreAfterDeath();
+
+		UpdateSpectatorOverlay( data.param4, data.param5 );
+	}
+
+	//! Undoes what the vanilla death simulation did on this client (DayZPlayerImplement.SimulateDeath):
+	//! darkening and dead screen, locked controls with the cursor shown, and muted sound
+	static void RestoreAfterDeath()
+	{
+		Man player = GetGame().GetPlayer();
+		if ( player )
+			player.StopDeathDarkeningEffect();
+
+		GetGame().GetUIManager().ScreenFadeOut( 1.0 );
+
+		// The dead player's stamina bar and quickbar have nothing to show while watching someone else
+		if ( GetGame().GetMission() && GetGame().GetMission().GetHud() )
+			GetGame().GetMission().GetHud().Show( false );
+
+		Input input = GetGame().GetInput();
+		if ( !input.HasGameFocus( INPUT_DEVICE_MOUSE ) && !GetGame().GetUIManager().GetMenu() )
+		{
+			input.ChangeGameFocus( -1, INPUT_DEVICE_MOUSE );
+			input.ChangeGameFocus( -1, INPUT_DEVICE_KEYBOARD );
+			input.ChangeGameFocus( -1, INPUT_DEVICE_GAMEPAD );
+			GetGame().GetUIManager().ShowUICursor( false );
+		}
+
+		DayZGame game = DayZGame.Cast( GetGame() );
+		if ( game )
+		{
+			game.GetSoundScene().SetSoundVolume( game.m_volume_sound, 1 );
+			game.GetSoundScene().SetSpeechExVolume( game.m_volume_speechEX, 1 );
+			game.GetSoundScene().SetMusicVolume( game.m_volume_music, 1 );
+			game.GetSoundScene().SetVOIPVolume( game.m_volume_VOIP, 1 );
+			game.GetSoundScene().SetRadioVolume( game.m_volume_radio, 1 );
+		}
+	}
+
+	// Match already in progress: leave to the main menu and show the reason there
+	void MatchInProgress(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param1<int> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ MATCHINPROGRESS RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+			HandleMatchInProgress( data.param1 );
+	}
+
+	//! Shared by the CF RPC and the engine RPC sent during the connection, whichever arrives first
+	static void HandleMatchInProgress(int minutes_left)
+	{
+		if ( s_MatchInProgressAbortScheduled )
+			return;
+		s_MatchInProgressAbortScheduled = true;
+
+		if ( minutes_left > 0 )
+			s_PendingMainMenuMessage = string.Format( Widget.TranslateString( "#STR_BR_MATCH_IN_PROGRESS" ), minutes_left );
+		else
+			s_PendingMainMenuMessage = Widget.TranslateString( "#STR_BR_MATCH_IN_PROGRESS_NO_TIME" );
+
+		// The system queue also ticks while the client is still loading; the GUI queue does not
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(LeaveToMainMenu, 1000, false);
+	}
+
+	static void LeaveToMainMenu()
+	{
+		// Cleared by the main menu: the rejected session is already over, never leave a later one
+		if ( !s_MatchInProgressAbortScheduled )
+			return;
+
+		DayZGame game = DayZGame.Cast( GetGame() );
+		if ( !game )
+			return;
+
+		Mission mission = game.GetMission();
+		if ( game.GetGameState() == DayZGameState.IN_GAME && mission && mission.IsMissionGameplay() )
+		{
+			mission.AbortMission();
+			return;
+		}
+
+		// Still connecting or loading: same exit as the vanilla login screen
+		game.SetGameState( DayZGameState.MAIN_MENU );
+		game.SetLoadState( DayZLoadState.MAIN_MENU_START );
+		game.GetCallQueue( CALL_CATEGORY_SYSTEM ).Call( game.DisconnectSessionForce );
 	}
 }
 #endif

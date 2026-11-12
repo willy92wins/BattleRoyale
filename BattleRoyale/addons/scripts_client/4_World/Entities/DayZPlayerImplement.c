@@ -50,6 +50,10 @@ modded class DayZPlayerImplement
 
 	void LeaveServer()
 	{
+		// Spectating dead players stay until the match ends
+		if (BattleRoyaleRPC.s_Spectating)
+			return;
+
 		GetGame().GetMission().AbortMission();
 	}
 }

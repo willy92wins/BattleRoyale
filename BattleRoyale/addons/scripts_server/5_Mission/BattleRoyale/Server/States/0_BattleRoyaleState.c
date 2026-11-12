@@ -95,12 +95,9 @@ class BattleRoyaleState: Timeable
         GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetMatchPhase", new Param2<int, int>(phase, seconds), true);
     }
 
-    //! Sends the last broadcast phase to a client that connects after it, with the seconds left on its timer
-    static void SendMatchPhaseTo(PlayerIdentity identity)
+    //! Seconds left on the timer of the last broadcast phase, -1 when that phase has no timer
+    static int GetMatchPhaseSecondsLeft()
     {
-        if (!identity)
-            return;
-
         int seconds = s_MatchPhaseSeconds;
         if (seconds > 0)
         {
@@ -108,6 +105,16 @@ class BattleRoyaleState: Timeable
             if (seconds < 0)
                 seconds = 0;
         }
+        return seconds;
+    }
+
+    //! Sends the last broadcast phase to a client that connects after it, with the seconds left on its timer
+    static void SendMatchPhaseTo(PlayerIdentity identity)
+    {
+        if (!identity)
+            return;
+
+        int seconds = GetMatchPhaseSecondsLeft();
 
         GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetMatchPhase", new Param2<int, int>(s_MatchPhase, seconds), true, identity);
     }
