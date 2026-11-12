@@ -88,7 +88,10 @@ modded class PlayerBase
 			if ( playerSource != this && playerSource.GetIdentity() )
 			{
 				br_last_player_hit_by = playerSource;
-				br_last_player_hit_name = playerSource.GetIdentity().GetName();
+				string hit_name = playerSource.BR_GetPlayerName();
+				if ( hit_name == "" )
+					hit_name = playerSource.GetIdentity().GetName();
+				br_last_player_hit_name = hit_name;
 				br_last_player_hit_time = GetGame().GetTime();
 				br_last_player_hit_weapon = "";
 				br_last_player_hit_distance = 0;
