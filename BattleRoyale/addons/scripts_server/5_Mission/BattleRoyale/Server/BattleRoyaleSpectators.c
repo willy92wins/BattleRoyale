@@ -147,14 +147,18 @@ class BattleRoyaleSpectators
 			return;
 
 		// The identity owns a new anchor body near the target, then spectates from a camera
+		// Without an anchor the camera never receives the target: the client leaves after its death as before
 		PlayerBase anchor = PlayerBase.Cast(GetGame().CreatePlayer(identity, "SurvivorM_Mirek", AnchorPosition(target), 0, "NONE"));
-		if (anchor)
+		if (!anchor)
 		{
-			anchor.SetAllowDamage(false);
-			dBodyEnableGravity(anchor, false);
-			m_Anchors.Set(identityId, anchor);
-			GetGame().SelectPlayer(identity, anchor);
+			BattleRoyaleUtils.Warn("Spectator anchor could not be created for " + identity.GetName());
+			return;
 		}
+
+		anchor.SetAllowDamage(false);
+		dBodyEnableGravity(anchor, false);
+		m_Anchors.Set(identityId, anchor);
+		GetGame().SelectPlayer(identity, anchor);
 
 		GetGame().SelectPlayer(identity, null);
 		GetGame().SelectSpectator(identity, "BattleRoyaleSpectatorCamera", HeadPosition(target));

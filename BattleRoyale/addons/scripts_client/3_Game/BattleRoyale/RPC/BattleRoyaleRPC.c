@@ -36,6 +36,7 @@ class BattleRoyaleRPC
 	static int s_SpectateTargetLow = 0;
 	static int s_SpectateTargetHigh = 0;
 	static vector s_SpectateTargetHint = "0 0 0";
+	static string s_SpectateTargetName = "";
 
 	// Overlay that tells a spectator apart from a living player in first person
 	static ref Widget s_SpectatorOverlay;
@@ -142,6 +143,10 @@ class BattleRoyaleRPC
 				BattleRoyaleUtils.Trace(string.Format("SetPlayerCount: %1 %2", data.param1, data.param2));
 			nb_players = data.param1;
 			nb_groups = data.param2;
+
+			// The overlay shows the players alive, which change without a new spectate target
+			if ( s_Spectating && s_SpectatorOverlay )
+				UpdateSpectatorOverlay( s_SpectateTargetName, nb_players );
 		}
 	}
 
@@ -462,6 +467,7 @@ class BattleRoyaleRPC
 		s_SpectateTargetLow = data.param1;
 		s_SpectateTargetHigh = data.param2;
 		s_SpectateTargetHint = data.param3;
+		s_SpectateTargetName = data.param4;
 
 		if ( first )
 			RestoreAfterDeath();
