@@ -455,53 +455,7 @@ class SpawnSelectionMenu extends UIScriptedMenu
 
 	void WorldRenderOval(CanvasWidget canvas, MapWidget world_map, float world_x, float world_z, float radius_x, float radius_z, int color = -1)
 	{
-		if (!world_map || radius_x <= 0 || radius_z <= 0 || !canvas)
-		{
-			BattleRoyaleUtils.Trace("WorldRenderOval: Invalid parameters");
-			return;
-		}
-
-		float screen_x, screen_y;
-		world_map.GetScreenPos(screen_x, screen_y);
-
-		// Create the center point in world coordinates
-		vector worldCenter = Vector(world_x, 0, world_z);
-		vector screenCenter = world_map.MapToScreen(worldCenter);
-
-		// Create edge points in world coordinates for accurate size calculation
-		vector worldEdgeX = Vector(world_x + radius_x, 0, world_z);
-		vector worldEdgeZ = Vector(world_x, 0, world_z + radius_z);
-
-		// Convert edges to screen coordinates
-		vector screenEdgeX = world_map.MapToScreen(worldEdgeX);
-		vector screenEdgeZ = world_map.MapToScreen(worldEdgeZ);
-
-		// Calculate width and height in screen pixels
-		float screenWidth = vector.Distance(screenCenter, screenEdgeX);
-		float screenHeight = vector.Distance(screenCenter, screenEdgeZ);
-
-		// Calculate the center of the oval in screen space
-		float cx = screenCenter[0] - screen_x;
-		float cy = screenCenter[1] - screen_y;
-
-		// Draw the oval
-		// 64 to 96 segments keep the error under a pixel up to a radius of about 1800 px
-		int segments = Math.Clamp(Math.Round(Math.Max(screenWidth, screenHeight) / 8), 64, 96);
-		float angleIncrement = 360.0 / segments;
-
-		for(int i = 0; i < segments; i++)
-		{
-			float angle1 = i * angleIncrement;
-			float angle2 = (i + 1) * angleIncrement;
-
-			float x1 = cx + (screenWidth * Math.Cos(angle1 * Math.DEG2RAD));
-			float y1 = cy + (screenHeight * Math.Sin(angle1 * Math.DEG2RAD));
-
-			float x2 = cx + (screenWidth * Math.Cos(angle2 * Math.DEG2RAD));
-			float y2 = cy + (screenHeight * Math.Sin(angle2 * Math.DEG2RAD));
-
-			canvas.DrawLine(x1, y1, x2, y2, 2, color);
-		}
+		BattleRoyaleMapCanvas.DrawWorldOval(canvas, world_map, world_x, world_z, radius_x, radius_z, color);
 	}
 
 	/**
