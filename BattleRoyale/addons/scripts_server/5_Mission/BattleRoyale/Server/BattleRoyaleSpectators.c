@@ -27,18 +27,33 @@ class BattleRoyaleSpectators
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(UpdateAnchors);
 	}
 
-	//! Anchor bodies are not match players: the match logic leaves them alone
+	//! Anchor bodies are not match players: the match logic leaves them alone.
+	//! Called on every scheduled player tick, so it reads a flag kept in step with m_Anchors
+	//! (SetAnchor, ClearAnchor) instead of scanning the map
 	bool IsAnchor(PlayerBase player)
 	{
 		if (!player)
 			return false;
 
-		foreach (string id, PlayerBase anchor : m_Anchors)
-		{
-			if (anchor == player)
-				return true;
-		}
-		return false;
+		return player.br_spectator_anchor;
+	}
+
+	//! The only writer of m_Anchors entries: the body the entry held before stops being an anchor
+	protected void SetAnchor(string identityId, PlayerBase anchor)
+	{
+		ClearAnchor(identityId);
+		m_Anchors.Set(identityId, anchor);
+		if (anchor)
+			anchor.br_spectator_anchor = true;
+	}
+
+	//! The only remover of m_Anchors entries
+	protected void ClearAnchor(string identityId)
+	{
+		PlayerBase previous = m_Anchors.Get(identityId);
+		if (previous)
+			previous.br_spectator_anchor = false;
+		m_Anchors.Remove(identityId);
 	}
 
 	protected vector AnchorPosition(PlayerBase target)
@@ -110,7 +125,7 @@ class BattleRoyaleSpectators
 
 		m_Targets.Remove(identity.GetId());
 		m_LastRequest.Remove(identity.GetId());
-		m_Anchors.Remove(identity.GetId());
+		ClearAnchor(identity.GetId());
 		m_Identities.Remove(identity.GetId());
 	}
 
@@ -174,7 +189,7 @@ class BattleRoyaleSpectators
 
 		anchor.SetAllowDamage(false);
 		dBodyEnableGravity(anchor, false);
-		m_Anchors.Set(identityId, anchor);
+		SetAnchor(identityId, anchor);
 		GetGame().SelectPlayer(identity, anchor);
 
 		GetGame().SelectPlayer(identity, null);

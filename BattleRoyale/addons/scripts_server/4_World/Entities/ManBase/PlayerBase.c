@@ -18,6 +18,7 @@ modded class PlayerBase
 	int br_position = -1;
 	string player_steamid = "";
 	bool br_in_current_state = false;
+	bool br_spectator_anchor = false;  //!< set by BattleRoyaleSpectators while this body is a spectator's anchor
 
 	vector spawn_pos = vector.Zero;
 
