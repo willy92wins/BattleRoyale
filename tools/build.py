@@ -112,13 +112,19 @@ def warn_missing_assets():
     main_root, missing = missing_assets()
     if not missing:
         return
-    print(f"WARNING: {len(missing)} asset file(s) of the main checkout are missing in this worktree, "
-          "so the PBOs will ship without them (missing textures, imagesets, models):")
-    for p in missing[:10]:
-        print("  " + p)
+    lines = [f"WARNING: {len(missing)} asset file(s) of the main checkout are missing in this worktree, "
+             "so the PBOs will ship without them (missing textures, imagesets, models):"]
+    lines += ["  " + p for p in missing[:10]]
     if len(missing) > 10:
-        print(f"  ... and {len(missing) - 10} more")
-    print(f"  Copy them first: python -I \"{os.path.join(main_root, 'tools', 'sync_assets.py')}\" \"{ROOT}\"")
+        lines.append(f"  ... and {len(missing) - 10} more")
+    lines.append(f"  Copy them first: python -I \"{os.path.join(main_root, 'tools', 'sync_assets.py')}\" \"{ROOT}\"")
+    enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+    try:
+        for line in lines:
+            # A name the console cannot encode is shown escaped instead of stopping the build
+            print(line.encode(enc, "backslashreplace").decode(enc))
+    except Exception:
+        pass
 
 
 def addon_names(addons):
