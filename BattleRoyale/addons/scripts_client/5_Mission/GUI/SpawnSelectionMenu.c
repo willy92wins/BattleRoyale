@@ -36,6 +36,14 @@ class SpawnSelectionMenu extends UIScriptedMenu
 	protected float f_HeatMapCellSize;
 	protected bool b_HeatMapDirty = true;
 
+	// Box around the centres of the squares, in world metres. A redraw converts its corners with the map
+	// widget and places the squares between them, instead of converting every square
+	protected static const float HEATMAP_TRANSFORM_TOLERANCE = 1.0;	//!< pixels the placement may differ from the map widget on the check point
+	protected float f_HeatMapMinX;
+	protected float f_HeatMapMaxX;
+	protected float f_HeatMapMinZ;
+	protected float f_HeatMapMaxZ;
+
 	// Map view of the last redraw; the canvases are only redrawn when it or their content changes
 	protected bool b_CanvasDirty = true;
 	protected float f_DrawnMapScale = -1;
@@ -240,9 +248,58 @@ class SpawnSelectionMenu extends UIScriptedMenu
 				float square_w = vector.Distance(screen_origin, screen_edge_x);
 				float square_h = vector.Distance(screen_origin, screen_edge_z);
 
-				for (int i = 0; i < m_HeatMapCellColor.Count(); i++)
+				// The map view is a shift and a scale of the world, so the squares are placed between three
+				// converted corners of their box with arithmetic. A fourth point inside the box, off both
+				// axes, is converted both ways: when the results differ, every square goes through the map
+				// widget as before
+				int square_count = m_HeatMapCellColor.Count();
+				float map_x, map_y;
+				m_MapWidget.GetScreenPos(map_x, map_y);
+
+				float span_x = f_HeatMapMaxX - f_HeatMapMinX;
+				float span_z = f_HeatMapMaxZ - f_HeatMapMinZ;
+				vector screen_min = m_MapWidget.MapToScreen(Vector(f_HeatMapMinX, 0, f_HeatMapMinZ));
+				float x_to_sx = 0;
+				float x_to_sy = 0;
+				float z_to_sx = 0;
+				float z_to_sy = 0;
+				float check_error_x = 0;
+				float check_error_y = 0;
+				bool use_transform = false;
+				if (span_x > 0 && span_z > 0)
 				{
-					RenderFilledSquare(m_HeatMapCanvas, m_MapWidget, m_HeatMapCellX[i], m_HeatMapCellZ[i], f_HeatMapCellSize, square_w, square_h, map_w, map_h, m_HeatMapCellColor[i]);
+					vector screen_max_x = m_MapWidget.MapToScreen(Vector(f_HeatMapMaxX, 0, f_HeatMapMinZ));
+					vector screen_max_z = m_MapWidget.MapToScreen(Vector(f_HeatMapMinX, 0, f_HeatMapMaxZ));
+					x_to_sx = (screen_max_x[0] - screen_min[0]) / span_x;
+					x_to_sy = (screen_max_x[1] - screen_min[1]) / span_x;
+					z_to_sx = (screen_max_z[0] - screen_min[0]) / span_z;
+					z_to_sy = (screen_max_z[1] - screen_min[1]) / span_z;
+
+					float check_dx = 0.75 * span_x;
+					float check_dz = 0.25 * span_z;
+					vector screen_check = m_MapWidget.MapToScreen(Vector(f_HeatMapMinX + check_dx, 0, f_HeatMapMinZ + check_dz));
+					check_error_x = Math.AbsFloat(screen_min[0] + check_dx * x_to_sx + check_dz * z_to_sx - screen_check[0]);
+					check_error_y = Math.AbsFloat(screen_min[1] + check_dx * x_to_sy + check_dz * z_to_sy - screen_check[1]);
+					use_transform = check_error_x <= HEATMAP_TRANSFORM_TOLERANCE && check_error_y <= HEATMAP_TRANSFORM_TOLERANCE;
+				}
+
+				if (!use_transform && BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE))
+					BattleRoyaleUtils.Trace(string.Format("SpawnSelectionMenu: heat map placement off by %1 x %2 px, converting %3 squares one by one", check_error_x, check_error_y, square_count));
+
+				float square_dx, square_dz, square_cx, square_cy;
+				for (int i = 0; i < square_count; i++)
+				{
+					if (!use_transform)
+					{
+						RenderFilledSquare(m_HeatMapCanvas, m_MapWidget, m_HeatMapCellX[i], m_HeatMapCellZ[i], f_HeatMapCellSize, square_w, square_h, map_w, map_h, m_HeatMapCellColor[i]);
+						continue;
+					}
+
+					square_dx = m_HeatMapCellX[i] - f_HeatMapMinX;
+					square_dz = m_HeatMapCellZ[i] - f_HeatMapMinZ;
+					square_cx = screen_min[0] + square_dx * x_to_sx + square_dz * z_to_sx - map_x;
+					square_cy = screen_min[1] + square_dx * x_to_sy + square_dz * z_to_sy - map_y;
+					DrawFilledSquare(m_HeatMapCanvas, square_cx, square_cy, square_w, square_h, map_w, map_h, m_HeatMapCellColor[i]);
 				}
 			}
 		}
@@ -370,6 +427,21 @@ class SpawnSelectionMenu extends UIScriptedMenu
 
 	protected void AddHeatMapSquare(float world_x, float world_z, int color)
 	{
+		if (m_HeatMapCellColor.Count() == 0)
+		{
+			f_HeatMapMinX = world_x;
+			f_HeatMapMaxX = world_x;
+			f_HeatMapMinZ = world_z;
+			f_HeatMapMaxZ = world_z;
+		}
+		else
+		{
+			f_HeatMapMinX = Math.Min(f_HeatMapMinX, world_x);
+			f_HeatMapMaxX = Math.Max(f_HeatMapMaxX, world_x);
+			f_HeatMapMinZ = Math.Min(f_HeatMapMinZ, world_z);
+			f_HeatMapMaxZ = Math.Max(f_HeatMapMaxZ, world_z);
+		}
+
 		m_HeatMapCellX.Insert(world_x);
 		m_HeatMapCellZ.Insert(world_z);
 		m_HeatMapCellColor.Insert(color);
@@ -503,10 +575,16 @@ class SpawnSelectionMenu extends UIScriptedMenu
 		vector worldCenter = Vector(world_x, 0, world_z);
 		vector screenCenter = world_map.MapToScreen(worldCenter);
 
-		// Calculate the corners of the square in screen space
+		// Centre of the square in canvas space
 		float cx = screenCenter[0] - screen_x;
 		float cy = screenCenter[1] - screen_y;
 
+		DrawFilledSquare(canvas, cx, cy, square_w, square_h, clip_w, clip_h, color);
+	}
+
+	//! Draws the square of RenderFilledSquare from its centre in canvas space (cx, cy), with the same clip rule
+	protected void DrawFilledSquare(CanvasWidget canvas, float cx, float cy, float square_w, float square_h, float clip_w, float clip_h, int color)
+	{
 		float left = cx - square_w/2;
 		float right = cx + square_w/2;
 		float top = cy - square_h/2;
