@@ -537,7 +537,7 @@ class BattleRoyaleState: Timeable
 		if (parties)
 		{
 			BattleRoyaleUtils.Trace("GetGroups: Parties OK");
-			BattleRoyaleUtils.Trace("Current parties: " + parties.Repr());
+			if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Current parties: " + parties.Repr());
 
 			// Create map player id <-> player object
 			auto id_map = new map<string, PlayerBase>();
@@ -631,7 +631,7 @@ class BattleRoyaleState: Timeable
 		ref array<ref set<PlayerBase>> groups = GetGroups();
 		for (int i = 0; i < groups.Count(); i++)
 		{
-			BattleRoyaleUtils.Trace("Group " + i + " has " + groups.Get(i).Count() + " players");
+			if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Group " + i + " has " + groups.Get(i).Count() + " players");
 			if (groups.Get(i).Find(player) != -1)
 			{
 				BattleRoyaleUtils.Trace("Found group for player " + player.BR_GetPlayerName());
