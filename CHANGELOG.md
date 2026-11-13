@@ -1,5 +1,49 @@
 # Changelog
 
+## 1.3.0 (2026-11-13)
+
+### Changed
+- DayZ Expansion is no longer needed. The mod runs with `@CF;@Dabs Framework;@BattleRoyale`, plus COT or
+  VPP when used. Servers can drop `@DayZ-Expansion-Core`, `@DayZ-Expansion` and
+  `@DayZ-Expansion-Navigation` from `-mod`.
+- Map: the vanilla 2D map opens with the map key without a map or navigation item, shows the player's
+  own position and draws the zone in force in red and the announced zone in yellow.
+- Notifications go through CF's notification system, with the same title, text, colour and duration,
+  and a vanilla sound (at most one per second). A new notification shows at once; with five on screen
+  the oldest is removed.
+- Faster restart and join: the Restart state waits 3 s instead of 10 before exiting (10 s when
+  `enable_vigrid_api` is on), `restart_loop.ps1` waits 2 s instead of 10, `TimeLogin` goes from 15 to
+  5 s and `serverDZ.cfg.example` sets `loginQueueConcurrentPlayers = 20`.
+- The character is created directly in the lobby, so the client loads one world area: in a solo test,
+  joining took 14 s instead of about 36 s.
+- Placement updates in the lobby are no longer sent to every player on every join; each match state
+  sends them once when it starts.
+
+### Added
+- Minimap in the HUD, top right: centred on the player (or on the camera when dead or spectating), north
+  up, with the zone circles. J shows or hides it (hidden at start), Numpad + cycles four zoom levels
+  from 150 m to 1.2 km.
+
+### Removed
+- The Expansion airdrop, which never ran (it needed Expansion mission scripts the mod never loaded).
+  The `airdrop_*` settings are ignored; older JSON files still load.
+
+### Performance (100 players)
+- The per-player tick checks state membership in O(1) instead of walking the player list.
+- Prepare validates each spawn point once instead of three or four times (about 400-600 fewer physics
+  queries per 100-player match).
+- Spectators reuse their identity instead of searching for it; the spectator camera caches the head
+  bone.
+- The kill webhook JSON is built only when the API is on; trace strings are not built when the log level
+  drops them.
+- The CE weapon-spawn config is read once instead of on every spawned item.
+- Heat-map squares are drawn with one thick line instead of one line per pixel row.
+
+### Not tested yet
+- With several players: spectator with three or more, kill webhooks, the heat map's look, the
+  notification sound and the J key for the minimap.
+- `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
+
 ## 1.2.2 (2026-11-12)
 
 ### Added
