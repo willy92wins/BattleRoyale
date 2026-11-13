@@ -89,20 +89,23 @@ def missing_assets():
     """Binary assets (textures, sounds, models) are gitignored and live only in the main checkout.
     When building from another worktree, return the main checkout and the ignored asset files it
     has under BattleRoyale/ and BattleRoyale_VPP/ that this tree lacks; the PBOs would ship without
-    them. Returns (None, []) when this is the main checkout or git cannot tell."""
+    them. Returns (None, []) when this is the main checkout or git cannot tell: it is only a
+    warning, so no failure in here may stop the build."""
+    def git(*args):
+        return subprocess.run(["git", *args], capture_output=True, encoding="utf-8", errors="replace",
+                              check=True).stdout
     try:
-        common = subprocess.run(["git", "-C", ROOT, "rev-parse", "--path-format=absolute", "--git-common-dir"],
-                                capture_output=True, text=True, check=True).stdout.strip()
-        main_root = os.path.dirname(os.path.normpath(common))
+        main_root = os.path.dirname(os.path.normpath(git("-C", ROOT, "rev-parse", "--path-format=absolute",
+                                                         "--git-common-dir").strip()))
         if os.path.normcase(os.path.abspath(main_root)) == os.path.normcase(ROOT):
             return None, []
-        listed = subprocess.run(["git", "-C", main_root, "ls-files", "--others", "--ignored", "--exclude-standard",
-                                 "--", "BattleRoyale", "BattleRoyale_VPP"],
-                                capture_output=True, text=True, check=True).stdout.splitlines()
-    except (OSError, subprocess.CalledProcessError):
+        # -z: paths come raw, NUL-separated, never quoted
+        listed = git("-C", main_root, "ls-files", "-z", "--others", "--ignored", "--exclude-standard",
+                     "--", "BattleRoyale", "BattleRoyale_VPP").split("\0")
+        assets = [p for p in listed if p.lower().endswith(ASSET_EXT)]
+        return main_root, [p for p in assets if not os.path.isfile(os.path.join(ROOT, p))]
+    except Exception:
         return None, []
-    assets = [p for p in listed if p.lower().endswith(ASSET_EXT)]
-    return main_root, [p for p in assets if not os.path.isfile(os.path.join(ROOT, p))]
 
 
 def warn_missing_assets():
@@ -115,7 +118,7 @@ def warn_missing_assets():
         print("  " + p)
     if len(missing) > 10:
         print(f"  ... and {len(missing) - 10} more")
-    print(f"  Copy them first: python -I {os.path.join(main_root, 'tools', 'sync_assets.py')} {ROOT}")
+    print(f"  Copy them first: python -I \"{os.path.join(main_root, 'tools', 'sync_assets.py')}\" \"{ROOT}\"")
 
 
 def addon_names(addons):
