@@ -313,8 +313,6 @@ class BattleRoyaleKillFeed
         {
             case EBRKillFeedType.EXPLOSIVE:
                 return "#STR_BR_KILLFEED_KILL_EXPLOSIVE";
-            case EBRKillFeedType.VEHICLE:
-                return "#STR_BR_KILLFEED_KILL_VEHICLE";
             case EBRKillFeedType.BLEED_OUT:
                 return "#STR_BR_KILLFEED_KILL_BLEED_OUT";
         }

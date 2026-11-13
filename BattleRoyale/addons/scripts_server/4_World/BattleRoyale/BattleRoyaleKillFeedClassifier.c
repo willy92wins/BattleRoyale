@@ -14,9 +14,9 @@ class BattleRoyaleKillFeedEntry
 //! state of the victim. It only reads; the caller sends the result
 class BattleRoyaleKillFeedClassifier
 {
-	//! A damage older than this at the time of death did not cause it
+	//! The damage that kills is still being applied when the death is reported, and a zone tick that kills
+	//! was stamped in the same call; anything older than this is not the cause
 	static const int LETHAL_DAMAGE_WINDOW_MS = 1000;
-	//! Same, for the damage tick taken outside the play area
 	static const int ZONE_DAMAGE_WINDOW_MS = 1000;
 
 	static const string AMMO_FALL_PREFIX = "FallDamage";  //!< DayZPlayerImplementFallDamage.FALL_DAMAGE_AMMO_*
@@ -33,7 +33,7 @@ class BattleRoyaleKillFeedClassifier
 
 		int now = GetGame().GetTime();
 
-		// Damage that was being applied when the victim died, if any
+		// Damage that was being applied when the victim died, if any (PlayerBase forgets a damage it survived)
 		bool lethal_damage = victim.br_last_damage_time > 0 && now - victim.br_last_damage_time <= LETHAL_DAMAGE_WINDOW_MS;
 		string ammo = "";
 		string zone = "";
@@ -54,23 +54,6 @@ class BattleRoyaleKillFeedClassifier
 		if (!holder)
 			holder = PlayerBase.Cast(source);
 
-		if (victim.CommitedSuicide())
-		{
-			entry.m_Type = EBRKillFeedType.SUICIDE;
-			if (source_ai && source_ai != victim && holder == victim)
-				entry.m_ItemClass = source_ai.GetType();
-			return;
-		}
-
-		if (bleed_out)
-		{
-			entry.m_Type = EBRKillFeedType.BLEED_OUT;
-			entry.m_KillerName = victim.br_last_player_hit_name;
-			entry.m_ItemClass = victim.br_last_player_hit_weapon;
-			entry.m_Distance = Math.Round(victim.br_last_player_hit_distance);
-			return;
-		}
-
 		Grenade_Base grenade = Grenade_Base.Cast(source);
 		LandMineTrap mine = LandMineTrap.Cast(source);
 		if (grenade || mine)
@@ -86,6 +69,25 @@ class BattleRoyaleKillFeedClassifier
 
 		if (!source || source == victim || holder == victim)
 		{
+			// The suicide flag is raised while the animation plays; a kill by someone else in the
+			// meantime has its own source and never gets here
+			if (victim.CommitedSuicide())
+			{
+				entry.m_Type = EBRKillFeedType.SUICIDE;
+				if (source_ai && source_ai != victim)
+					entry.m_ItemClass = source_ai.GetType();
+				return;
+			}
+
+			if (bleed_out)
+			{
+				entry.m_Type = EBRKillFeedType.BLEED_OUT;
+				entry.m_KillerName = victim.br_last_player_hit_name;
+				entry.m_ItemClass = victim.br_last_player_hit_weapon;
+				entry.m_Distance = Math.Round(victim.br_last_player_hit_distance);
+				return;
+			}
+
 			entry.m_Type = ClassifyWithoutKiller(victim, ammo, damage_type, now);
 			if (entry.m_Type == EBRKillFeedType.VEHICLE_CRASH)
 				entry.m_ItemClass = GetVehicleClass(victim);
@@ -102,10 +104,8 @@ class BattleRoyaleKillFeedClassifier
 				return;
 			}
 
+			// The driver is not named: the kill counter and the webhook do not credit a run over to anyone
 			entry.m_Type = EBRKillFeedType.VEHICLE;
-			PlayerBase driver = PlayerBase.Cast(transport.CrewDriver());
-			if (driver && driver != victim && driver.GetIdentity())
-				entry.m_KillerName = driver.GetIdentity().GetName();
 			return;
 		}
 
@@ -113,10 +113,10 @@ class BattleRoyaleKillFeedClassifier
 		{
 			entry.m_KillerName = holder.GetIdentity().GetName();
 
-			if (source == holder && !lethal_damage)
+			if (source == holder && victim.IsAlive())
 			{
-				// Not a hit: the victim left the game unconscious and the server names who knocked it out.
-				// The feed shows the last hit that player landed
+				// Not a death by damage: the victim left the game unconscious, still alive, and the server
+				// names who knocked it out. The feed shows the last hit that player landed
 				entry.m_Type = EBRKillFeedType.FISTS;
 				if (victim.br_last_player_hit_by == holder)
 				{
@@ -194,17 +194,13 @@ class BattleRoyaleKillFeedClassifier
 	//! Cause of a death that names no killer, from the most to the least specific evidence
 	protected static int ClassifyWithoutKiller(PlayerBase victim, string ammo, int damage_type, int now)
 	{
-		// A zone tick is not a damage hit, so the later of the two is the one that killed
-		bool zone_tick = victim.br_zone_damage_time > 0 && now - victim.br_zone_damage_time <= ZONE_DAMAGE_WINDOW_MS;
-		if (zone_tick && victim.br_zone_damage_time >= victim.br_last_damage_time)
+		// Only the zone tick that killed keeps its stamp (PlayerBase.BR_ZoneDamage)
+		if (victim.br_zone_damage_time > 0 && now - victim.br_zone_damage_time <= ZONE_DAMAGE_WINDOW_MS)
 			return EBRKillFeedType.ZONE;
 
 		int by_damage = ClassifyByDamage(ammo, damage_type);
 		if (by_damage != EBRKillFeedType.DIED)
 			return by_damage;
-
-		if (zone_tick)
-			return EBRKillFeedType.ZONE;
 
 		if (victim.br_bled_out)
 			return EBRKillFeedType.BLEED_OUT;
@@ -214,7 +210,8 @@ class BattleRoyaleKillFeedClassifier
 		if (victim.GetCommand_Vehicle())
 			return EBRKillFeedType.VEHICLE_CRASH;
 
-		if (victim.GetDrowningWaterLevelCheck())
+		// Under water with no stamina left is when vanilla takes health away (DrowningMdfr.OnTick)
+		if (victim.GetDrowningWaterLevelCheck() && victim.GetStaminaHandler() && victim.GetStaminaHandler().GetStamina() <= 0)
 			return EBRKillFeedType.DROWNED;
 
 		return EBRKillFeedType.DIED;

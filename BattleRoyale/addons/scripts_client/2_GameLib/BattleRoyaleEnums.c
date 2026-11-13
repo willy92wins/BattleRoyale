@@ -49,7 +49,7 @@ enum EBRKillFeedType
 	MELEE,          //!< hit by a player holding a melee weapon or any other item
 	FISTS,          //!< hit by a player with bare hands
 	EXPLOSIVE,      //!< grenade, mine or any other explosion; the killer is who set it off, when known
-	VEHICLE,        //!< run over; the killer is the driver, when there is one
+	VEHICLE,        //!< run over; names no killer
 	VEHICLE_CRASH,  //!< died inside a crashing vehicle
 	FALL,
 	ZONE,           //!< damage taken outside the play area

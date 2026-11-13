@@ -180,8 +180,7 @@ class BattleRoyaleLastRound: BattleRoyaleState
             {
                 //DAMAGE
                 player.GetSymptomManager().QueueUpPrimarySymptom(SymptomIDs.SYMPTOM_PAIN_HEAVY);
-                player.br_zone_damage_time = GetGame().GetTime(); // names the cause in the kill feed
-                player.DecreaseHealthCoef( f_Damage );
+                player.BR_ZoneDamage( f_Damage );
                 player.time_until_damage = i_DamageTickTime; //reset timer
             }
             player.time_until_damage -= timeslice;

@@ -33,13 +33,24 @@ modded class PlayerBase
 	float br_last_player_hit_distance;  //!< metres between the two players at the hit, 0 in melee
 	bool br_bled_out;  //!< set when this player dies: its blood was under the fatal level, so the death was blood loss
 
-	// Last damage of any origin, written right before the engine applies it, so that it is already known
-	// when that same damage kills. The kill feed reads it to tell a fall, a fire or an explosion apart
-	int br_last_damage_time;  //!< GetGame().GetTime() of that damage, in ms; 0 until the first one
+	// Damage being applied, written right before the engine applies it and forgotten once the player has
+	// survived it, so that at death it is the damage that killed. The kill feed reads it to tell a fall,
+	// a fire or an explosion apart
+	int br_last_damage_time;  //!< GetGame().GetTime() of that damage, in ms; 0 when there is none
 	int br_last_damage_type;  //!< DamageType
 	string br_last_damage_ammo;  //!< ammo name, such as "FallDamageHealth" or "TransportHit"
 	string br_last_damage_zone;  //!< damage zone, such as "Brain" or "Torso"
-	int br_zone_damage_time;  //!< GetGame().GetTime() of the last damage tick taken outside the play area; 0 until the first one
+	int br_zone_damage_time;  //!< GetGame().GetTime() of the damage tick outside the play area that killed this player; 0 when none did
+
+	//! Damage tick taken outside the play area. The stamp stays only when the tick killed, so that the
+	//! kill feed names the zone for that death and for no other
+	void BR_ZoneDamage( float damage_coef )
+	{
+		br_zone_damage_time = GetGame().GetTime();
+		DecreaseHealthCoef( damage_coef );
+		if ( IsAlive() )
+			br_zone_damage_time = 0;
+	}
 
 	void SetBRPosition( int position )
 	{
@@ -91,6 +102,10 @@ modded class PlayerBase
 	{
 		super.EEHitBy(damageResult, damageType, source, component, dmgZone, ammo, modelPos, speedCoef);
 
+		// Survived: that damage will not be the cause of a later death
+		if ( IsAlive() )
+			br_last_damage_time = 0;
+
 		if (!source)
 		{
 			last_unconscious_source = NULL;
@@ -125,7 +140,8 @@ modded class PlayerBase
 					br_last_player_hit_weapon = source.GetType();
 					br_last_player_hit_type = EBRKillFeedType.MELEE;
 				}
-				if ( source.IsWeapon() )
+				// A firearm used to strike stays a melee hit
+				if ( source.IsWeapon() && damageType != DamageType.CLOSE_COMBAT )
 				{
 					br_last_player_hit_type = EBRKillFeedType.FIREARM;
 					br_last_player_hit_distance = vector.Distance( GetPosition(), playerSource.GetPosition() );
