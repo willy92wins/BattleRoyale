@@ -118,7 +118,11 @@ class BattleRoyaleKillFeedClassifier
 			{
 				entry.m_Type = EBRKillFeedType.BLEED_OUT;
 				entry.m_KillerName = victim.br_last_player_hit_name;
-				entry.m_KillerId = victim.br_last_player_hit_player_id;
+				// The id is read now, not kept from the hit: a session id is given to someone else
+				// once its player has left
+				PlayerBase attacker = victim.br_last_player_hit_by;
+				if (attacker && attacker.GetIdentity())
+					entry.m_KillerId = attacker.GetIdentity().GetPlayerId();
 				entry.m_ItemClass = victim.br_last_player_hit_weapon;
 				entry.m_Distance = Math.Round(victim.br_last_player_hit_distance);
 				return;

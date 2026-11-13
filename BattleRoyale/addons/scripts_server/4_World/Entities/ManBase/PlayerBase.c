@@ -27,7 +27,6 @@ modded class PlayerBase
 	// Last hit taken from another player, kept to credit that player with a later bleed out
 	PlayerBase br_last_player_hit_by;
 	string br_last_player_hit_name;  //!< empty until another player hits this one
-	int br_last_player_hit_player_id = -1;  //!< PlayerIdentity.GetPlayerId() of that player
 	int br_last_player_hit_time;  //!< GetGame().GetTime() of that hit, in ms
 	string br_last_player_hit_weapon;  //!< class name of the weapon, empty for fists
 	int br_last_player_hit_type;  //!< EBRKillFeedType of that hit: FIREARM, MELEE or FISTS
@@ -139,7 +138,6 @@ modded class PlayerBase
 				if ( hit_name == "" )
 					hit_name = playerSource.GetIdentity().GetName();
 				br_last_player_hit_name = hit_name;
-				br_last_player_hit_player_id = playerSource.GetIdentity().GetPlayerId();
 				br_last_player_hit_time = GetGame().GetTime();
 				br_last_player_hit_weapon = "";
 				br_last_player_hit_type = EBRKillFeedType.FISTS;
