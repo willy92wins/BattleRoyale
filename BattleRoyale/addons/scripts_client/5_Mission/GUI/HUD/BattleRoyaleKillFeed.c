@@ -42,12 +42,13 @@ class BattleRoyaleKillFeed
     protected bool m_RowOwn[ROW_COUNT];         //!< the row names the local player
     protected float m_RowAlpha[ROW_COUNT];      //!< fade last applied to the row, -1 to force it
 
-    protected string m_LocalName;   //!< name of the local player, kept for when it has no character
+    protected int m_LocalPlayerId;  //!< PlayerIdentity.GetPlayerId() of the local player, -1 until it is known
 
     void BattleRoyaleKillFeed( Widget parent )
     {
         m_LastSerial = -1;
         m_NextExpiry = -1;
+        m_LocalPlayerId = -1;
 
         if ( !GetGame() || !GetGame().GetWorkspace() )
             return;
@@ -120,6 +121,8 @@ class BattleRoyaleKillFeed
         string victim;
         string item;
         int distance;
+        int killer_id;
+        int victim_id;
         int time;
         int expiry;
         int row = 0;
@@ -127,14 +130,14 @@ class BattleRoyaleKillFeed
         // Newest event first; events arrive in time order, so the first expired one ends the list
         for ( int serial = br_rpc.kill_feed_serial - 1; serial >= 0 && row < ROW_COUNT; serial-- )
         {
-            if ( !br_rpc.GetKillFeedEvent( serial, kill_type, flags, killer, victim, item, distance, time ) )
+            if ( !br_rpc.GetKillFeedEvent( serial, kill_type, flags, killer, victim, item, distance, killer_id, victim_id, time ) )
                 break;
 
             expiry = time + ROW_LIFETIME_MS;
             if ( expiry <= now )
                 break;
 
-            FillRow( row, kill_type, flags, killer, victim, item, distance );
+            FillRow( row, kill_type, flags, killer, victim, item, distance, IsLocalPlayer( killer_id ) || IsLocalPlayer( victim_id ) );
             m_RowTime[row] = time;
             m_RowAlpha[row] = -1;
 
@@ -209,10 +212,9 @@ class BattleRoyaleKillFeed
         }
     }
 
-    protected void FillRow( int row, int kill_type, int flags, string killer, string victim, string item, int distance )
+    //! own: the event names the local player as killer or victim
+    protected void FillRow( int row, int kill_type, int flags, string killer, string victim, string item, int distance, bool own )
     {
-        string local_name = GetLocalName();
-        bool own = local_name != "" && ( killer == local_name || victim == local_name );
         m_RowOwn[row] = own;
 
         Widget row_widget = m_Rows[row];
@@ -275,18 +277,21 @@ class BattleRoyaleKillFeed
         back.SetSize( end + ROW_PADDING, ROW_HEIGHT );
     }
 
-    //! Name of the local player; empty until it is known
-    protected string GetLocalName()
+    //! True when player_id is the session id of the local player. Names are not compared: two players
+    //! can have the same one. The id is read once, while the player has a character, and kept
+    protected bool IsLocalPlayer( int player_id )
     {
-        PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
-        if ( player )
+        if ( player_id < 0 )
+            return false;
+
+        if ( m_LocalPlayerId < 0 )
         {
-            string name = player.BR_GetPlayerName();
-            if ( name != "" )
-                m_LocalName = name;
+            Man player = GetGame().GetPlayer();
+            if ( player && player.GetIdentity() )
+                m_LocalPlayerId = player.GetIdentity().GetPlayerId();
         }
 
-        return m_LocalName;
+        return player_id == m_LocalPlayerId;
     }
 
     protected string ClipName( string name )

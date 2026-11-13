@@ -5,6 +5,7 @@ class BattleRoyaleKillFeedEntry
 	int m_Type = EBRKillFeedType.DIED;  //!< EBRKillFeedType
 	int m_Flags;                        //!< BRKillFeedFlags
 	string m_KillerName;                //!< empty when the death names nobody
+	int m_KillerId = -1;                //!< PlayerIdentity.GetPlayerId() of the killer; -1 when unknown or nobody
 	string m_ItemClass;                 //!< class name of the weapon, explosive, vehicle or animal; empty when none
 	int m_Distance;                     //!< whole metres between killer and victim; 0 when it does not apply
 	string m_ActivatorId;               //!< plain id of who set off the explosive; the caller turns it into a name
@@ -24,6 +25,35 @@ class BattleRoyaleKillFeedClassifier
 	static const string AMMO_BARBED_WIRE = "BarbedWireHit";  //!< area damage of BarbedWire
 	static const string AMMO_TRANSPORT = "TransportHit";  //!< EntityAI: body hit by a moving vehicle
 
+	//! True when what killed the victim is on record: a zone tick or a damage that names its cause
+	//! (fall, fire, barbed wire, vehicle, explosion). Such a death is not a blood loss, whatever the blood level
+	static bool HasRecordedCause(PlayerBase victim)
+	{
+		if (!victim)
+			return false;
+
+		int now = GetGame().GetTime();
+		if (IsZoneKill(victim, now))
+			return true;
+
+		if (!IsDamageInFlight(victim, now))
+			return false;
+
+		return ClassifyByDamage(victim.br_last_damage_ammo, victim.br_last_damage_type) != EBRKillFeedType.DIED;
+	}
+
+	//! Only the zone tick that killed keeps its stamp (PlayerBase.BR_ZoneDamage)
+	protected static bool IsZoneKill(PlayerBase victim, int now)
+	{
+		return victim.br_zone_damage_time > 0 && now - victim.br_zone_damage_time <= ZONE_DAMAGE_WINDOW_MS;
+	}
+
+	//! A damage was being applied when the victim died (PlayerBase forgets a damage it survived)
+	protected static bool IsDamageInFlight(PlayerBase victim, int now)
+	{
+		return victim.br_last_damage_time > 0 && now - victim.br_last_damage_time <= LETHAL_DAMAGE_WINDOW_MS;
+	}
+
 	//! source is what EEKilled named as killer: null or the victim for a death without one.
 	//! bleed_out is true when the death is a blood loss credited to the last player who hit the victim
 	static void Classify(PlayerBase victim, Object source, bool bleed_out, BattleRoyaleKillFeedEntry entry)
@@ -33,12 +63,11 @@ class BattleRoyaleKillFeedClassifier
 
 		int now = GetGame().GetTime();
 
-		// Damage that was being applied when the victim died, if any (PlayerBase forgets a damage it survived)
-		bool lethal_damage = victim.br_last_damage_time > 0 && now - victim.br_last_damage_time <= LETHAL_DAMAGE_WINDOW_MS;
+		// Damage that was being applied when the victim died, if any
 		string ammo = "";
 		string zone = "";
 		int damage_type = -1;
-		if (lethal_damage)
+		if (IsDamageInFlight(victim, now))
 		{
 			ammo = victim.br_last_damage_ammo;
 			zone = victim.br_last_damage_zone;
@@ -69,6 +98,12 @@ class BattleRoyaleKillFeedClassifier
 
 		if (!source || source == victim || holder == victim)
 		{
+			// What killed, when it is on record, comes before what the victim was doing or how much
+			// blood it had: a zone tick or a fall can kill during a suicide animation or a bleeding
+			entry.m_Type = ClassifyRecordedCause(victim, ammo, damage_type, now);
+			if (entry.m_Type != EBRKillFeedType.DIED)
+				return;
+
 			// The suicide flag is raised while the animation plays; a kill by someone else in the
 			// meantime has its own source and never gets here
 			if (victim.CommitedSuicide())
@@ -83,12 +118,13 @@ class BattleRoyaleKillFeedClassifier
 			{
 				entry.m_Type = EBRKillFeedType.BLEED_OUT;
 				entry.m_KillerName = victim.br_last_player_hit_name;
+				entry.m_KillerId = victim.br_last_player_hit_player_id;
 				entry.m_ItemClass = victim.br_last_player_hit_weapon;
 				entry.m_Distance = Math.Round(victim.br_last_player_hit_distance);
 				return;
 			}
 
-			entry.m_Type = ClassifyWithoutKiller(victim, ammo, damage_type, now);
+			entry.m_Type = ClassifyByState(victim);
 			if (entry.m_Type == EBRKillFeedType.VEHICLE_CRASH)
 				entry.m_ItemClass = GetVehicleClass(victim);
 			return;
@@ -112,8 +148,9 @@ class BattleRoyaleKillFeedClassifier
 		if (holder && holder.GetIdentity())
 		{
 			entry.m_KillerName = holder.GetIdentity().GetName();
+			entry.m_KillerId = holder.GetIdentity().GetPlayerId();
 
-			if (source == holder && victim.IsAlive())
+			if (source == holder && victim.BR_IsAlive())
 			{
 				// Not a death by damage: the victim left the game unconscious, still alive, and the server
 				// names who knocked it out. The feed shows the last hit that player landed
@@ -191,17 +228,19 @@ class BattleRoyaleKillFeedClassifier
 		return EBRKillFeedType.DIED;
 	}
 
-	//! Cause of a death that names no killer, from the most to the least specific evidence
-	protected static int ClassifyWithoutKiller(PlayerBase victim, string ammo, int damage_type, int now)
+	//! Cause of a death without a killer that is on record: the zone tick that killed, or the damage
+	//! being applied; DIED when there is neither
+	protected static int ClassifyRecordedCause(PlayerBase victim, string ammo, int damage_type, int now)
 	{
-		// Only the zone tick that killed keeps its stamp (PlayerBase.BR_ZoneDamage)
-		if (victim.br_zone_damage_time > 0 && now - victim.br_zone_damage_time <= ZONE_DAMAGE_WINDOW_MS)
+		if (IsZoneKill(victim, now))
 			return EBRKillFeedType.ZONE;
 
-		int by_damage = ClassifyByDamage(ammo, damage_type);
-		if (by_damage != EBRKillFeedType.DIED)
-			return by_damage;
+		return ClassifyByDamage(ammo, damage_type);
+	}
 
+	//! Cause of a death without a killer and without a recorded cause, read from the state of the victim
+	protected static int ClassifyByState(PlayerBase victim)
+	{
 		if (victim.br_bled_out)
 			return EBRKillFeedType.BLEED_OUT;
 

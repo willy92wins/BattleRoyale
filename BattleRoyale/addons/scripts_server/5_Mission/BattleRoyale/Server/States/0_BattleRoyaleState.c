@@ -810,6 +810,10 @@ class BattleRoyaleState: Timeable
 		if (!victim.br_bled_out || victim.br_last_player_hit_name == "")
 			return false;
 
+		// Low on blood, but killed by a zone tick, a fall or another damage that names its cause
+		if (BattleRoyaleKillFeedClassifier.HasRecordedCause(victim))
+			return false;
+
 		return GetGame().GetTime() - victim.br_last_player_hit_time <= BLEED_OUT_CREDIT_SECONDS * 1000;
 	}
 
@@ -897,15 +901,21 @@ class BattleRoyaleState: Timeable
 		GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "AddPlayerKill", new Param1<int>(1), true, identity, killer);
 	}
 
-	//! Tells every client about the death: cause, names, weapon and distance (KillFeedEvent, see
+	//! Tells every client about the death: cause, names, player ids, weapon and distance (KillFeedEvent, see
 	//! BattleRoyale_dev/contracts/rpc-1.0.md). The cause is decided here, clients only draw it
 	protected void BroadcastKillFeed(PlayerBase victim, Object source, bool bleed_out)
 	{
 		string victim_name = "";
+		int victim_id = -1;
 		if (victim && victim.GetIdentity())
+		{
 			victim_name = victim.GetIdentity().GetName();
+			victim_id = victim.GetIdentity().GetPlayerId();
+		}
 		else if (victim)
+		{
 			victim_name = victim.BR_GetPlayerName();
+		}
 
 		BattleRoyaleKillFeedEntry entry = new BattleRoyaleKillFeedEntry();
 		BattleRoyaleKillFeedClassifier.Classify(victim, source, bleed_out, entry);
@@ -923,21 +933,26 @@ class BattleRoyaleState: Timeable
 				if (activator)
 				{
 					entry.m_KillerName = activator.GetIdentity().GetName();
+					entry.m_KillerId = activator.GetIdentity().GetPlayerId();
 					entry.m_Distance = Math.Round(vector.Distance(victim.GetPosition(), activator.GetPosition()));
 				}
 
-				// Dead by now: the name it had when the match started
+				// Dead by now: the name it had when the match started, and its id if it is still connected
 				if (entry.m_KillerName == "" && s_MatchPlayerNames)
 				{
 					string stored_name = "";
 					if (s_MatchPlayerNames.Find(entry.m_ActivatorId, stored_name))
 						entry.m_KillerName = stored_name;
+
+					PlayerIdentity activator_identity = FindConnectedIdentity(entry.m_ActivatorId);
+					if (entry.m_KillerName != "" && activator_identity)
+						entry.m_KillerId = activator_identity.GetPlayerId();
 				}
 			}
 		}
 
 		int meta = entry.m_Type | (entry.m_Flags << 8);
-		GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "KillFeedEvent", new Param5<int, string, string, string, int>(meta, entry.m_KillerName, victim_name, entry.m_ItemClass, entry.m_Distance), true);
+		GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "KillFeedEvent", new Param7<int, string, string, string, int, int, int>(meta, entry.m_KillerName, victim_name, entry.m_ItemClass, entry.m_Distance, entry.m_KillerId, victim_id), true);
 	}
 }
 

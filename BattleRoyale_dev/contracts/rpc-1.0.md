@@ -7,7 +7,7 @@ value for the HUD. Existing RPCs keep their names and payloads.
 | RPC | Payload | Sent when | Client use |
 |---|---|---|---|
 | `SetMatchPhase` | `Param2<int, int>`: phase (`EBRMatchPhase`), seconds left in the phase (`-1` if unknown) | On every state `Activate()` and when a round timer is (re)armed; unicast to a player on connect/reconnect | HUD phase text and timer label |
-| `KillFeedEvent` | `Param5<int, string, string, string, int>`: meta = cause (`EBRKillFeedType`) in bits 0-7 and flags (`BRKillFeedFlags`) in bits 8-15, killer name (empty when the death names nobody), victim name, class name of the weapon, explosive, vehicle or animal (empty if none; the client shows its display name in its own language), distance in whole metres (0 when it does not apply) | Once per player death in a running match, broadcast | Killfeed widget, fixed pool of 6 rows: icon of the cause, sentence, weapon and distance |
+| `KillFeedEvent` | `Param7<int, string, string, string, int, int, int>`: meta = cause (`EBRKillFeedType`) in bits 0-7 and flags (`BRKillFeedFlags`) in bits 8-15, killer name (empty when the death names nobody), victim name, class name of the weapon, explosive, vehicle or animal (empty if none; the client shows its display name in its own language), distance in whole metres (0 when it does not apply), `PlayerIdentity.GetPlayerId()` of the killer and of the victim (-1 when unknown or nobody; the client compares them with its own to mark its rows) | Once per player death in a running match, broadcast | Killfeed widget, fixed pool of 6 rows: icon of the cause, sentence, weapon and distance |
 
 Rules:
 - Broadcast once, never one unicast per player with the same payload.

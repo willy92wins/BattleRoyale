@@ -418,12 +418,15 @@ class BattleRoyaleRPC
 	protected string m_KillFeedVictim[KILL_FEED_SIZE];
 	protected string m_KillFeedItem[KILL_FEED_SIZE];   //!< name of the weapon, explosive, vehicle or animal in the client's language
 	protected int m_KillFeedDistance[KILL_FEED_SIZE];  //!< metres, 0 when it does not apply
+	protected int m_KillFeedKillerId[KILL_FEED_SIZE];  //!< PlayerIdentity.GetPlayerId() of the killer, -1 when unknown or nobody
+	protected int m_KillFeedVictimId[KILL_FEED_SIZE];  //!< same for the victim
 	protected int m_KillFeedTime[KILL_FEED_SIZE];      //!< GetGame().GetTime() at reception
 
 	void KillFeedEvent(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
-		// meta (type | flags << 8), killer name, victim name, item class name, distance in metres
-		Param5<int, string, string, string, int> data;
+		// meta (type | flags << 8), killer name, victim name, item class name, distance in metres,
+		// player id of the killer, player id of the victim
+		Param7<int, string, string, string, int, int, int> data;
 		if( !ctx.Read( data ) )
 		{
 			Error("FAILED TO READ KILLFEEDEVENT RPC");
@@ -432,7 +435,7 @@ class BattleRoyaleRPC
 		if ( type == CallType.Client )
 		{
 			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
-				BattleRoyaleUtils.Trace(string.Format("KillFeedEvent: %1 %2 %3 %4 %5", data.param1, data.param2, data.param3, data.param4, data.param5));
+				BattleRoyaleUtils.Trace(string.Format("KillFeedEvent: %1 %2 %3 %4 %5 %6 %7", data.param1, data.param2, data.param3, data.param4, data.param5, data.param6, data.param7));
 
 			// A type this client does not know (newer server) is drawn as a plain death
 			int kill_type = data.param1 & 0xFF;
@@ -446,6 +449,8 @@ class BattleRoyaleRPC
 			m_KillFeedVictim[slot] = data.param3;
 			m_KillFeedItem[slot] = GetKillFeedItemName( data.param4 );
 			m_KillFeedDistance[slot] = data.param5;
+			m_KillFeedKillerId[slot] = data.param6;
+			m_KillFeedVictimId[slot] = data.param7;
 			m_KillFeedTime[slot] = GetGame().GetTime();
 			kill_feed_serial++;
 		}
@@ -469,7 +474,7 @@ class BattleRoyaleRPC
 	}
 
 	//! Reads the kill feed event number 'serial' (0 based); false if it was never received or was already overwritten
-	bool GetKillFeedEvent(int serial, out int kill_type, out int flags, out string killer, out string victim, out string item, out int distance, out int time)
+	bool GetKillFeedEvent(int serial, out int kill_type, out int flags, out string killer, out string victim, out string item, out int distance, out int killer_id, out int victim_id, out int time)
 	{
 		if ( serial < 0 || serial >= kill_feed_serial || serial < kill_feed_serial - KILL_FEED_SIZE )
 			return false;
@@ -481,6 +486,8 @@ class BattleRoyaleRPC
 		victim = m_KillFeedVictim[slot];
 		item = m_KillFeedItem[slot];
 		distance = m_KillFeedDistance[slot];
+		killer_id = m_KillFeedKillerId[slot];
+		victim_id = m_KillFeedVictimId[slot];
 		time = m_KillFeedTime[slot];
 		return true;
 	}

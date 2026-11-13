@@ -27,6 +27,7 @@ modded class PlayerBase
 	// Last hit taken from another player, kept to credit that player with a later bleed out
 	PlayerBase br_last_player_hit_by;
 	string br_last_player_hit_name;  //!< empty until another player hits this one
+	int br_last_player_hit_player_id = -1;  //!< PlayerIdentity.GetPlayerId() of that player
 	int br_last_player_hit_time;  //!< GetGame().GetTime() of that hit, in ms
 	string br_last_player_hit_weapon;  //!< class name of the weapon, empty for fists
 	int br_last_player_hit_type;  //!< EBRKillFeedType of that hit: FIREARM, MELEE or FISTS
@@ -48,8 +49,15 @@ modded class PlayerBase
 	{
 		br_zone_damage_time = GetGame().GetTime();
 		DecreaseHealthCoef( damage_coef );
-		if ( IsAlive() )
+		if ( BR_IsAlive() )
 			br_zone_damage_time = 0;
+	}
+
+	//! True while the player is neither destroyed nor out of health. Either sign alone means dead: which
+	//! of the two the engine updates first when a damage kills is not documented
+	bool BR_IsAlive()
+	{
+		return IsAlive() && GetHealth( "", "" ) > 0;
 	}
 
 	void SetBRPosition( int position )
@@ -103,7 +111,7 @@ modded class PlayerBase
 		super.EEHitBy(damageResult, damageType, source, component, dmgZone, ammo, modelPos, speedCoef);
 
 		// Survived: that damage will not be the cause of a later death
-		if ( IsAlive() )
+		if ( BR_IsAlive() )
 			br_last_damage_time = 0;
 
 		if (!source)
@@ -131,6 +139,7 @@ modded class PlayerBase
 				if ( hit_name == "" )
 					hit_name = playerSource.GetIdentity().GetName();
 				br_last_player_hit_name = hit_name;
+				br_last_player_hit_player_id = playerSource.GetIdentity().GetPlayerId();
 				br_last_player_hit_time = GetGame().GetTime();
 				br_last_player_hit_weapon = "";
 				br_last_player_hit_type = EBRKillFeedType.FISTS;
