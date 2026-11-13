@@ -27,6 +27,7 @@ DSSIGN = os.path.join(TOOLS, "DsUtils", "DSSignFile.exe")
 DEFAULT_KEY = r"C:\Users\guill\Repos\br-keys\BattleRoyaleCommunity.biprivatekey"
 GENERATED = {"$pboprefix$", "$pboprefix$.txt", "texheaders.bin"}
 SKIP_SOURCE = {"$pboprefix$", "removed.md"}
+ASSET_EXT = (".edds", ".paa", ".ogg", ".wss", ".p3d")  # the extensions tools/sync_assets.py copies
 
 
 def pbo_entries(path):
@@ -84,6 +85,39 @@ def build_one(name, key, temp, addons=ADDONS, out=OUT):
     print(f"ok {name}: {len(expected)} files, {os.path.getsize(pbo)} bytes, prefix {prefix}")
 
 
+def missing_assets():
+    """Binary assets (textures, sounds, models) are gitignored and live only in the main checkout.
+    When building from another worktree, return the main checkout and the ignored asset files it
+    has under BattleRoyale/ and BattleRoyale_VPP/ that this tree lacks; the PBOs would ship without
+    them. Returns (None, []) when this is the main checkout or git cannot tell."""
+    try:
+        common = subprocess.run(["git", "-C", ROOT, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                                capture_output=True, text=True, check=True).stdout.strip()
+        main_root = os.path.dirname(os.path.normpath(common))
+        if os.path.normcase(os.path.abspath(main_root)) == os.path.normcase(ROOT):
+            return None, []
+        listed = subprocess.run(["git", "-C", main_root, "ls-files", "--others", "--ignored", "--exclude-standard",
+                                 "--", "BattleRoyale", "BattleRoyale_VPP"],
+                                capture_output=True, text=True, check=True).stdout.splitlines()
+    except (OSError, subprocess.CalledProcessError):
+        return None, []
+    assets = [p for p in listed if p.lower().endswith(ASSET_EXT)]
+    return main_root, [p for p in assets if not os.path.isfile(os.path.join(ROOT, p))]
+
+
+def warn_missing_assets():
+    main_root, missing = missing_assets()
+    if not missing:
+        return
+    print(f"WARNING: {len(missing)} asset file(s) of the main checkout are missing in this worktree, "
+          "so the PBOs will ship without them (missing textures, imagesets, models):")
+    for p in missing[:10]:
+        print("  " + p)
+    if len(missing) > 10:
+        print(f"  ... and {len(missing) - 10} more")
+    print(f"  Copy them first: python -I {os.path.join(main_root, 'tools', 'sync_assets.py')} {ROOT}")
+
+
 def addon_names(addons):
     return sorted(d for d in os.listdir(addons) if os.path.isfile(os.path.join(addons, d, "config.cpp")))
 
@@ -125,11 +159,14 @@ def main():
             raise SystemExit(f"FAIL unknown addon {unknown}")
         names = [n for n in names if n in a.only]
         vpp_names = [n for n in vpp_names if n in a.only]
+    warn_missing_assets()
     temp = os.path.join(ROOT, "build", "abtemp")
     if names or not a.only:
         build_mod(ADDONS, OUT, names, not a.only, a.key, temp, os.path.join(ROOT, "BattleRoyale", "mod.cpp"))
     if vpp_names or not a.only:
         build_mod(VPP_ADDONS, VPP_OUT, vpp_names, not a.only, a.key, temp, os.path.join(ROOT, "BattleRoyale_VPP", "mod.cpp"))
+    # Repeated at the end so it is not lost above the AddonBuilder output
+    warn_missing_assets()
 
 
 if __name__ == "__main__":
