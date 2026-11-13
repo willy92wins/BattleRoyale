@@ -409,18 +409,21 @@ class BattleRoyaleRPC
 
 	// Kill feed, stored in a fixed ring buffer until the HUD reads it
 
-	static const int KILL_FEED_SIZE = 5;
+	static const int KILL_FEED_SIZE = 8; //!< at least the number of rows of BattleRoyaleKillFeed
 
 	int kill_feed_serial = 0; //!< number of KillFeedEvent received since Reset
-	protected string m_KillFeedKiller[KILL_FEED_SIZE];
+	protected int m_KillFeedType[KILL_FEED_SIZE];      //!< EBRKillFeedType
+	protected int m_KillFeedFlags[KILL_FEED_SIZE];     //!< BRKillFeedFlags
+	protected string m_KillFeedKiller[KILL_FEED_SIZE]; //!< empty when the death names nobody
 	protected string m_KillFeedVictim[KILL_FEED_SIZE];
-	protected string m_KillFeedWeapon[KILL_FEED_SIZE];
-	protected float m_KillFeedDistance[KILL_FEED_SIZE];
-	protected int m_KillFeedTime[KILL_FEED_SIZE];
+	protected string m_KillFeedItem[KILL_FEED_SIZE];   //!< name of the weapon, explosive, vehicle or animal in the client's language
+	protected int m_KillFeedDistance[KILL_FEED_SIZE];  //!< metres, 0 when it does not apply
+	protected int m_KillFeedTime[KILL_FEED_SIZE];      //!< GetGame().GetTime() at reception
 
 	void KillFeedEvent(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
-		Param4<string, string, string, float> data;
+		// meta (type | flags << 8), killer name, victim name, item class name, distance in metres
+		Param5<int, string, string, string, int> data;
 		if( !ctx.Read( data ) )
 		{
 			Error("FAILED TO READ KILLFEEDEVENT RPC");
@@ -429,27 +432,54 @@ class BattleRoyaleRPC
 		if ( type == CallType.Client )
 		{
 			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
-				BattleRoyaleUtils.Trace(string.Format("KillFeedEvent: %1 %2 %3 %4", data.param1, data.param2, data.param3, data.param4));
+				BattleRoyaleUtils.Trace(string.Format("KillFeedEvent: %1 %2 %3 %4 %5", data.param1, data.param2, data.param3, data.param4, data.param5));
+
+			// A type this client does not know (newer server) is drawn as a plain death
+			int kill_type = data.param1 & 0xFF;
+			if ( kill_type >= EBRKillFeedType.COUNT )
+				kill_type = EBRKillFeedType.DIED;
+
 			int slot = kill_feed_serial % KILL_FEED_SIZE;
-			m_KillFeedKiller[slot] = data.param1;
-			m_KillFeedVictim[slot] = data.param2;
-			m_KillFeedWeapon[slot] = data.param3;
-			m_KillFeedDistance[slot] = data.param4;
+			m_KillFeedType[slot] = kill_type;
+			m_KillFeedFlags[slot] = ( data.param1 >> 8 ) & 0xFF;
+			m_KillFeedKiller[slot] = data.param2;
+			m_KillFeedVictim[slot] = data.param3;
+			m_KillFeedItem[slot] = GetKillFeedItemName( data.param4 );
+			m_KillFeedDistance[slot] = data.param5;
 			m_KillFeedTime[slot] = GetGame().GetTime();
 			kill_feed_serial++;
 		}
 	}
 
+	//! Display name of an item, vehicle or creature class in the client's language; the class name itself when the config has none
+	protected string GetKillFeedItemName(string class_name)
+	{
+		if ( class_name == "" )
+			return "";
+
+		string name = "";
+		if ( GetGame().ConfigGetText( "CfgWeapons " + class_name + " displayName", name ) && name != "" )
+			return name;
+		if ( GetGame().ConfigGetText( "CfgVehicles " + class_name + " displayName", name ) && name != "" )
+			return name;
+		if ( GetGame().ConfigGetText( "CfgMagazines " + class_name + " displayName", name ) && name != "" )
+			return name;
+
+		return class_name;
+	}
+
 	//! Reads the kill feed event number 'serial' (0 based); false if it was never received or was already overwritten
-	bool GetKillFeedEvent(int serial, out string killer, out string victim, out string weapon, out float distance, out int time)
+	bool GetKillFeedEvent(int serial, out int kill_type, out int flags, out string killer, out string victim, out string item, out int distance, out int time)
 	{
 		if ( serial < 0 || serial >= kill_feed_serial || serial < kill_feed_serial - KILL_FEED_SIZE )
 			return false;
 
 		int slot = serial % KILL_FEED_SIZE;
+		kill_type = m_KillFeedType[slot];
+		flags = m_KillFeedFlags[slot];
 		killer = m_KillFeedKiller[slot];
 		victim = m_KillFeedVictim[slot];
-		weapon = m_KillFeedWeapon[slot];
+		item = m_KillFeedItem[slot];
 		distance = m_KillFeedDistance[slot];
 		time = m_KillFeedTime[slot];
 		return true;

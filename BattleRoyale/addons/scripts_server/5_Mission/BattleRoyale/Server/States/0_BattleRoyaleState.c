@@ -897,72 +897,47 @@ class BattleRoyaleState: Timeable
 		GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "AddPlayerKill", new Param1<int>(1), true, identity, killer);
 	}
 
+	//! Tells every client about the death: cause, names, weapon and distance (KillFeedEvent, see
+	//! BattleRoyale_dev/contracts/rpc-1.0.md). The cause is decided here, clients only draw it
 	protected void BroadcastKillFeed(PlayerBase victim, Object source, bool bleed_out)
 	{
-		string killer_name = "";
 		string victim_name = "";
-		string weapon_name = "";
-		float distance_m = 0;
-
 		if (victim && victim.GetIdentity())
 			victim_name = victim.GetIdentity().GetName();
+		else if (victim)
+			victim_name = victim.BR_GetPlayerName();
 
-		if (source && victim)
+		BattleRoyaleKillFeedEntry entry = new BattleRoyaleKillFeedEntry();
+		BattleRoyaleKillFeedClassifier.Classify(victim, source, bleed_out, entry);
+
+		// A grenade or mine names who set it off by plain id. Blowing oneself up names nobody
+		if (entry.m_ActivatorId != "" && victim)
 		{
-			PlayerBase playerSource;
-			EntityAI source_ai = EntityAI.Cast(source);
-			if (source_ai)
-				playerSource = PlayerBase.Cast(source_ai.GetHierarchyParent());
-			if (!playerSource)
-				playerSource = PlayerBase.Cast(source);
+			bool own_explosive = false;
+			if (victim.GetIdentity())
+				own_explosive = victim.GetIdentity().GetPlainId() == entry.m_ActivatorId;
 
-			if (playerSource && playerSource != victim && playerSource.GetIdentity())
+			if (!own_explosive)
 			{
-				killer_name = playerSource.GetIdentity().GetName();
-				distance_m = vector.Distance(victim.GetPosition(), playerSource.GetPosition());
-			}
-
-			string activator_id = "";
-			Grenade_Base grenade = Grenade_Base.Cast(source);
-			LandMineTrap mine = LandMineTrap.Cast(source);
-			if (grenade)
-				activator_id = grenade.GetActivatorId();
-			else if (mine)
-				activator_id = mine.GetActivatorId();
-
-			if (killer_name == "" && activator_id != "")
-			{
-				PlayerBase activator = FindMatchPlayer(activator_id);
+				PlayerBase activator = FindMatchPlayer(entry.m_ActivatorId);
 				if (activator)
 				{
-					killer_name = activator.GetIdentity().GetName();
-					distance_m = vector.Distance(victim.GetPosition(), activator.GetPosition());
+					entry.m_KillerName = activator.GetIdentity().GetName();
+					entry.m_Distance = Math.Round(vector.Distance(victim.GetPosition(), activator.GetPosition()));
 				}
 
-				if (killer_name == "" && s_MatchPlayerNames)
+				// Dead by now: the name it had when the match started
+				if (entry.m_KillerName == "" && s_MatchPlayerNames)
 				{
 					string stored_name = "";
-					if (s_MatchPlayerNames.Find(activator_id, stored_name) && stored_name != "")
-						killer_name = stored_name;
+					if (s_MatchPlayerNames.Find(entry.m_ActivatorId, stored_name))
+						entry.m_KillerName = stored_name;
 				}
 			}
-
-			if (source_ai)
-			{
-				if (source.IsWeapon() || source.IsMeleeWeapon() || grenade || mine)
-					weapon_name = source_ai.GetDisplayName();
-			}
 		}
 
-		// A bleed out names the last player who hit the victim, with the weapon and distance of that hit
-		if (killer_name == "" && bleed_out)
-		{
-			killer_name = victim.br_last_player_hit_name;
-			weapon_name = victim.br_last_player_hit_weapon;
-			distance_m = victim.br_last_player_hit_distance;
-		}
-
-		GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "KillFeedEvent", new Param4<string, string, string, float>(killer_name, victim_name, weapon_name, distance_m), true);
+		int meta = entry.m_Type | (entry.m_Flags << 8);
+		GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "KillFeedEvent", new Param5<int, string, string, string, int>(meta, entry.m_KillerName, victim_name, entry.m_ItemClass, entry.m_Distance), true);
 	}
 }
 
