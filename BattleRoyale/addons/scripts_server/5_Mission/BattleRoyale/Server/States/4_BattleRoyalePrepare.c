@@ -19,6 +19,9 @@ class BattleRoyalePrepare: BattleRoyaleState
 
     private string last_village_spawn = "";
 
+    //! First play area, resolved once in Activate: i_NumStartingPlayers is fixed for the whole state
+    protected ref BattleRoyalePlayArea m_FirstArea;
+
     ref map<string, vector> m_OverrideSpawnPositions;
     protected ref map<string, ref array<vector>> m_SafeVillagePoints;
     protected bool m_PlayersProcessed;
@@ -51,6 +54,9 @@ class BattleRoyalePrepare: BattleRoyaleState
         super.Activate();
         RememberMatchPlayers();
         BroadcastMatchPhase(EBRMatchPhase.PREPARE, -1);
+
+        //! Resolve the starting area once for this match instead of per spawn candidate
+        m_FirstArea = BattleRoyaleZone.GetZone(GetDynamicStartingZone(i_NumStartingPlayers)).GetArea();
 
 		if ( m_ServerData.enable_vigrid_api )
 		{
@@ -350,9 +356,12 @@ class BattleRoyalePrepare: BattleRoyaleState
         z = village_z + ( radius * Math.Sin(angle) );
         y = GetGame().SurfaceY(x, z);
 
-        // Get the distance between the center of the village and the random point
-        float distance = Math.Sqrt(Math.Pow(x - village_x, 2) + Math.Pow(z - village_z, 2));
-        BattleRoyaleUtils.Trace("Distance from village center: " + distance + " (from an initial radius of " + village_pad + ")");
+        //! The distance is only for the trace, so only compute it when that level prints
+        if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE))
+        {
+            float distance = Math.Sqrt(Math.Pow(x - village_x, 2) + Math.Pow(z - village_z, 2));
+            BattleRoyaleUtils.Trace("Distance from village center: " + distance + " (from an initial radius of " + village_pad + ")");
+        }
 
         BattleRoyaleUtils.Trace("Trying to spawn player to " + village.Name + " (" + village.Type + ") with a radius of " + village_pad);
 
@@ -369,11 +378,11 @@ class BattleRoyalePrepare: BattleRoyaleState
             vector village_pos = "0 0 0";
             bool village_pos_fresh = false;
             if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Spawn in zone " + GetDynamicStartingZone(i_NumStartingPlayers));
-            ref BattleRoyalePlayArea spawn_area = BattleRoyaleZone.GetZone(GetDynamicStartingZone(i_NumStartingPlayers)).GetArea();
+            ref BattleRoyalePlayArea spawn_area = m_FirstArea;
             int spawn_checks = 0;
             for(int village_spawn_try = 1; village_spawn_try <= 40 && spawn_checks < 600; village_spawn_try++)
             {
-                BattleRoyaleUtils.Trace("Try to spawn in village " + village_spawn_try);
+                if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Try to spawn in village " + village_spawn_try);
 
                 village = NULL;
                 if(m_SpawnsSettings.spawn_in_first_zone)
@@ -383,7 +392,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 
                 if (village != NULL && village.Name != "")
                 {
-                    BattleRoyaleUtils.Trace("Found village " + village.Name);
+                    if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Found village " + village.Name);
                     village_pos = "0 0 0";
                     village_pos_fresh = false;
                     vector search_for_village = "0 0 0";
@@ -417,7 +426,7 @@ class BattleRoyalePrepare: BattleRoyaleState
                     for(int search_pos = 1; search_pos <= 15 && spawn_checks < 600; search_pos++)
                     {
                         spawn_checks++;
-                        BattleRoyaleUtils.Trace("Try to find a position in village " + search_pos);
+                        if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Try to find a position in village " + search_pos);
                         search_for_village = GetRandomVillagePosition(village);
 
                         if(!IsAcceptedSpawn(search_for_village))
@@ -442,7 +451,7 @@ class BattleRoyalePrepare: BattleRoyaleState
                         continue;
                     }
 
-                    BattleRoyaleUtils.Trace("Found village position " + village_pos);
+                    if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Found village position " + village_pos);
                     random_pos = village_pos; // Found a valid village position
                     if( village.Type == NamedLocation.CAPITAL || village.Type == NamedLocation.CITY )
                     	last_village_spawn = village.Name; // Save last village spawn to avoid it next time
@@ -462,7 +471,7 @@ class BattleRoyalePrepare: BattleRoyaleState
             int world_size = GetGame().GetWorld().GetWorldSize();
             for (int random_spawn_try = 1; random_spawn_try <= 40; random_spawn_try++)
             {
-                BattleRoyaleUtils.Trace("Try to spawn at random position " + random_spawn_try);
+                if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Try to spawn at random position " + random_spawn_try);
 
                 float x = Math.RandomFloatInclusive((world_size * edge_pad), world_size - (world_size * edge_pad));
                 float z = Math.RandomFloatInclusive((world_size * edge_pad), world_size - (world_size * edge_pad));
@@ -494,13 +503,13 @@ class BattleRoyalePrepare: BattleRoyaleState
 
     protected vector GetRandomSafePosition(vector position = "0 0 0", float radius = 100.0)
 	{
-		BattleRoyaleUtils.Trace("GetRandomSafePosition() with position " + position + " and radius " + radius);
+		if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("GetRandomSafePosition() with position " + position + " and radius " + radius);
 
 		vector random_pos = "0 0 0";
 		int max_spawn_try = 50;
 		for(int i = 0; i < max_spawn_try; i++)
 		{
-			BattleRoyaleUtils.Trace("Try to spawn at random position " + i);
+			if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Try to spawn at random position " + i);
 
 			random_pos[0] = position[0] + Math.RandomFloatInclusive(-radius-i, radius+i);
 			random_pos[2] = position[2] + Math.RandomFloatInclusive(-radius-i, radius+i);
@@ -508,7 +517,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 
 			if(!IsAcceptedSpawn(random_pos))
 			{
-				BattleRoyaleUtils.Trace("Position " + random_pos + " is not safe, we try again");
+				if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Position " + random_pos + " is not safe, we try again");
 				random_pos = "0 0 0";  // Reset random_pos to zero vector
 				continue;
 			}
@@ -527,7 +536,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 
     protected bool IsInsideExpandedFirstZone(vector pos)
     {
-        BattleRoyalePlayArea area = BattleRoyaleZone.GetZone(GetDynamicStartingZone(i_NumStartingPlayers)).GetArea();
+        BattleRoyalePlayArea area = m_FirstArea;
         if (!area)
             return false;
 
@@ -552,7 +561,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 
     protected vector GetValidatedReserve()
     {
-        BattleRoyalePlayArea area = BattleRoyaleZone.GetZone(GetDynamicStartingZone(i_NumStartingPlayers)).GetArea();
+        BattleRoyalePlayArea area = m_FirstArea;
         if (!area)
             return vector.Zero;
 
@@ -578,7 +587,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 
     protected bool IsInsideFirstZone(vector pos)
     {
-        BattleRoyalePlayArea area = BattleRoyaleZone.GetZone(GetDynamicStartingZone(i_NumStartingPlayers)).GetArea();
+        BattleRoyalePlayArea area = m_FirstArea;
         if (!area)
             return false;
 
@@ -592,7 +601,7 @@ class BattleRoyalePrepare: BattleRoyaleState
     // Growing rings inside the first zone. Collision is preferred; the last point only has to be on the map and inside the zone.
     protected vector GetLastResortSpawn()
     {
-        BattleRoyalePlayArea area = BattleRoyaleZone.GetZone(GetDynamicStartingZone(i_NumStartingPlayers)).GetArea();
+        BattleRoyalePlayArea area = m_FirstArea;
         if (!area)
             return vector.Zero;
 
@@ -688,12 +697,12 @@ class BattleRoyalePrepare: BattleRoyaleState
             PlayerBase player = group.Get(i);
             if(player && player.GetIdentity())
             {
-                BattleRoyaleUtils.Trace("Teleport player " + player.BR_GetPlayerName() + " to position " + position);
+                if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Teleport player " + player.BR_GetPlayerName() + " to position " + position);
 
                 vector accepted = vector.Zero;
                 for (int spawn_try = 1; spawn_try <= 50; spawn_try++)
                 {
-                    BattleRoyaleUtils.Trace("Try Group " + spawn_try);
+                    if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Try Group " + spawn_try);
                     float x = position[0] + Math.RandomFloatInclusive(-5.0, 5.0);
                     float z = position[2] + Math.RandomFloatInclusive(-5.0, 5.0);
                     float y = GetGame().SurfaceY(x, z);
@@ -754,7 +763,9 @@ class BattleRoyalePrepare: BattleRoyaleState
 
         if (village)
         {
-            direction = vector.Direction(player.GetPosition(), village.Position);
+            //! Face the village from the final spawn position, not from the lobby, and keep it level
+            direction = vector.Direction(position, village.Position);
+            direction[1] = 0;
         } else {
             //random direction
             float dir = Math.RandomFloat(0, 360); //non-inclusive, 360==0
@@ -974,7 +985,9 @@ class BattleRoyalePrepare: BattleRoyaleState
         if(player.time_until_heal <= 0)
         {
             player.time_until_heal = 5;
-            player.Heal();
+            //! Skip the full heal when the vitals are already at their maximum
+            if (VitalsNeedHeal(player))
+                player.Heal();
         }
 
         player.time_until_heal -= timeslice;
@@ -996,8 +1009,12 @@ class BattleRoyalePrepare: BattleRoyaleState
         ref array<PlayerBase> players = super.RemoveAllPlayers();
         foreach(PlayerBase player: players)
         {
-            player.SetAllowDamage(true); //leaving debug state = disable god mode
-            player.Heal();
+            //! A player destroyed during preparation can still be in the copied list
+            if (player)
+            {
+                player.SetAllowDamage(true); //leaving debug state = disable god mode
+                player.Heal();
+            }
         }
 
         return players;

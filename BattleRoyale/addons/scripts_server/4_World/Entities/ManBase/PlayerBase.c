@@ -158,10 +158,14 @@ modded class PlayerBase
 			}
 		} else {
 			last_unconscious_source = NULL;
-			string victim_name = "unknown";
-			if (GetIdentity())
-				victim_name = GetIdentity().GetName();
-			BattleRoyaleUtils.Info("Player " + victim_name + " was hit by an unknown source.");
+			//! Only build the name and message when the Info level will print them
+			if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.INFO))
+			{
+				string victim_name = "unknown";
+				if (GetIdentity())
+					victim_name = GetIdentity().GetName();
+				BattleRoyaleUtils.Info("Player " + victim_name + " was hit by an unknown source.");
+			}
 		}
 	}
 

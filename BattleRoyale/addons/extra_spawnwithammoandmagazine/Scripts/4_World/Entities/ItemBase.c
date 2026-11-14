@@ -6,6 +6,12 @@ modded class ItemBase
 	protected static int m_BRMinSpawnAmmo;
 	protected static int m_BRMaxSpawnAmmo;
 
+	//! Config does not change at runtime: cache it by class instead of reading it for every CE weapon
+	protected static ref map<string, int> m_BRMagazineCapacityCache;
+	protected static ref map<string, ref array<string>> m_BRChamberableFromCache;
+	//! 1 when the ammo class has an economy profile with nominal above zero, 0 when it does not
+	protected static ref map<string, int> m_BRAmmoNominalCache;
+
 	// Thanks to @incinatus for this
 	override void EEOnCECreate()
 	{
@@ -59,6 +65,8 @@ modded class ItemBase
 			// Try to spawn a magazine of the weapon's compatible magazines
 			if( magazineType != string.Empty )
 			{
+				if( !m_BRMagazineCapacityCache )
+					m_BRMagazineCapacityCache = new map<string, int>();
 				int spawnCount = Math.RandomIntInclusive(min_spawn, max_spawn);
 				int validMagazinesSpawned = 0;
 				int maxAttempts = spawnCount * 10; // Set a reasonable limit to prevent infinite loops
@@ -71,7 +79,12 @@ modded class ItemBase
 					magazineType = weapon.GetRandomMagazineTypeName(0);
 
 					// Skip high capacity magazines (check if > 100 rounds)
-					int maxMagCapacity = GetGame().ConfigGetInt("CfgMagazines " + magazineType + " count");
+					int maxMagCapacity;
+					if( !m_BRMagazineCapacityCache.Find(magazineType, maxMagCapacity) )
+					{
+						maxMagCapacity = GetGame().ConfigGetInt("CfgMagazines " + magazineType + " count");
+						m_BRMagazineCapacityCache.Insert(magazineType, maxMagCapacity);
+					}
 					if(maxMagCapacity > 100)
 					{
 						continue; // Try another magazine type without counting it as spawned
@@ -87,22 +100,53 @@ modded class ItemBase
 			else  // No compatible magazines, try to spawn chamberable ammo piles instead
 			{
 				int ammoSpawnCount = Math.RandomIntInclusive(min_spawn, max_spawn);
-				array<string> ammoTypes = new array<string>;
-				ConfigGetTextArray("chamberableFrom", ammoTypes);
+				if( !m_BRChamberableFromCache )
+					m_BRChamberableFromCache = new map<string, ref array<string>>();
+				if( !m_BRAmmoNominalCache )
+					m_BRAmmoNominalCache = new map<string, int>();
+
+				//! chamberableFrom is fixed per weapon class, so read it once and share the list
+				string weaponType = GetType();
+				array<string> ammoTypes;
+				if( m_BRChamberableFromCache.Contains(weaponType) )
+				{
+					ammoTypes = m_BRChamberableFromCache.Get(weaponType);
+				}
+				else
+				{
+					ammoTypes = new array<string>;
+					ConfigGetTextArray("chamberableFrom", ammoTypes);
+					m_BRChamberableFromCache.Insert(weaponType, ammoTypes);
+				}
 				if( ammoTypes.Count() > 0 )
 				{
 					for( int j = 0; j < ammoSpawnCount; j++ )
 					{
 						string ammoType = ammoTypes.GetRandomElement();
+
+						//! A class already known to have no economy profile would only be created to be deleted
+						int ammoNominal;
+						bool ammoNominalKnown = m_BRAmmoNominalCache.Find(ammoType, ammoNominal);
+						if( ammoNominalKnown && ammoNominal == 0 )
+							continue;
+
 						EntityAI ammoPile = EntityAI.Cast(GetGame().CreateObjectEx( ammoType, GetPosition(), ECE_CREATEPHYSICS|ECE_UPDATEPATHGRAPH ));
 						if (!ammoPile)
 							continue;
 
-						if( ammoPile.GetEconomyProfile() == NULL || ammoPile.GetEconomyProfile().GetNominal() == 0 )
+						if( !ammoNominalKnown )
 						{
-							// Ammo pile has no economy profile, delete it
-							// We don't try to spawn one more to avoid infinite loop
-							ammoPile.Delete();
+							ammoNominal = 1;
+							if( ammoPile.GetEconomyProfile() == NULL || ammoPile.GetEconomyProfile().GetNominal() == 0 )
+								ammoNominal = 0;
+							m_BRAmmoNominalCache.Insert(ammoType, ammoNominal);
+
+							if( ammoNominal == 0 )
+							{
+								// Ammo pile has no economy profile, delete it
+								// We don't try to spawn one more to avoid infinite loop
+								ammoPile.Delete();
+							}
 						}
 					}
 //					string ammoType = weapon.GetRandomChamberableAmmoTypeName(0);
