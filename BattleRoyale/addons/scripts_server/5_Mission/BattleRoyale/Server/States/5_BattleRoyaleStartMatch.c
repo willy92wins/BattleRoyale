@@ -9,6 +9,8 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 
     protected ref array<PlayerBase> a_PlayerList;
 
+    static const int BR_UNSTUCK_COOLDOWN_MS = 30000;  //!< per-player wait after an unstuck finishes, tuned by the owner
+
     protected ref array<ref Timer> m_MessageTimers;
     protected ref Timer m_UnlockTimer;
     protected ref Timer m_ShowFirstZone;
@@ -77,6 +79,17 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 
     override void Deactivate()
     {
+        //! Cancel pending unstucks so none teleports after this state ends
+        GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).RemoveByName(this, "Unstuck");
+        foreach (PlayerBase pending_player: m_Players)
+        {
+            if (pending_player)
+            {
+                pending_player.wait_unstuck = false;
+                pending_player.br_unstuck_repeat_notified = false;
+            }
+        }
+
         //deactivate all one-time timers
         if ( m_UnlockTimer && m_UnlockTimer.IsRunning() )
         {
@@ -185,23 +198,41 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 
     void DeferredUnstuck( PlayerBase player )
 	{
+		if( !player )
+			return;
+
+		//! Discard silently while this player's previous unstuck is still cooling down
+		if( GetGame().GetTime() < player.br_unstuck_ready_at )
+			return;
+
 		if( !player.wait_unstuck )
 		{
 			player.wait_unstuck = true;
+			player.br_unstuck_repeat_notified = false;
 			MessagePlayerUntranslated( player, "STR_BR_UNSTUCK_TELEPORTATION" );
 			BattleRoyaleUtils.Trace( player.BR_GetPlayerName() + " asked for an unstuck teleportation." );
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLaterByName(this, "Unstuck", Math.RandomFloat(1, 3) * 1000 , false, new Param1<PlayerBase>( player ));
 		}
-		else
+		else if( !player.br_unstuck_repeat_notified )
 		{
+			//! Tell the player only once per pending request
+			player.br_unstuck_repeat_notified = true;
 			MessagePlayerUntranslated( player, "STR_BR_ALREADY_REQUESTED_UNSTUCK" );
 		}
 	}
 
 	void Unstuck( PlayerBase player )
 	{
-        if (!player || !player.GetIdentity())
+        if (!player)
             return;
+
+        //! A pending unstuck must not teleport outside this state, for a player who left it or died while waiting
+        if (!player.GetIdentity() || !IsActive() || !ContainsPlayer(player) || !player.BR_IsAlive())
+        {
+            player.wait_unstuck = false;
+            player.br_unstuck_repeat_notified = false;
+            return;
+        }
 
 		bool unstuckSuccess = false;
 		for(int search_pos = 0; search_pos < 50; search_pos++)
@@ -227,6 +258,9 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 				player.SendSyncJuncture( 88, pCtx );
 				player.SetSynchDirty();
 				player.wait_unstuck = false;
+				player.br_unstuck_repeat_notified = false;
+				//! The cooldown starts when the unstuck finishes, not when it was asked for
+				player.br_unstuck_ready_at = GetGame().GetTime() + BR_UNSTUCK_COOLDOWN_MS;
 
 				unstuckSuccess = true;
 				break;
@@ -237,6 +271,9 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 		{
 			BattleRoyaleUtils.Warn( player.BR_GetPlayerName() + " unstuck failed at " + player.GetPosition() );
 			player.wait_unstuck = false;
+			player.br_unstuck_repeat_notified = false;
+			//! The cooldown starts when the unstuck finishes, not when it was asked for
+			player.br_unstuck_ready_at = GetGame().GetTime() + BR_UNSTUCK_COOLDOWN_MS;
 		}
 	}
 

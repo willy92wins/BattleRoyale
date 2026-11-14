@@ -12,6 +12,8 @@ modded class PlayerBase
     bool force_result = true;
 
     bool wait_unstuck = false;
+    int br_unstuck_ready_at;  //!< mission time in ms before which a new unstuck is discarded, set when an unstuck finishes
+    bool br_unstuck_repeat_notified = false;  //!< the already-requested notice was sent for the pending unstuck
 
     string owner_id = "";
 
