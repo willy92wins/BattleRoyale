@@ -46,6 +46,13 @@ modded class VONManagerImplementation
 	override void SetMaxVolume(int max_level)
 	{
 		max_voice_level = max_level;
+
+		// Lower the active level at once, not only on the next voice key press (e.g. back to whisper in the lobby)
+		if ( GetGame() && GetGame().GetVoiceLevel() > max_voice_level )
+		{
+			GetGame().SetVoiceLevel( max_voice_level );
+			ShowVoiceNotification( max_voice_level, true );
+		}
 	}
 }
 #endif
