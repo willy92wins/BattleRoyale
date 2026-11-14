@@ -168,6 +168,10 @@ class BattleRoyaleServer: BattleRoyaleBase
     //! Matches ended in this server run
     protected static int s_MatchesEnded = 0;
     protected ref BRMatchTurnover m_Turnover;
+    //! A match ended while the previous turnover was still cleaning: served when that turnover ends
+    protected bool m_TurnoverPending;
+    //! The current turnover aborted and the server is exiting: a pending request is dropped with it
+    protected bool m_TurnoverAborted;
     //! identity id -> character class of the last body, so a spectator returns to the lobby with the same look
     protected ref map<string, string> m_CharacterTypes;
 
@@ -176,7 +180,12 @@ class BattleRoyaleServer: BattleRoyaleBase
     bool RequestTurnover()
     {
         if (m_Turnover)
+        {
+            // A match cannot end before the lobby opens, so this is the clean phase outliving the next
+            // match: keep the request instead of dropping it, Update serves it when this turnover ends
+            m_TurnoverPending = true;
             return true;
+        }
 
         BattleRoyaleServerData serverData = BattleRoyaleConfig.GetConfig().GetServerData();
         if (!serverData || !serverData.UsesSerialMatches())
@@ -500,6 +509,8 @@ class BattleRoyaleServer: BattleRoyaleBase
     //! The turnover could not finish: exit as without serial matches, the restart loop starts a clean server
     void Turnover_Abort(string reason)
     {
+        // The server exits anyway, so a turnover request pending behind this one is dropped with it
+        m_TurnoverAborted = true;
         Error("[Serial] Turnover aborted (" + reason + "), restarting the server");
         GetGame().RequestExit(0);
     }
@@ -535,7 +546,19 @@ class BattleRoyaleServer: BattleRoyaleBase
         // A serial match turnover replaces m_States, so it runs before the states are iterated.
         // Released here, after Step returned, never from inside it
         if (m_Turnover && !m_Turnover.Step())
+        {
             m_Turnover = null;
+
+            // A match ended while this turnover was still cleaning: serve its request now, through the
+            // same counting and scheduled-restart decision as a request with no turnover running
+            if (m_TurnoverPending)
+            {
+                m_TurnoverPending = false;
+                if (!m_TurnoverAborted && !RequestTurnover())
+                    GetGame().RequestExit(0);
+            }
+            m_TurnoverAborted = false;
+        }
 
         foreach(BattleRoyaleState state: m_States)
         {

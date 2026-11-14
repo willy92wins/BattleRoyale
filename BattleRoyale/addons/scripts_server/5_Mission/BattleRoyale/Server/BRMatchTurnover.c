@@ -150,6 +150,10 @@ class BRMatchTurnover
 			if (m_Retry.Count() == 0)
 			{
 				m_Phase = PHASE_CLEAN;
+				// This step can return nobody while a connect or disconnect changed the held count since
+				// the last batch: publish it once here, so this also replaces the per-batch send below
+				m_Server.Turnover_BroadcastPlayerCount();
+				return true;
 			}
 			else
 			{
@@ -161,7 +165,7 @@ class BRMatchTurnover
 			}
 		}
 
-		// One count per batch that returned someone, also on the step that moves on to PHASE_CLEAN
+		// One count per batch that returned someone (the step into PHASE_CLEAN already sent its count above)
 		if (m_Returned > returned_before)
 			m_Server.Turnover_BroadcastPlayerCount();
 
