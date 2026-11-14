@@ -190,7 +190,7 @@ class BattleRoyaleState: Timeable
 
     void AddPlayer(PlayerBase player)
     {
-    	BattleRoyaleUtils.Info(string.Format("BattleRoyaleState::AddPlayer: %1", player.BR_GetPlayerName()));
+    	if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.INFO)) BattleRoyaleUtils.Info(string.Format("BattleRoyaleState::AddPlayer: %1", player.BR_GetPlayerName()));
         m_Players.Insert( player );
         player.br_in_current_state = true;
         OnPlayerCountChanged();
@@ -210,7 +210,7 @@ class BattleRoyaleState: Timeable
         if (!ContainsPlayer(player))
             return;
 
-    	BattleRoyaleUtils.Info(string.Format("BattleRoyaleState::RemovePlayer: %1", player.BR_GetPlayerName()));
+    	if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.INFO)) BattleRoyaleUtils.Info(string.Format("BattleRoyaleState::RemovePlayer: %1", player.BR_GetPlayerName()));
         m_Players.RemoveItem(player);
         player.br_in_current_state = false;
         OnPlayerCountChanged();
@@ -218,7 +218,7 @@ class BattleRoyaleState: Timeable
 
     ref array<PlayerBase> RemoveAllPlayers()
     {
-    	BattleRoyaleUtils.Debug(string.Format("BattleRoyaleState::RemoveAllPlayers: removed %1 players", m_Players.Count()));
+    	if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.DEBUG)) BattleRoyaleUtils.Debug(string.Format("BattleRoyaleState::RemoveAllPlayers: removed %1 players", m_Players.Count()));
         ref array<PlayerBase> result_array = new array<PlayerBase>();
         result_array.InsertAll(m_Players);
         if (b_IsDebug)
@@ -769,7 +769,10 @@ class BattleRoyaleState: Timeable
 				vector killer_position = "0 0 0";
 
 				// Does the source is a carrier and the carrier a Player?
-				PlayerBase playerSource = PlayerBase.Cast( EntityAI.Cast( source ).GetHierarchyParent() );
+				EntityAI source_ai = EntityAI.Cast( source );
+				PlayerBase playerSource;
+				if ( source_ai )
+					playerSource = PlayerBase.Cast( source_ai.GetHierarchyParent() );
 				if (!playerSource)
 				{
 					// If not, does the source is a Player?
@@ -799,7 +802,7 @@ class BattleRoyaleState: Timeable
 				else {
 					json_data.Insert( "killer_position", source.GetPosition().ToString() );
 
-					if (playerSource)
+					if (playerSource && playerSource.GetIdentity())
 					{
 						json_data.Insert( "killer", playerSource.GetIdentity().GetPlainId() );
 						if (source.IsWeapon() || source.IsMeleeWeapon())
