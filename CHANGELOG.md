@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Kill feed: each death now shows an icon for its cause, a sentence that names killer and victim, and the
+  weapon, the distance and "headshot" next to it. The server tells apart firearm, melee, fists, explosive,
+  run over, vehicle crash, fall, zone, bleed out, infected, animal, suicide, drowning, fire and barbed
+  wire. Six rows, newest on top, 6 s each; rows slide and fade in, and fade out; the rows that name the
+  local player have a gold bar. Weapon names appear in the client's language. Sentences in English and
+  Spanish.
+- The `KillFeedEvent` RPC carries `Param7<int, string, string, string, int, int, int>` instead of
+  `Param4<string, string, string, float>`: server and clients must run the same build.
+- A death by a zone tick, a fall, fire, barbed wire, a vehicle or an explosion is no longer credited as a
+  bleed out to the last player who hit the victim, even when the victim was low on blood.
+
 ## 1.3.0 (2026-11-13)
 
 ### Changed

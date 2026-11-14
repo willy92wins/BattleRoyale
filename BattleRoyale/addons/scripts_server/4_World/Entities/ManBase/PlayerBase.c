@@ -29,9 +29,36 @@ modded class PlayerBase
 	PlayerBase br_last_player_hit_by;
 	string br_last_player_hit_name;  //!< empty until another player hits this one
 	int br_last_player_hit_time;  //!< GetGame().GetTime() of that hit, in ms
-	string br_last_player_hit_weapon;  //!< display name of the weapon, empty for fists
+	string br_last_player_hit_weapon;  //!< class name of the weapon, empty for fists
+	int br_last_player_hit_type;  //!< EBRKillFeedType of that hit: FIREARM, MELEE or FISTS
 	float br_last_player_hit_distance;  //!< metres between the two players at the hit, 0 in melee
 	bool br_bled_out;  //!< set when this player dies: its blood was under the fatal level, so the death was blood loss
+
+	// Damage being applied, written right before the engine applies it and forgotten once the player has
+	// survived it, so that at death it is the damage that killed. The kill feed reads it to tell a fall,
+	// a fire or an explosion apart
+	int br_last_damage_time;  //!< GetGame().GetTime() of that damage, in ms; 0 when there is none
+	int br_last_damage_type;  //!< DamageType
+	string br_last_damage_ammo;  //!< ammo name, such as "FallDamageHealth" or "TransportHit"
+	string br_last_damage_zone;  //!< damage zone, such as "Brain" or "Torso"
+	int br_zone_damage_time;  //!< GetGame().GetTime() of the damage tick outside the play area that killed this player; 0 when none did
+
+	//! Damage tick taken outside the play area. The stamp stays only when the tick killed, so that the
+	//! kill feed names the zone for that death and for no other
+	void BR_ZoneDamage( float damage_coef )
+	{
+		br_zone_damage_time = GetGame().GetTime();
+		DecreaseHealthCoef( damage_coef );
+		if ( BR_IsAlive() )
+			br_zone_damage_time = 0;
+	}
+
+	//! True while the player is neither destroyed nor out of health. Either sign alone means dead: which
+	//! of the two the engine updates first when a damage kills is not documented
+	bool BR_IsAlive()
+	{
+		return IsAlive() && GetHealth( "", "" ) > 0;
+	}
 
 	void SetBRPosition( int position )
 	{
@@ -65,9 +92,27 @@ modded class PlayerBase
             m_BR.OnPlayerKilled(this, killer);
     }
 
+    override bool EEOnDamageCalculated(TotalDamageResult damageResult, int damageType, EntityAI source, int component, string dmgZone, string ammo, vector modelPos, float speedCoef)
+    {
+        bool apply = super.EEOnDamageCalculated(damageResult, damageType, source, component, dmgZone, ammo, modelPos, speedCoef);
+        if (apply)
+        {
+            br_last_damage_time = GetGame().GetTime();
+            br_last_damage_type = damageType;
+            br_last_damage_ammo = ammo;
+            br_last_damage_zone = dmgZone;
+        }
+
+        return apply;
+    }
+
     override void EEHitBy(TotalDamageResult damageResult, int damageType, EntityAI source, int component, string dmgZone, string ammo, vector modelPos, float speedCoef)
 	{
 		super.EEHitBy(damageResult, damageType, source, component, dmgZone, ammo, modelPos, speedCoef);
+
+		// Survived: that damage will not be the cause of a later death
+		if ( BR_IsAlive() )
+			br_last_damage_time = 0;
 
 		if (!source)
 		{
@@ -96,11 +141,19 @@ modded class PlayerBase
 				br_last_player_hit_name = hit_name;
 				br_last_player_hit_time = GetGame().GetTime();
 				br_last_player_hit_weapon = "";
+				br_last_player_hit_type = EBRKillFeedType.FISTS;
 				br_last_player_hit_distance = 0;
-				if ( source.IsWeapon() || source.IsMeleeWeapon() )
-					br_last_player_hit_weapon = source.GetDisplayName();
-				if ( source.IsWeapon() )
+				if ( source != playerSource )
+				{
+					br_last_player_hit_weapon = source.GetType();
+					br_last_player_hit_type = EBRKillFeedType.MELEE;
+				}
+				// A firearm used to strike stays a melee hit
+				if ( source.IsWeapon() && damageType != DamageType.CLOSE_COMBAT )
+				{
+					br_last_player_hit_type = EBRKillFeedType.FIREARM;
 					br_last_player_hit_distance = vector.Distance( GetPosition(), playerSource.GetPosition() );
+				}
 			}
 		} else {
 			last_unconscious_source = NULL;

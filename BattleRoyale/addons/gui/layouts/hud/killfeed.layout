@@ -10,96 +10,497 @@ FrameWidgetClass KillFeedRoot {
   FrameWidgetClass KillFeedPanel {
    ignorepointer 1
    position 0.05 0.05
-   size 700 148
+   size 960 200
    hexactpos 0
    vexactpos 0
    hexactsize 1
    vexactsize 1
    {
-    TextWidgetClass KillFeedRow0 {
+    FrameWidgetClass KillFeedRow0 {
      visible 0
      ignorepointer 1
      position 0 0
-     size 1 28
+     size 960 30
      hexactpos 1
      vexactpos 1
-     hexactsize 0
+     hexactsize 1
      vexactsize 1
-     style Bold
-     font "gui/fonts/etelkatextpro"
-     "exact text" 0
-     "outline size" 1
-     "outline color" 0 0 0 1
-     "text halign" left
-     "text valign" center
+     {
+      PanelWidgetClass KillFeedRow0Back {
+       ignorepointer 1
+       color 0 0 0 0.55
+       position 0 0
+       size 960 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass KillFeedRow0Accent {
+       ignorepointer 1
+       color 1 1 1 0.5
+       position 0 0
+       size 3 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      ImageWidgetClass KillFeedRow0Icon {
+       ignorepointer 1
+       position 10 3
+       size 24 24
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       image0 "set:dayz_gui image:iconSkull"
+       mode blend
+       "src alpha" 1
+       "no wrap" 1
+       stretch 1
+      }
+      TextWidgetClass KillFeedRow0Text {
+       ignorepointer 1
+       position 42 1
+       size 910 28
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style Bold
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" left
+       "text valign" center
+      }
+      TextWidgetClass KillFeedRow0Detail {
+       visible 0
+       ignorepointer 1
+       color 0.78 0.78 0.78 1
+       position 360 5
+       size 330 22
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" left
+       "text valign" center
+      }
+     }
     }
-    TextWidgetClass KillFeedRow1 {
+    FrameWidgetClass KillFeedRow1 {
      visible 0
      ignorepointer 1
-     position 0 30
-     size 1 28
+     position 0 34
+     size 960 30
      hexactpos 1
      vexactpos 1
-     hexactsize 0
+     hexactsize 1
      vexactsize 1
-     style Bold
-     font "gui/fonts/etelkatextpro"
-     "exact text" 0
-     "outline size" 1
-     "outline color" 0 0 0 1
-     "text halign" left
-     "text valign" center
+     {
+      PanelWidgetClass KillFeedRow1Back {
+       ignorepointer 1
+       color 0 0 0 0.55
+       position 0 0
+       size 960 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass KillFeedRow1Accent {
+       ignorepointer 1
+       color 1 1 1 0.5
+       position 0 0
+       size 3 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      ImageWidgetClass KillFeedRow1Icon {
+       ignorepointer 1
+       position 10 3
+       size 24 24
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       image0 "set:dayz_gui image:iconSkull"
+       mode blend
+       "src alpha" 1
+       "no wrap" 1
+       stretch 1
+      }
+      TextWidgetClass KillFeedRow1Text {
+       ignorepointer 1
+       position 42 1
+       size 910 28
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style Bold
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" left
+       "text valign" center
+      }
+      TextWidgetClass KillFeedRow1Detail {
+       visible 0
+       ignorepointer 1
+       color 0.78 0.78 0.78 1
+       position 360 5
+       size 330 22
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" left
+       "text valign" center
+      }
+     }
     }
-    TextWidgetClass KillFeedRow2 {
+    FrameWidgetClass KillFeedRow2 {
      visible 0
      ignorepointer 1
-     position 0 60
-     size 1 28
+     position 0 68
+     size 960 30
      hexactpos 1
      vexactpos 1
-     hexactsize 0
+     hexactsize 1
      vexactsize 1
-     style Bold
-     font "gui/fonts/etelkatextpro"
-     "exact text" 0
-     "outline size" 1
-     "outline color" 0 0 0 1
-     "text halign" left
-     "text valign" center
+     {
+      PanelWidgetClass KillFeedRow2Back {
+       ignorepointer 1
+       color 0 0 0 0.55
+       position 0 0
+       size 960 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass KillFeedRow2Accent {
+       ignorepointer 1
+       color 1 1 1 0.5
+       position 0 0
+       size 3 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      ImageWidgetClass KillFeedRow2Icon {
+       ignorepointer 1
+       position 10 3
+       size 24 24
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       image0 "set:dayz_gui image:iconSkull"
+       mode blend
+       "src alpha" 1
+       "no wrap" 1
+       stretch 1
+      }
+      TextWidgetClass KillFeedRow2Text {
+       ignorepointer 1
+       position 42 1
+       size 910 28
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style Bold
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" left
+       "text valign" center
+      }
+      TextWidgetClass KillFeedRow2Detail {
+       visible 0
+       ignorepointer 1
+       color 0.78 0.78 0.78 1
+       position 360 5
+       size 330 22
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" left
+       "text valign" center
+      }
+     }
     }
-    TextWidgetClass KillFeedRow3 {
+    FrameWidgetClass KillFeedRow3 {
      visible 0
      ignorepointer 1
-     position 0 90
-     size 1 28
+     position 0 102
+     size 960 30
      hexactpos 1
      vexactpos 1
-     hexactsize 0
+     hexactsize 1
      vexactsize 1
-     style Bold
-     font "gui/fonts/etelkatextpro"
-     "exact text" 0
-     "outline size" 1
-     "outline color" 0 0 0 1
-     "text halign" left
-     "text valign" center
+     {
+      PanelWidgetClass KillFeedRow3Back {
+       ignorepointer 1
+       color 0 0 0 0.55
+       position 0 0
+       size 960 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass KillFeedRow3Accent {
+       ignorepointer 1
+       color 1 1 1 0.5
+       position 0 0
+       size 3 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      ImageWidgetClass KillFeedRow3Icon {
+       ignorepointer 1
+       position 10 3
+       size 24 24
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       image0 "set:dayz_gui image:iconSkull"
+       mode blend
+       "src alpha" 1
+       "no wrap" 1
+       stretch 1
+      }
+      TextWidgetClass KillFeedRow3Text {
+       ignorepointer 1
+       position 42 1
+       size 910 28
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style Bold
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" left
+       "text valign" center
+      }
+      TextWidgetClass KillFeedRow3Detail {
+       visible 0
+       ignorepointer 1
+       color 0.78 0.78 0.78 1
+       position 360 5
+       size 330 22
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" left
+       "text valign" center
+      }
+     }
     }
-    TextWidgetClass KillFeedRow4 {
+    FrameWidgetClass KillFeedRow4 {
      visible 0
      ignorepointer 1
-     position 0 120
-     size 1 28
+     position 0 136
+     size 960 30
      hexactpos 1
      vexactpos 1
-     hexactsize 0
+     hexactsize 1
      vexactsize 1
-     style Bold
-     font "gui/fonts/etelkatextpro"
-     "exact text" 0
-     "outline size" 1
-     "outline color" 0 0 0 1
-     "text halign" left
-     "text valign" center
+     {
+      PanelWidgetClass KillFeedRow4Back {
+       ignorepointer 1
+       color 0 0 0 0.55
+       position 0 0
+       size 960 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass KillFeedRow4Accent {
+       ignorepointer 1
+       color 1 1 1 0.5
+       position 0 0
+       size 3 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      ImageWidgetClass KillFeedRow4Icon {
+       ignorepointer 1
+       position 10 3
+       size 24 24
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       image0 "set:dayz_gui image:iconSkull"
+       mode blend
+       "src alpha" 1
+       "no wrap" 1
+       stretch 1
+      }
+      TextWidgetClass KillFeedRow4Text {
+       ignorepointer 1
+       position 42 1
+       size 910 28
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style Bold
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" left
+       "text valign" center
+      }
+      TextWidgetClass KillFeedRow4Detail {
+       visible 0
+       ignorepointer 1
+       color 0.78 0.78 0.78 1
+       position 360 5
+       size 330 22
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" left
+       "text valign" center
+      }
+     }
+    }
+    FrameWidgetClass KillFeedRow5 {
+     visible 0
+     ignorepointer 1
+     position 0 170
+     size 960 30
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass KillFeedRow5Back {
+       ignorepointer 1
+       color 0 0 0 0.55
+       position 0 0
+       size 960 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass KillFeedRow5Accent {
+       ignorepointer 1
+       color 1 1 1 0.5
+       position 0 0
+       size 3 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      ImageWidgetClass KillFeedRow5Icon {
+       ignorepointer 1
+       position 10 3
+       size 24 24
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       image0 "set:dayz_gui image:iconSkull"
+       mode blend
+       "src alpha" 1
+       "no wrap" 1
+       stretch 1
+      }
+      TextWidgetClass KillFeedRow5Text {
+       ignorepointer 1
+       position 42 1
+       size 910 28
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style Bold
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" left
+       "text valign" center
+      }
+      TextWidgetClass KillFeedRow5Detail {
+       visible 0
+       ignorepointer 1
+       color 0.78 0.78 0.78 1
+       position 360 5
+       size 330 22
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" left
+       "text valign" center
+      }
+     }
     }
    }
   }

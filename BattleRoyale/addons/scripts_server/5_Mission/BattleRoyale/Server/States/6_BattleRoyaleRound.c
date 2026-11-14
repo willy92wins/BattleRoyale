@@ -319,7 +319,7 @@ class BattleRoyaleRound: BattleRoyaleState
                     //DAMAGE
 				    player.GetSymptomManager().QueueUpPrimarySymptom(SymptomIDs.SYMPTOM_PAIN_LIGHT);
                     //TODO: determine if this last health tick will kill the player
-                    player.DecreaseHealthCoef( f_Damage ); //TODO: delta this by the # of zones that have ticked (more zones = more damage)
+                    player.BR_ZoneDamage( f_Damage ); //TODO: delta this by the # of zones that have ticked (more zones = more damage)
                     player.time_until_damage = i_DamageTickTime; //reset timer
                 }
                 player.time_until_damage -= timeslice;
