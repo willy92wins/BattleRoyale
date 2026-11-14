@@ -17,8 +17,9 @@ class BattleRoyaleRestart: BattleRoyaleState
         if (server_data && server_data.enable_vigrid_api)
             delay = SHUTDOWN_DELAY_SECONDS_WITH_API;
 
-        // Serial matches: the server stays up, the clients keep "match over" until they are back in the lobby
-        if (BRMatchDebris.s_Enabled)
+        //! RESTARTING only when the server will actually exit after this match; in serial matches without a restart due the clients keep "match over" until they are back in the lobby
+        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+        if (server && !server.WillRestartAfterMatch())
             BroadcastMatchPhase(EBRMatchPhase.FINISHED, -1);
         else
             BroadcastMatchPhase(EBRMatchPhase.RESTARTING, delay);

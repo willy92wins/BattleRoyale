@@ -17,6 +17,11 @@ class BRAdminController
 		if (!server)
 			return;
 
+		//! Restart is the last state and its shutdown timer is the only exit: skipping it would stop the timer and leave the server stuck, so Next is ignored there
+		BattleRoyaleRestart restart_state;
+		if (Class.CastTo(restart_state, server.GetCurrentState()))
+			return;
+
 		BattleRoyaleUtils.Trace("[DayZBR] State machine skipping");
 		server.GetCurrentState().Deactivate();
 	}
