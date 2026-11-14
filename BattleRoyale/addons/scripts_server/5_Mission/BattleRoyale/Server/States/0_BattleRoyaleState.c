@@ -289,8 +289,30 @@ class BattleRoyaleState: Timeable
 #endif
 
 			//BattleRoyaleUtils.Trace(string.Format("OnPlayerCountChanged: %1 %2", nb_players, nb_groups));
+			// Serial turnover: the count broadcast is held while players return (asked each time, so an
+			// aborted turnover releases it on its own) and sent once per batch by BroadcastPlayerCount
+			BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+			if (server && server.IsReturningPlayers())
+				return;
+
 			GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetPlayerCount", new Param2<int, int>( nb_players, nb_groups ), true);
 		}
+	}
+
+	//! The current player count to every client, once per return batch while OnPlayerCountChanged is held
+	void BroadcastPlayerCount()
+	{
+		if (!IsActive())
+			return;
+
+		int nb_players = GetPlayers().Count();
+		int nb_groups = -2;
+#ifdef Carim
+		nb_groups = GetGroupsCount();
+		if (nb_players < 10 && hide_players_endgame && !b_IsDebug)
+			nb_groups = -1;
+#endif
+		GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetPlayerCount", new Param2<int, int>( nb_players, nb_groups ), true);
 	}
 
 	//! The counts of the last OnPlayerCountChanged, to one client whose HUD was reset after it (waiting room)
