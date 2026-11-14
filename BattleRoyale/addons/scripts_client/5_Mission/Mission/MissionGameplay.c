@@ -66,6 +66,8 @@ modded class MissionGameplay
 		// Set again by the next server that runs serial matches or the waiting room
 		BattleRoyaleRPC.s_StayConnected = false;
 		BattleRoyaleRPC.s_WaitingRoom = false;
+		// A direct reconnect skips the main menu, which is the other place that clears the spectator statics
+		BattleRoyaleRPC.ResetSpectating();
 
 		super.OnMissionFinish();
 	}
@@ -96,6 +98,8 @@ modded class MissionGameplay
 #endif
 		BattleRoyaleRPC.ResetSpectating();
 		BattleRoyaleRPC.RestoreAfterDeath();
+		// Back in the lobby the voice goes back to whisper; SetMaxVolume also lowers a shout still active
+		VONManager.GetInstance().SetMaxVolume( VoiceLevelWhisper );
 		if ( GetHud() )
 			GetHud().Show( true );
 

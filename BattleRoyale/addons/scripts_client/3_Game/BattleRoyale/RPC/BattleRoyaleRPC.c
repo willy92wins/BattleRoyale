@@ -162,8 +162,9 @@ class BattleRoyaleRPC
 
 	void Reset()
 	{
-		nb_players = 0;
-		nb_groups = 0;
+		// -1/-2 mean no count received yet, so the HUD shows no "0" until the server sends one
+		nb_players = -1;
+		nb_groups = -2;
 		fade_state = false;
 		input_state = false;
 		player_kills = 0;
@@ -184,8 +185,8 @@ class BattleRoyaleRPC
 
 	// Set the number of players and groups
 
-	int nb_players = 0;
-	int nb_groups = 0;
+	int nb_players = -1;
+	int nb_groups = -2;
 
 	void SetPlayerCount(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{

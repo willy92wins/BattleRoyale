@@ -41,6 +41,8 @@ class BattleRoyaleKillFeed
     protected float m_PanelOffset;  //!< x of KillFeedPanel last set by Place, -1 while it has the one of the layout
     protected float m_LayoutOffset;         //!< m_PanelOffset the rows on screen were laid out for
     protected float m_LayoutCentreRight;    //!< right edge of the centred lines the rows were laid out for, -1 for none
+    protected int m_LayoutScreenW;          //!< screen width the rows on screen were laid out for, -1 for none
+    protected int m_LayoutScreenH;          //!< screen height the rows on screen were laid out for, -1 for none
     protected Widget m_Rows[ROW_COUNT];
     protected Widget m_Backs[ROW_COUNT];
     protected Widget m_Accents[ROW_COUNT];
@@ -67,6 +69,8 @@ class BattleRoyaleKillFeed
         m_PanelOffset = -1;
         m_LayoutOffset = -1;
         m_LayoutCentreRight = -1;
+        m_LayoutScreenW = -1;
+        m_LayoutScreenH = -1;
 
         if ( !GetGame() || !GetGame().GetWorkspace() )
             return;
@@ -143,14 +147,21 @@ class BattleRoyaleKillFeed
         if ( hud )
             centre_right = hud.GetCentreLinesRight();
 
-        // Rows on screen are laid out again when their room changed: the panel moved, or the centred lines grew
-        if ( !refresh && ( m_PanelOffset != m_LayoutOffset || centre_right > m_LayoutCentreRight + CENTRE_RELAYOUT_PX ) )
+        int screen_w;
+        int screen_h;
+        GetScreenSize( screen_w, screen_h );
+
+        // Rows on screen are laid out again when their room changed: the panel moved, the centred lines grew,
+        // or the screen changed size (the right-anchored panel and the centred lines move, neither check above sees it)
+        if ( !refresh && ( m_PanelOffset != m_LayoutOffset || centre_right > m_LayoutCentreRight + CENTRE_RELAYOUT_PX || screen_w != m_LayoutScreenW || screen_h != m_LayoutScreenH ) )
             refresh = true;
 
         if ( refresh )
         {
             m_LayoutOffset = m_PanelOffset;
             m_LayoutCentreRight = centre_right;
+            m_LayoutScreenW = screen_w;
+            m_LayoutScreenH = screen_h;
             Refresh( br_rpc, now, RowRoom( centre_right ) );
         }
 

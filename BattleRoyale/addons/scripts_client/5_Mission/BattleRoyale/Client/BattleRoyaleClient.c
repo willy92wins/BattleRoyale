@@ -86,7 +86,7 @@ class BattleRoyaleClient: BattleRoyaleBase
 
 		// Update player and group remaining count
 		// A value is only marked as shown once the HUD exists: one received before it would be lost
-		if ( br_previous_nb_players != br_rpc.nb_players || br_previous_nb_groups != br_rpc.nb_groups )
+		if ( br_rpc.nb_players >= 0 && ( br_previous_nb_players != br_rpc.nb_players || br_previous_nb_groups != br_rpc.nb_groups ) )
 		{
 			if ( gameplay.UpdatePlayerCount( br_rpc.nb_players, br_rpc.nb_groups ) )
 			{
@@ -102,8 +102,8 @@ class BattleRoyaleClient: BattleRoyaleBase
 				br_previous_kills = br_rpc.player_kills;
 		}
 
-		// Update match start state
-		if( br_rpc.match_started && !b_MatchStarted )
+		// Update match start state; a waiting player is not in this match, so it keeps whisper and no match start
+		if( br_rpc.match_started && !b_MatchStarted && !br_rpc.waiting )
 		{
 			OnMatchStarted();
 		}
@@ -133,11 +133,17 @@ class BattleRoyaleClient: BattleRoyaleBase
 			{
 				m_FuturePlayArea = new BattleRoyalePlayArea( br_rpc.future_play_area_center, br_rpc.future_play_area_radius );
 
-				if ( br_rpc.b_ArtillerySound )
+				// A waiting player is not in this match: no artillery sound for a zone that is not its concern
+				if ( br_rpc.b_ArtillerySound && !br_rpc.waiting )
 				{
 					ref EffectSound m_ArtySound = SEffectManager.PlaySound("Artillery_Distant_SoundSet", m_FuturePlayArea.GetCenter(), 0.1, 0.1);
 					m_ArtySound.SetAutodestroy(true);
 				}
+			}
+			else
+			{
+				// A cleared future area (0/0) drops the previous one, so no phantom wall, circle or arrow stays
+				m_FuturePlayArea = null;
 			}
 			br_previous_future_play_area_center = br_rpc.future_play_area_center;
 			br_previous_future_play_area_radius = br_rpc.future_play_area_radius;
@@ -181,10 +187,11 @@ class BattleRoyaleClient: BattleRoyaleBase
 			return;
 		}
 
-		// Fade in/out effect
-		if( br_previous_fade_state != br_rpc.fade_state )
+		// Fade in/out effect; a waiting player keeps a clear screen, and a later SetFade(false) still undoes a fade already applied
+		bool fade_state = br_rpc.fade_state && !br_rpc.waiting;
+		if( br_previous_fade_state != fade_state )
 		{
-			if( br_rpc.fade_state )
+			if( fade_state )
 			{
 				FadeIn( player );
 			}
@@ -192,14 +199,15 @@ class BattleRoyaleClient: BattleRoyaleBase
 			{
 				FadeOut( player );
 			}
-			br_previous_fade_state = br_rpc.fade_state;
+			br_previous_fade_state = fade_state;
 		}
 
-		// Input enable/disable
-		if( br_previous_input_state != br_rpc.input_state )
+		// Input enable/disable; a waiting player keeps its controls, and a later SetInput(false) still undoes a lock already applied
+		bool input_state = br_rpc.input_state && !br_rpc.waiting;
+		if( br_previous_input_state != input_state )
 		{
-			player.DisableInput( br_rpc.input_state );
-			br_previous_input_state = br_rpc.input_state;
+			player.DisableInput( input_state );
+			br_previous_input_state = input_state;
 		}
 
 		// Set top position
@@ -549,7 +557,8 @@ class BattleRoyaleClient: BattleRoyaleBase
 
     void StartMatch(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
     {
-        if ( type == CallType.Client )
+        // A waiting player is not in this match: same filter as the match_started poll in Update
+        if ( type == CallType.Client && !BattleRoyaleRPC.GetInstance().waiting )
         {
             OnMatchStarted();
         }
