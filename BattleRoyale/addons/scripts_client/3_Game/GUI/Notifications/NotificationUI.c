@@ -3,19 +3,40 @@
 //! Battle royale notifications also get their colour on the icon and a short vanilla sound.
 modded class NotificationUI
 {
-	//! Top of the notification stack, as a fraction of the screen height. Vanilla puts it at 0.05, where the BattleRoyale
-	//! HUD starts (HudPanel, 90 % of the screen, centred) with the phase line (40 units) and the zone damage line under it
-	//! (ending 76 units lower): 0.05 + 84 / 1080 keeps the notifications centred, just below both, at every resolution
-	protected static const float BR_NOTIFICATION_TOP = 0.128;
+	//! Top left corner of the notification stack, as fractions of the screen: the corner of the BattleRoyale HUD
+	//! (HudPanel, 90 % of the screen, centred). The phase line is centred and the kill feed is on the right,
+	//! so the notifications cover neither
+	protected static const float BR_NOTIFICATION_LEFT = 0.05;
+	protected static const float BR_NOTIFICATION_TOP = 0.05;
 
 	void NotificationUI()
 	{
-		if (!m_Root)
+		BR_PlaceRoot();
+	}
+
+	override void Update(float timeslice)
+	{
+		super.Update(timeslice);
+		BR_PlaceRoot();
+	}
+
+	//! The root of notifications.layout is centred (halign center_ref), which a script cannot change, so the corner
+	//! is set in screen pixels, again whenever it moved: a new screen size, or vanilla resizing the centred root
+	protected void BR_PlaceRoot()
+	{
+		// While a menu shows its own notification panel, vanilla moves the stack under it (UpdateOffset)
+		if (!m_Root || m_OffsetEnabled)
 			return;
 
-		float x, y;
-		m_Root.GetPos(x, y);
-		m_Root.SetPos(x, BR_NOTIFICATION_TOP);
+		int screenWidth, screenHeight;
+		GetScreenSize(screenWidth, screenHeight);
+		float x = screenWidth * BR_NOTIFICATION_LEFT;
+		float y = screenHeight * BR_NOTIFICATION_TOP;
+
+		float currentX, currentY;
+		m_Root.GetScreenPos(currentX, currentY);
+		if (Math.AbsFloat(currentX - x) > 0.5 || Math.AbsFloat(currentY - y) > 0.5)
+			m_Root.SetScreenPos(x, y);
 	}
 
 	override void AddNotification(NotificationRuntimeData data)

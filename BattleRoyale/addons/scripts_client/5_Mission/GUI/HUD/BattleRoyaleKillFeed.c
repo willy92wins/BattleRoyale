@@ -1,14 +1,16 @@
 #ifndef SERVER
 //! Kill feed: a fixed pool of rows filled from the events stored by BattleRoyaleRPC, newest on top.
 //! A row is a dark panel with an icon for the cause, a sentence naming killer and victim and, after it,
-//! the weapon and the distance. Rows slide and fade in, and fade out before they expire
+//! the weapon and the distance. Rows slide and fade in, and fade out before they expire.
+//! The panel is level with the top of the HUD and right aligned beside what its top right corner shows (match info
+//! column, minimap); each row is as wide as its content, grows to the left and stays clear of the centred phase lines
 class BattleRoyaleKillFeed
 {
     static const int ROW_COUNT = 6;             //!< rows in killfeed.layout; at most BattleRoyaleRPC.KILL_FEED_SIZE
     static const int ROW_LIFETIME_MS = 6000;
     static const int FADE_IN_MS = 150;
     static const int FADE_OUT_MS = 700;
-    static const float SLIDE_IN_PX = 12;        //!< a new row starts this far to the left
+    static const float SLIDE_IN_PX = 12;        //!< a new row starts this far to the right
 
     // Geometry of killfeed.layout, in pixels
     static const float ROW_PITCH = 34;
@@ -17,15 +19,28 @@ class BattleRoyaleKillFeed
     static const float DETAIL_Y = 5;
     static const float DETAIL_GAP = 12;         //!< between the sentence and the detail
     static const float ROW_PADDING = 10;        //!< after the last text
-    static const float ROW_WIDTH_UNMEASURED = 620;  //!< panel width when the text could not be measured
+    static const float ROW_WIDTH_UNMEASURED = 620;  //!< row width when the text could not be measured
+    static const float ROW_MIN_WIDTH = 200;     //!< a row is never squeezed narrower to clear the phase lines
+
+    // Place of KillFeedPanel, right aligned in the HUD frame, in layout units
+    static const float PANEL_TOP = 4;           //!< below the top of the HUD frame: level with the match info column
+    static const float PANEL_GAP = 16;          //!< between the rows and what the top right corner shows
+    static const float PLACE_HYSTERESIS = 24;   //!< the panel moves right only once the room grew this much
+    static const float CENTRE_GAP = 16;         //!< between the rows and the centred phase lines
+    static const float CENTRE_RELAYOUT_PX = 8;  //!< centred lines that grew this much (screen pixels) lay the rows out again
 
     static const int NAME_MAX_CHARS = 24;       //!< longer player names are cut
+    static const int NAME_SHORT_CHARS = 12;     //!< names of a row too wide for its room
 
     static const float BACK_ALPHA = 0.55;
     static const float BACK_ALPHA_OWN = 0.8;    //!< row that names the local player
     static const float ACCENT_ALPHA = 0.5;
 
     protected Widget m_Root;
+    protected Widget m_Panel;
+    protected float m_PanelOffset;  //!< x of KillFeedPanel last set by Place, -1 while it has the one of the layout
+    protected float m_LayoutOffset;         //!< m_PanelOffset the rows on screen were laid out for
+    protected float m_LayoutCentreRight;    //!< right edge of the centred lines the rows were laid out for, -1 for none
     protected Widget m_Rows[ROW_COUNT];
     protected Widget m_Backs[ROW_COUNT];
     protected Widget m_Accents[ROW_COUNT];
@@ -49,6 +64,9 @@ class BattleRoyaleKillFeed
         m_LastSerial = -1;
         m_NextExpiry = -1;
         m_LocalPlayerId = -1;
+        m_PanelOffset = -1;
+        m_LayoutOffset = -1;
+        m_LayoutCentreRight = -1;
 
         if ( !GetGame() || !GetGame().GetWorkspace() )
             return;
@@ -57,6 +75,15 @@ class BattleRoyaleKillFeed
         if ( !m_Root )
         {
             Error("[BattleRoyaleKillFeed] killfeed.layout not loaded!");
+            return;
+        }
+
+        m_Panel = m_Root.FindAnyWidget( "KillFeedPanel" );
+        if ( !m_Panel )
+        {
+            Error("[BattleRoyaleKillFeed] killfeed.layout has no KillFeedPanel");
+            m_Root.Unlink();
+            m_Root = null;
             return;
         }
 
@@ -94,23 +121,117 @@ class BattleRoyaleKillFeed
             m_Root.Unlink();
     }
 
-    //! Called every frame; rebuilds the rows only when an event arrived or a row expired, and moves the
-    //! fade of the rows on screen
-    void Update()
+    //! Called every frame; rebuilds the rows only when an event arrived or a row expired, keeps the panel beside
+    //! the top right corner of the HUD while rows are on screen, and moves the fade of the rows.
+    //! hud and minimap may be null
+    void Update( BattleRoyaleHud hud, BattleRoyaleMiniMap minimap )
     {
         if ( !m_Root )
             return;
 
         BattleRoyaleRPC br_rpc = BattleRoyaleRPC.GetInstance();
         int now = GetGame().GetTime();
+        bool refresh = br_rpc.kill_feed_serial != m_LastSerial || ( m_NextExpiry >= 0 && now >= m_NextExpiry );
 
-        if ( br_rpc.kill_feed_serial != m_LastSerial || ( m_NextExpiry >= 0 && now >= m_NextExpiry ) )
-            Refresh( br_rpc, now );
+        // No row on screen and none coming: nothing to place or to fade
+        if ( !refresh && m_ShownRows == 0 )
+            return;
+
+        Place( hud, minimap );
+
+        float centre_right = -1;
+        if ( hud )
+            centre_right = hud.GetCentreLinesRight();
+
+        // Rows on screen are laid out again when their room changed: the panel moved, or the centred lines grew
+        if ( !refresh && ( m_PanelOffset != m_LayoutOffset || centre_right > m_LayoutCentreRight + CENTRE_RELAYOUT_PX ) )
+            refresh = true;
+
+        if ( refresh )
+        {
+            m_LayoutOffset = m_PanelOffset;
+            m_LayoutCentreRight = centre_right;
+            Refresh( br_rpc, now, RowRoom( centre_right ) );
+        }
 
         Animate( now );
     }
 
-    protected void Refresh( BattleRoyaleRPC br_rpc, int now )
+    //! Puts the right edge of the panel PANEL_GAP left of the leftmost thing the top right corner of the HUD shows
+    //! (match info column, minimap). It moves left at once and right only past PLACE_HYSTERESIS, so a counter that
+    //! gains and loses a digit does not shake the rows. With nothing in that corner the panel stays where it is
+    protected void Place( BattleRoyaleHud hud, BattleRoyaleMiniMap minimap )
+    {
+        float corner_left = -1;
+        if ( hud )
+            corner_left = hud.GetMatchInfoLeft();
+        if ( minimap )
+        {
+            float map_left = minimap.GetScreenLeft();
+            if ( map_left >= 0 && ( corner_left < 0 || map_left < corner_left ) )
+                corner_left = map_left;
+        }
+        if ( corner_left < 0 )
+            return;
+
+        float px_per_unit = PxPerUnit();
+        if ( px_per_unit <= 0 )
+            return;
+
+        float root_x;
+        float root_y;
+        float root_w;
+        float root_h;
+        m_Root.GetScreenPos( root_x, root_y );
+        m_Root.GetScreenSize( root_w, root_h );
+
+        // KillFeedPanel is right aligned in the HUD frame: its x is the distance between both right edges
+        float offset = ( root_x + root_w - corner_left ) / px_per_unit + PANEL_GAP;
+        if ( m_PanelOffset >= 0 )
+        {
+            if ( offset < m_PanelOffset && m_PanelOffset - offset < PLACE_HYSTERESIS )
+                return;
+            if ( Math.AbsFloat( offset - m_PanelOffset ) < 0.5 )
+                return;
+        }
+
+        m_PanelOffset = offset;
+        m_Panel.SetPos( offset, PANEL_TOP );
+    }
+
+    //! Widest a row can be, in layout units, to stay CENTRE_GAP right of centre_right (screen pixels, the right
+    //! edge of the centred phase lines); -1 for no limit
+    protected float RowRoom( float centre_right )
+    {
+        if ( centre_right < 0 )
+            return -1;
+
+        float px_per_unit = PxPerUnit();
+        if ( px_per_unit <= 0 )
+            return -1;
+
+        float panel_x;
+        float panel_y;
+        float panel_w;
+        float panel_h;
+        m_Panel.GetScreenPos( panel_x, panel_y );
+        m_Panel.GetScreenSize( panel_w, panel_h );
+
+        float room = ( panel_x + panel_w - centre_right ) / px_per_unit - CENTRE_GAP;
+        return Math.Max( room, ROW_MIN_WIDTH );
+    }
+
+    //! Screen pixels per exact layout unit: the units are 1/1080 of the screen height
+    protected float PxPerUnit()
+    {
+        int screen_w;
+        int screen_h;
+        GetScreenSize( screen_w, screen_h );
+        return screen_h / 1080.0;
+    }
+
+    //! max_width: widest a row can be (layout units), -1 for no limit
+    protected void Refresh( BattleRoyaleRPC br_rpc, int now, float max_width )
     {
         m_LastSerial = br_rpc.kill_feed_serial;
         m_NextExpiry = -1;
@@ -137,7 +258,7 @@ class BattleRoyaleKillFeed
             if ( expiry <= now )
                 break;
 
-            FillRow( row, kill_type, flags, killer, victim, item, distance, IsLocalPlayer( killer_id ) || IsLocalPlayer( victim_id ) );
+            FillRow( row, kill_type, flags, killer, victim, item, distance, IsLocalPlayer( killer_id ) || IsLocalPlayer( victim_id ), max_width );
             m_RowTime[row] = time;
             m_RowAlpha[row] = -1;
 
@@ -208,21 +329,20 @@ class BattleRoyaleKillFeed
             icon.SetAlpha( alpha );
             text.SetAlpha( alpha );
             detail.SetAlpha( alpha );
+            // Right aligned row: x is measured from the right edge of the panel, a negative x is to the right
             row_widget.SetPos( slide, row * ROW_PITCH );
         }
     }
 
-    //! own: the event names the local player as killer or victim
-    protected void FillRow( int row, int kill_type, int flags, string killer, string victim, string item, int distance, bool own )
+    //! own: the event names the local player as killer or victim. max_width: widest the row can be (layout units),
+    //! -1 for no limit; a wider row drops the weapon and the distance, then shortens the names
+    protected void FillRow( int row, int kill_type, int flags, string killer, string victim, string item, int distance, bool own, float max_width )
     {
         m_RowOwn[row] = own;
 
         Widget row_widget = m_Rows[row];
-        Widget back = m_Backs[row];
         Widget accent = m_Accents[row];
         ImageWidget icon = m_Icons[row];
-        TextWidget text_widget = m_Texts[row];
-        TextWidget detail_widget = m_Details[row];
 
         // Gold bar on the rows that name the local player
         if ( own )
@@ -236,45 +356,80 @@ class BattleRoyaleKillFeed
             m_RowIcon[row] = kill_type;
         }
 
-        string text = BuildSentence( kill_type, ClipName( killer ), ClipName( victim ) );
+        string sentence = BuildSentence( kill_type, ClipName( killer, NAME_MAX_CHARS ), ClipName( victim, NAME_MAX_CHARS ) );
         string detail = BuildDetail( kill_type, flags, item, distance );
 
         // Shown before measuring: the size of a text is the size it is drawn with
         row_widget.Show( true );
-        text_widget.SetText( text );
+
+        float width = LayoutRow( row, sentence, detail );
+        if ( max_width < 0 || width <= max_width )
+            return;
+
+        if ( detail != "" )
+        {
+            width = LayoutRow( row, sentence, "" );
+            if ( width <= max_width )
+                return;
+        }
+
+        LayoutRow( row, BuildSentence( kill_type, ClipName( killer, NAME_SHORT_CHARS ), ClipName( victim, NAME_SHORT_CHARS ) ), "" );
+    }
+
+    //! Writes the sentence and the detail (empty for none) in the row, sizes the row to them and returns its width
+    protected float LayoutRow( int row, string sentence, string detail )
+    {
+        Widget row_widget = m_Rows[row];
+        Widget back = m_Backs[row];
+        TextWidget text_widget = m_Texts[row];
+        TextWidget detail_widget = m_Details[row];
+
+        text_widget.SetText( sentence );
 
         int text_width;
         int text_height;
         text_widget.GetTextSize( text_width, text_height );
 
+        float width;
         if ( text_width <= 0 )
         {
-            // Not measured: one text and a panel of fixed width
+            // Not measured: one text and a row of fixed width
             if ( detail != "" )
-                text_widget.SetText( text + "  " + detail );
+                text_widget.SetText( sentence + "  " + detail );
             detail_widget.Show( false );
-            back.SetSize( ROW_WIDTH_UNMEASURED, ROW_HEIGHT );
-            return;
-        }
-
-        float end = TEXT_X + text_width;
-        if ( detail != "" )
-        {
-            int detail_width;
-            int detail_height;
-            detail_widget.Show( true );
-            detail_widget.SetText( detail );
-            detail_widget.SetPos( end + DETAIL_GAP, DETAIL_Y );
-            detail_widget.GetTextSize( detail_width, detail_height );
-            end = end + DETAIL_GAP + detail_width;
+            width = ROW_WIDTH_UNMEASURED;
         }
         else
         {
-            detail_widget.Show( false );
+            // GetTextSize measures in screen pixels; the row is laid out in layout units
+            float units_per_px = 1;
+            float px_per_unit = PxPerUnit();
+            if ( px_per_unit > 0 )
+                units_per_px = 1.0 / px_per_unit;
+
+            float end = TEXT_X + text_width * units_per_px;
+            if ( detail != "" )
+            {
+                int detail_width;
+                int detail_height;
+                detail_widget.Show( true );
+                detail_widget.SetText( detail );
+                detail_widget.SetPos( end + DETAIL_GAP, DETAIL_Y );
+                detail_widget.GetTextSize( detail_width, detail_height );
+                end = end + DETAIL_GAP + detail_width * units_per_px;
+            }
+            else
+            {
+                detail_widget.Show( false );
+            }
+
+            width = end + ROW_PADDING;
         }
 
-        // The panel hugs its content
-        back.SetSize( end + ROW_PADDING, ROW_HEIGHT );
+        // The row hugs its content; it is right aligned, so its width moves its left edge and the content with it
+        row_widget.SetSize( width, ROW_HEIGHT );
+        back.SetSize( width, ROW_HEIGHT );
+        return width;
     }
 
     //! True when player_id is the session id of the local player. Names are not compared: two players
@@ -294,12 +449,12 @@ class BattleRoyaleKillFeed
         return player_id == m_LocalPlayerId;
     }
 
-    protected string ClipName( string name )
+    protected string ClipName( string name, int max_chars )
     {
-        if ( name.LengthUtf8() <= NAME_MAX_CHARS )
+        if ( name.LengthUtf8() <= max_chars )
             return name;
 
-        return name.SubstringUtf8( 0, NAME_MAX_CHARS - 3 ) + "...";
+        return name.SubstringUtf8( 0, max_chars - 3 ) + "...";
     }
 
     //! Sentence for the cause: the one with killer and victim when the event names a killer, else the one with the victim alone

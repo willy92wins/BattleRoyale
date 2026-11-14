@@ -40,6 +40,7 @@ class BattleRoyaleHud
     protected TextWidget m_DistanceTextWidget;
     protected TextWidget m_KillTextWidget;
     protected TextWidget m_PhaseTextWidget;
+    protected TextWidget m_ZoneDamageTextWidget;
 
     protected ImageWidget m_DistanceZoneArrow;
 
@@ -76,6 +77,7 @@ class BattleRoyaleHud
         m_DistanceTextWidget = TextWidget.Cast( m_ZoneDistancePanel.FindAnyWidget( "DistanceText" ) );
         m_KillTextWidget = TextWidget.Cast( m_KillCountPanel.FindAnyWidget( "KillCountText" ) );
         m_PhaseTextWidget = TextWidget.Cast( m_Root.FindAnyWidget( "PhaseText" ) );
+        m_ZoneDamageTextWidget = TextWidget.Cast( m_Root.FindAnyWidget( "ZoneDamageText" ) );
 
         m_DistanceZoneArrow = ImageWidget.Cast( m_Root.FindAnyWidget( "ZoneIcon" ) );
 
@@ -96,6 +98,74 @@ class BattleRoyaleHud
     bool Shown()
     {
         return is_shown;
+    }
+
+    //! Left edge, in screen pixels, of what the match info column (top right) draws now: the counters and the zone
+    //! distance that show, each text where it is drawn. -1 when the column shows nothing. The kill feed ends left of it
+    float GetMatchInfoLeft()
+    {
+        float left = -1;
+        left = LeftOfRightAlignedText( m_PlayerCountPanel, m_PlayerTextWidget, left );
+        left = LeftOfRightAlignedText( m_GroupCountPanel, m_GroupTextWidget, left );
+        left = LeftOfRightAlignedText( m_KillCountPanel, m_KillTextWidget, left );
+        left = LeftOfRightAlignedText( m_ZoneDistancePanel, m_DistanceTextWidget, left );
+        return left;
+    }
+
+    //! Right edge, in screen pixels, of the centred lines at the top (phase, zone damage) as drawn now; -1 when
+    //! neither shows. Kill feed rows stay right of it
+    float GetCentreLinesRight()
+    {
+        float right = -1;
+        right = RightOfCentredText( m_PhasePanel, m_PhaseTextWidget, right );
+        right = RightOfCentredText( m_ZoneDamagePanel, m_ZoneDamageTextWidget, right );
+        return right;
+    }
+
+    //! The smaller of left and the left edge of the text of row while row shows; the text is right aligned in its box
+    protected float LeftOfRightAlignedText( Widget row, TextWidget text, float left )
+    {
+        if ( !row || !text || !row.IsVisibleHierarchy() )
+            return left;
+
+        float x;
+        float y;
+        float w;
+        float h;
+        text.GetScreenPos( x, y );
+        text.GetScreenSize( w, h );
+
+        int text_w;
+        int text_h;
+        text.GetTextSize( text_w, text_h );
+
+        float text_left = x + w - text_w;
+        if ( left < 0 || text_left < left )
+            return text_left;
+        return left;
+    }
+
+    //! The larger of right and the right edge of the text of panel while panel shows; the text is centred in its box
+    protected float RightOfCentredText( Widget panel, TextWidget text, float right )
+    {
+        if ( !panel || !text || !panel.IsVisibleHierarchy() )
+            return right;
+
+        float x;
+        float y;
+        float w;
+        float h;
+        text.GetScreenPos( x, y );
+        text.GetScreenSize( w, h );
+
+        int text_w;
+        int text_h;
+        text.GetTextSize( text_w, text_h );
+
+        float text_right = x + ( w + text_w ) * 0.5;
+        if ( text_right > right )
+            return text_right;
+        return right;
     }
 
     void ShowHud( bool show )

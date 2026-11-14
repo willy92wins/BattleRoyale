@@ -211,6 +211,16 @@ class BattleRoyaleClient: BattleRoyaleBase
     //! Distance to the zone, outside zone visual effect and zone damage indicator
     protected void UpdateZoneHud(MissionGameplay gameplay, PlayerBase player, BattleRoyaleRPC br_rpc)
     {
+		// A waiting player stands in the lobby, outside the match: no distance, outside effect or damage warning
+		if ( br_rpc.waiting )
+		{
+			gameplay.HideDistance();
+			if ( player.IsAlive() )
+				UpdateOutsideZoneEffect( player, false );
+			gameplay.UpdateZoneDamage( false );
+			return;
+		}
+
 		float distExt;
 		float distInt;
 		float angle;
@@ -512,6 +522,13 @@ class BattleRoyaleClient: BattleRoyaleBase
 
     void ReadyUp()
     {
+        // A spectator with the waiting room on: the ready key leaves spectating and waits in the lobby
+        if (BattleRoyaleRPC.s_Spectating && BattleRoyaleRPC.s_WaitingRoom)
+        {
+            GetRPCManager().SendRPC( RPC_DAYZBRSERVER_NAMESPACE, "SpectatorToLobby", NULL, true );
+            return;
+        }
+
         //if(b_IsReady)
         //    return; //already ready!
 

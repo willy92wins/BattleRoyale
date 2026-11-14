@@ -73,6 +73,17 @@ class BattleRoyaleMiniMap
 		return m_Visible;
 	}
 
+	//! Left edge of the minimap, in screen pixels, while it shows; -1 while hidden
+	float GetScreenLeft()
+	{
+		if (!m_Visible || !m_Panel || !m_Panel.IsVisibleHierarchy())
+			return -1;
+
+		float x, y;
+		m_Panel.GetScreenPos(x, y);
+		return x;
+	}
+
 	void SetVisible(bool visible)
 	{
 		m_Visible = visible;
