@@ -19,9 +19,12 @@ class BRMatchTurnover
 	protected int m_MatchNumber;
 	protected int m_Phase;
 	protected float m_StartedAt;
-	//! Identities still to return, and how many times each was tried (same index)
+	//! Identities to return in this update, and how many times each was tried (same index)
 	protected ref array<PlayerIdentity> m_Pending;
 	protected ref array<int> m_Attempts;
+	//! Identities that failed in this update: tried again in the next one, never twice in the same update
+	protected ref array<PlayerIdentity> m_Retry;
+	protected ref array<int> m_RetryAttempts;
 	protected int m_Returned;
 	protected ref BRMatchDebrisBatch m_Debris;
 
@@ -33,6 +36,8 @@ class BRMatchTurnover
 		m_StartedAt = GetGame().GetTickTime();
 		m_Pending = new array<PlayerIdentity>;
 		m_Attempts = new array<int>;
+		m_Retry = new array<PlayerIdentity>;
+		m_RetryAttempts = new array<int>;
 		BattleRoyaleUtils.Info("[Serial] Match " + match_number + " over: preparing the next lobby");
 	}
 
@@ -126,12 +131,25 @@ class BRMatchTurnover
 		}
 
 		if (m_Pending.Count() == 0)
-			m_Phase = PHASE_CLEAN;
+		{
+			if (m_Retry.Count() == 0)
+			{
+				m_Phase = PHASE_CLEAN;
+			}
+			else
+			{
+				// The failures of this update are the work of the next one
+				m_Pending = m_Retry;
+				m_Attempts = m_RetryAttempts;
+				m_Retry = new array<PlayerIdentity>;
+				m_RetryAttempts = new array<int>;
+			}
+		}
 
 		return true;
 	}
 
-	//! Returns one identity; a failure is tried again on a later update, and aborts the turnover once out of tries
+	//! Returns one identity; a failure is tried again on the next update, and aborts the turnover once out of tries
 	protected bool Return(PlayerIdentity identity, int attempts)
 	{
 		int result = m_Server.Turnover_ReturnToLobby(identity);
@@ -151,8 +169,8 @@ class BRMatchTurnover
 			return false;
 		}
 
-		m_Pending.Insert(identity);
-		m_Attempts.Insert(attempts);
+		m_Retry.Insert(identity);
+		m_RetryAttempts.Insert(attempts);
 		return true;
 	}
 

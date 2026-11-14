@@ -119,10 +119,20 @@ class BattleRoyaleWin: BattleRoyaleState
     protected static const float FIREWORKS_DISTANCE = 8.0;
     protected static const int FIREWORKS_STAGGER_MS = 750;
 
+    //! The vanilla launcher refuses to be lit under a roof (FireworksBase.CanBeIgnitedBy, 60 m roof check); lighting it
+    //! directly skips that check, so a launcher that landed under a roof or inside a building is removed instead
     void LightFireworks(FireworksLauncher launcher)
     {
-        if (launcher)
-            launcher.OnIgnitedThis(null);
+        if (!launcher)
+            return;
+
+        if (MiscGameplayFunctions.IsUnderRoofEx(launcher, 60))
+        {
+            GetGame().ObjectDelete(launcher);
+            return;
+        }
+
+        launcher.OnIgnitedThis(null);
     }
 
     override void CancelPendingWork()
