@@ -293,6 +293,22 @@ class BattleRoyaleState: Timeable
 		}
 	}
 
+	//! The counts of the last OnPlayerCountChanged, to one client whose HUD was reset after it (waiting room)
+	void SendPlayerCountTo(PlayerIdentity identity)
+	{
+		if (!identity || !IsActive())
+			return;
+
+		int nb_players = GetPlayers().Count();
+		int nb_groups = -2;
+#ifdef Carim
+		nb_groups = GetGroupsCount();
+		if (nb_players < 10 && hide_players_endgame && !b_IsDebug)
+			nb_groups = -1;
+#endif
+		GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetPlayerCount", new Param2<int, int>( nb_players, nb_groups ), true, identity );
+	}
+
     void UpdateTopPosition( int position )
     {
 		for(int i = 0; i < GetPlayers().Count(); i++)

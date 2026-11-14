@@ -292,12 +292,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         // A player of the waiting room already stands in the lobby with a lobby character: it joins the new lobby as it is
         if (previous && previous.IsAlive() && previous.br_waiting)
         {
-            previous.br_waiting = false;
-            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "ReturnToLobby", NULL, true, identity );
-            previous.owner_id = identity.GetPlainId();
-            GetCurrentState().AddPlayer(previous);
-            BattleRoyaleState.SendMatchPhaseTo(identity);
-            if (!previous.br_in_current_state || !GetCurrentState().ContainsPlayer(previous))
+            if (!JoinLobbyFromWaitingRoom(previous, identity))
                 return RETURN_FAILED;
             return RETURN_DONE;
         }
@@ -372,6 +367,10 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         BattleRoyaleUtils.Info("Waiting room: " + player.BR_GetPlayerName() + " waits in the lobby for the next match");
         BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
+        // The client reset its HUD when this character was made: it learns that it waits (no zone warnings) and the
+        // player count, broadcast only when it changes
+        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetWaiting", new Param1<bool>( true ), true, player.GetIdentity() );
+        GetCurrentState().SendPlayerCountTo(player.GetIdentity());
         // With a restart after this match the player will have to join again: the notice says so
         string notice = "STR_BR_WAITING_ROOM";
         if (WillRestartAfterMatch())
@@ -381,11 +380,32 @@ class BattleRoyaleServer: BattleRoyaleBase
         GetCurrentState().MessagePlayerUntranslated(player, notice, minutesLeft.ToString());
     }
 
+    //! A player of the waiting room joins the lobby state with its lobby character, after its client reset its match
+    //! state. False when the lobby state did not take it
+    protected bool JoinLobbyFromWaitingRoom(PlayerBase player, PlayerIdentity identity)
+    {
+        player.br_waiting = false;
+        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "ReturnToLobby", NULL, true, identity );
+        player.owner_id = identity.GetPlainId();
+        GetCurrentState().AddPlayer(player);
+        BattleRoyaleState.SendMatchPhaseTo(identity);
+        return player.br_in_current_state && GetCurrentState().ContainsPlayer(player);
+    }
+
     //! A waiting player stays inside the lobby radius, immune and healed, like a lobby player
     protected void TickWaitingPlayer(PlayerBase player, float timeslice)
     {
         if (!player.IsAlive())
             return;
+
+        // The match is over and the turnover did not take this player (it reconnected after it, for one): it joins
+        // the lobby now instead of waiting through the next match
+        if (!IsMatchInProgress() && !m_Turnover && player.GetIdentity())
+        {
+            BattleRoyaleUtils.Info("Waiting room: " + player.BR_GetPlayerName() + " joins the lobby after the match");
+            JoinLobbyFromWaitingRoom(player, player.GetIdentity());
+            return;
+        }
 
         if ( !IsInLobbyArea( player.GetPosition() ) )
             player.SetPosition( GetLobbySpawnPosition() );
@@ -921,6 +941,11 @@ class BattleRoyaleServer: BattleRoyaleBase
                 else if (IsWaitingRoomEnabled() && killed.GetIdentity())
                     GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(this.MoveToWaitingRoomById, BattleRoyaleConfig.GetConfig().GetGameData().spectator_delay_seconds * 1000, false, killed.GetIdentity().GetId());
             }
+        }
+        // A suicide gets past the immunity of the waiting room: the player waits again with a new lobby character
+        else if (killed && killed.br_waiting && IsWaitingRoomEnabled() && killed.GetIdentity())
+        {
+            GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(this.MoveToWaitingRoomById, BattleRoyaleConfig.GetConfig().GetGameData().spectator_delay_seconds * 1000, false, killed.GetIdentity().GetId());
         }
 
         // Whoever watched the dead player moves on, even if the state already removed them

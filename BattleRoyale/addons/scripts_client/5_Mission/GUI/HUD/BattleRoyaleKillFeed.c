@@ -27,6 +27,7 @@ class BattleRoyaleKillFeed
     static const float PANEL_GAP = 16;          //!< between the rows and what the top right corner shows
     static const float PLACE_HYSTERESIS = 24;   //!< the panel moves right only once the room grew this much
     static const float CENTRE_GAP = 16;         //!< between the rows and the centred phase lines
+    static const float CENTRE_RELAYOUT_PX = 8;  //!< centred lines that grew this much (screen pixels) lay the rows out again
 
     static const int NAME_MAX_CHARS = 24;       //!< longer player names are cut
     static const int NAME_SHORT_CHARS = 12;     //!< names of a row too wide for its room
@@ -38,6 +39,8 @@ class BattleRoyaleKillFeed
     protected Widget m_Root;
     protected Widget m_Panel;
     protected float m_PanelOffset;  //!< x of KillFeedPanel last set by Place, -1 while it has the one of the layout
+    protected float m_LayoutOffset;         //!< m_PanelOffset the rows on screen were laid out for
+    protected float m_LayoutCentreRight;    //!< right edge of the centred lines the rows were laid out for, -1 for none
     protected Widget m_Rows[ROW_COUNT];
     protected Widget m_Backs[ROW_COUNT];
     protected Widget m_Accents[ROW_COUNT];
@@ -62,6 +65,8 @@ class BattleRoyaleKillFeed
         m_NextExpiry = -1;
         m_LocalPlayerId = -1;
         m_PanelOffset = -1;
+        m_LayoutOffset = -1;
+        m_LayoutCentreRight = -1;
 
         if ( !GetGame() || !GetGame().GetWorkspace() )
             return;
@@ -134,11 +139,18 @@ class BattleRoyaleKillFeed
 
         Place( hud, minimap );
 
+        float centre_right = -1;
+        if ( hud )
+            centre_right = hud.GetCentreLinesRight();
+
+        // Rows on screen are laid out again when their room changed: the panel moved, or the centred lines grew
+        if ( !refresh && ( m_PanelOffset != m_LayoutOffset || centre_right > m_LayoutCentreRight + CENTRE_RELAYOUT_PX ) )
+            refresh = true;
+
         if ( refresh )
         {
-            float centre_right = -1;
-            if ( hud )
-                centre_right = hud.GetCentreLinesRight();
+            m_LayoutOffset = m_PanelOffset;
+            m_LayoutCentreRight = centre_right;
             Refresh( br_rpc, now, RowRoom( centre_right ) );
         }
 
@@ -389,7 +401,13 @@ class BattleRoyaleKillFeed
         }
         else
         {
-            float end = TEXT_X + text_width;
+            // GetTextSize measures in screen pixels; the row is laid out in layout units
+            float units_per_px = 1;
+            float px_per_unit = PxPerUnit();
+            if ( px_per_unit > 0 )
+                units_per_px = 1.0 / px_per_unit;
+
+            float end = TEXT_X + text_width * units_per_px;
             if ( detail != "" )
             {
                 int detail_width;
@@ -398,7 +416,7 @@ class BattleRoyaleKillFeed
                 detail_widget.SetText( detail );
                 detail_widget.SetPos( end + DETAIL_GAP, DETAIL_Y );
                 detail_widget.GetTextSize( detail_width, detail_height );
-                end = end + DETAIL_GAP + detail_width;
+                end = end + DETAIL_GAP + detail_width * units_per_px;
             }
             else
             {

@@ -24,6 +24,7 @@ class BattleRoyaleRPC
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SpectateTarget", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetStayConnected", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetWaitingRoom", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetWaiting", this );
 
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
 	}
@@ -115,6 +116,22 @@ class BattleRoyaleRPC
 			s_WaitingRoom = data.param1;
 	}
 
+	//! The local player waits in the lobby while a match runs (waiting room): the zone is not its concern.
+	//! Sent when it enters; Reset (ReturnToLobby, before any new character) clears it
+	bool waiting = false;
+
+	void SetWaiting(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param1<bool> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ SETWAITING RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+			waiting = data.param1;
+	}
+
 	// Pending main menu message for a late join, shown once by MainMenu after AbortMission
 	static string s_PendingMainMenuMessage = "";
 	static bool s_MatchInProgressAbortScheduled = false;
@@ -162,6 +179,7 @@ class BattleRoyaleRPC
 		match_phase = -1;
 		match_phase_end_time = -1;
 		kill_feed_serial = 0;
+		waiting = false;
 	}
 
 	// Set the number of players and groups
