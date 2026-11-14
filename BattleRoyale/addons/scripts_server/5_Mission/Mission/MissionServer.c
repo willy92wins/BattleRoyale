@@ -246,6 +246,16 @@ modded class MissionServer
 		}
 	}
 
+	override void OnClientReconnectEvent(PlayerIdentity identity, PlayerBase player)
+	{
+		super.OnClientReconnectEvent(identity, player);
+
+		// A waiting player keeps its body on reconnect, but its client restarted the mission and lost the waiting state
+		BattleRoyaleServer br = BattleRoyaleServer.Cast( m_BattleRoyale );
+		if (br && player && player.IsAlive() && player.br_waiting)
+			br.ResyncWaitingPlayer(player);
+	}
+
 	override void OnClientDisconnectedEvent(PlayerIdentity identity, PlayerBase player, int logoutTime, bool authFailed)
 	{
 		if(player)
