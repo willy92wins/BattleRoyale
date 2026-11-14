@@ -34,10 +34,42 @@ class BattleRoyaleServerData: BattleRoyaleDataBase
 	int autolock_port = 2305;  // Server RCon Port (mandatory if use_autolock is true)
 	string autolock_rcon_password = "";  // Server RCon Password (mandatory if use_autolock is true)
 
+	// Serial matches: when a match ends the server stays up, removes the bodies and dropped items of the match and opens
+	// the next lobby. Connected players (winner, spectators) get a new character in the lobby without reconnecting.
+	// Ignored while enable_vigrid_api or use_autolock is on (their match id and lock belong to one server run).
+	// Loot is left to the Central Economy as the server is set up.
+	bool serial_matches = false;
+	// With serial_matches: full restart, as without serial matches, when this many matches have ended in one run (0 = never)
+	int serial_restart_every_matches = 0;
+
     override string GetProfilePath()
     {
         return BATTLEROYALE_SETTINGS_FOLDER + "server_settings.json";
     }
+
+	override void Validate()
+	{
+		if (serial_restart_every_matches < 0)
+		{
+			LogInvalidSetting("server_settings.json", "serial_restart_every_matches", serial_restart_every_matches.ToString(), "must be 0 or more");
+			serial_restart_every_matches = 0;
+		}
+	}
+
+	//! True when a match end keeps the server up; logs once per call why the setting is ignored
+	bool UsesSerialMatches()
+	{
+		if (!serial_matches)
+			return false;
+
+		if (enable_vigrid_api || use_autolock)
+		{
+			BattleRoyaleUtils.Warn("serial_matches is ignored while enable_vigrid_api or use_autolock is on: the server restarts after the match");
+			return false;
+		}
+
+		return true;
+	}
 
 	override void Load()
 	{

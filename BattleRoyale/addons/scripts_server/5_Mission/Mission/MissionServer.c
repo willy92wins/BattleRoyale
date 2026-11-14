@@ -114,6 +114,12 @@ modded class MissionServer
 
 	override void EquipCharacter(MenuDefaultCharacterData char_data)
 	{
+		BR_EquipLobbyItems(m_player);
+	}
+
+	//! The lobby items of lobby_settings.json, for a character created on connection or when a serial match ends
+	protected void BR_EquipLobbyItems(PlayerBase player)
+	{
 		BattleRoyaleLobbyData m_DebugSettings = BattleRoyaleConfig.GetConfig().GetDebugData();
 
 		array<string> player_lobby_items = m_DebugSettings.player_lobby_items;
@@ -122,7 +128,7 @@ modded class MissionServer
 		for(int i = 0; i < player_lobby_items.Count(); i++)
 		{
 			string item_name = player_lobby_items.Get(i);
-			EntityAI item = m_player.GetInventory().CreateInInventory(item_name);
+			EntityAI item = player.GetInventory().CreateInInventory(item_name);
 			if(item)
 			{
 				// set health to the maximum
@@ -132,7 +138,7 @@ modded class MissionServer
 				int shortcut_index = player_lobby_items_shortcut.Find(i);
 				if(shortcut_index != -1)
 				{
-					m_player.SetQuickBarEntityShortcut(item, shortcut_index);
+					player.SetQuickBarEntityShortcut(item, shortcut_index);
 				}
 			}
 			else
@@ -141,7 +147,32 @@ modded class MissionServer
 			}
 		}
 
-		StartingEquipSetup(m_player, true);
+		StartingEquipSetup(player, true);
+	}
+
+	//! Serial matches: a connected player gets a new character in the lobby, as vanilla does for a new character
+	//! (create, select, equip, InvokeOnConnect), without leaving the server. The caller removes the previous body
+	PlayerBase BR_CreateLobbyCharacter(PlayerIdentity identity, string character_type)
+	{
+		BattleRoyaleServer br = BattleRoyaleServer.Cast( m_BattleRoyale );
+		if (!br || !identity)
+			return null;
+
+		PlayerBase player = PlayerBase.Cast( GetGame().CreatePlayer(identity, character_type, br.GetLobbySpawnPosition(), 0, "NONE") );
+		if (!player)
+		{
+			BattleRoyaleUtils.Warn("[Serial] Could not create a lobby character (" + character_type + ") for " + identity.GetName());
+			return null;
+		}
+
+		GetGame().SelectPlayer(identity, player);
+		m_player = player;
+		BR_EquipLobbyItems(player);
+
+		// Names the player, then BattleRoyaleServer.OnPlayerConnected adds it to the lobby state
+		InvokeOnConnect(player, identity);
+		ControlPersonalLight(player);
+		return player;
 	}
 
 	override void PlayerDisconnected(PlayerBase player, PlayerIdentity identity, string uid)

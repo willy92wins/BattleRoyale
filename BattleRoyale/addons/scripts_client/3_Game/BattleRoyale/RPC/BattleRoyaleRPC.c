@@ -22,6 +22,7 @@ class BattleRoyaleRPC
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "KillFeedEvent", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "MatchInProgress", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SpectateTarget", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetStayConnected", this );
 
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
 	}
@@ -73,6 +74,22 @@ class BattleRoyaleRPC
 		}
 
 		s_SpectatorOverlay.Show( true );
+	}
+
+	//! Serial matches with spectators (server_settings.json): this client stays connected after its death and the server
+	//! brings it back to the next lobby. Cleared when the mission finishes, so another server starts without it
+	static bool s_StayConnected = false;
+
+	void SetStayConnected(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param1<bool> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ SETSTAYCONNECTED RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+			s_StayConnected = data.param1;
 	}
 
 	// Pending main menu message for a late join, shown once by MainMenu after AbortMission

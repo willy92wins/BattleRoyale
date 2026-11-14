@@ -95,6 +95,12 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
         BroadcastMatchPhase(EBRMatchPhase.SPAWN_SELECTION, i_SpawnSelectionDuration);
     }
 
+    override void CancelPendingWork()
+    {
+        GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).RemoveByName(this, "DisableInput");
+        GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(this.BroadcastHeatMap);
+    }
+
     override void Deactivate()
     {
         // Stop the spawn selection timer if it's running

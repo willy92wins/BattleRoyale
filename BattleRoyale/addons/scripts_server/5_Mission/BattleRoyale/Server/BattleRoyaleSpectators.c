@@ -123,10 +123,52 @@ class BattleRoyaleSpectators
 		if (!identity)
 			return;
 
+		// Serial matches: the anchor of a spectator who left is a leftover of the match; it keeps its anchor flag
+		// until it is deleted, so the match logic still leaves it alone
+		PlayerBase anchor = m_Anchors.Get(identity.GetId());
+		if (anchor && BRMatchDebris.s_Enabled)
+		{
+			BRMatchDebris.Get().AddObject(anchor);
+			m_Anchors.Remove(identity.GetId());
+		}
+
 		m_Targets.Remove(identity.GetId());
 		m_LastRequest.Remove(identity.GetId());
 		ClearAnchor(identity.GetId());
 		m_Identities.Remove(identity.GetId());
+	}
+
+	//! Serial matches: true while this identity watches the match (it has an anchor or a target)
+	bool IsSpectator(PlayerIdentity identity)
+	{
+		if (!identity)
+			return false;
+
+		string id = identity.GetId();
+		return m_Anchors.Contains(id) || m_Targets.Contains(id);
+	}
+
+	//! Serial matches: the identity now controls its new lobby character; its anchor body goes away
+	void Release(PlayerIdentity identity)
+	{
+		if (!identity)
+			return;
+
+		string id = identity.GetId();
+		PlayerBase anchor = m_Anchors.Get(id);
+		m_Anchors.Remove(id);
+		m_Targets.Remove(id);
+		m_LastRequest.Remove(id);
+		m_Identities.Remove(id);
+
+		if (anchor)
+			GetGame().ObjectDelete(anchor);
+	}
+
+	//! Serial matches: spectating scheduled for a death of the finished match must not start in the next lobby
+	void CancelPending()
+	{
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(Start);
 	}
 
 	//! Asked by the client: next (1) or previous (-1) alive player, or 0 to resend the current one

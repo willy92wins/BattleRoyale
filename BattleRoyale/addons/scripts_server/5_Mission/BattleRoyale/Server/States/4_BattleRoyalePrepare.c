@@ -22,6 +22,7 @@ class BattleRoyalePrepare: BattleRoyaleState
     ref map<string, vector> m_OverrideSpawnPositions;
     protected ref map<string, ref array<vector>> m_SafeVillagePoints;
     protected bool m_PlayersProcessed;
+    protected bool m_ProcessThreadRunning;
     protected int m_PlayerBatch;
     protected ref Timer m_ProcessWatchdog;
 
@@ -770,6 +771,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 
     void ProcessPlayers()
     {
+        m_ProcessThreadRunning = true;
         BattleRoyaleUtils.Trace("Starting to process players...");
         int i;
         PlayerBase process_player;
@@ -953,9 +955,16 @@ class BattleRoyalePrepare: BattleRoyaleState
         BattleRoyaleUtils.Trace("Healed players");
 
         m_PlayersProcessed = true;
+        m_ProcessThreadRunning = false;
         StopProcessWatchdog();
         if (IsActive())
             Deactivate();
+    }
+
+    //! True while the ProcessPlayers thread runs, also after the watchdog gave up on it
+    bool IsProcessing()
+    {
+        return m_ProcessThreadRunning;
     }
 
     override void OnPlayerTick(PlayerBase player, float timeslice)

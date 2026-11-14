@@ -111,6 +111,9 @@ class BattleRoyaleWin: BattleRoyaleState
             if (!chicken)
                 continue;
 
+            // Serial matches: the chickens leave with the match
+            BRMatchDebris.Get().AddObject(chicken);
+
 			float dir = Math.RandomFloat(0, 360);
 			vector chickenDir = vector.YawToVector(dir);
 			chicken.SetDirection( Vector(chickenDir[0], 0, chickenDir[1]) );
@@ -119,6 +122,14 @@ class BattleRoyaleWin: BattleRoyaleState
 
     void KickWinner()
     {
+        // Serial matches: the winner stays connected and goes back to the lobby with everyone else.
+        // The players move on to the restart state with this state; outside every state they would be logged out
+        if (BRMatchDebris.s_Enabled)
+        {
+            Deactivate();
+            return;
+        }
+
 		for ( int k = GetPlayers().Count() - 1; k >= 0; k-- )
 		{
 			PlayerBase winner = GetPlayers()[k];

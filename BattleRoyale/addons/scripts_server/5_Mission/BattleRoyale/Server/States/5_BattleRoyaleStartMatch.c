@@ -70,6 +70,11 @@ class BattleRoyaleStartMatch: BattleRoyaleState
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetCountdownSeconds", new Param1<int>(i_FirstRoundDelay), true);
     }
 
+    override void CancelPendingWork()
+    {
+        GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).RemoveByName(this, "Unstuck");
+    }
+
     override void Deactivate()
     {
         //deactivate all one-time timers

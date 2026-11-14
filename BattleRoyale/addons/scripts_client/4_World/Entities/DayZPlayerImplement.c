@@ -81,8 +81,8 @@ modded class DayZPlayerImplement
 		if (m_BR_LeaveSession != s_BR_SessionSerial || !GetGame().GetMission())
 			return;
 
-		// Spectating dead players stay until the match ends
-		if (BattleRoyaleRPC.s_Spectating)
+		// Spectating dead players stay until the match ends; with serial matches the server brings them back to the lobby
+		if (BattleRoyaleRPC.s_Spectating || BattleRoyaleRPC.s_StayConnected)
 			return;
 
 		GetGame().GetMission().AbortMission();

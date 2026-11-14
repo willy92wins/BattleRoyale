@@ -19,6 +19,7 @@ modded class MissionGameplay
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "HideSpawnSelection", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "ShowSpawnPoint", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "UpdateHeatMap", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "ReturnToLobby", this );
 	}
 
 	void ~MissionGameplay()
@@ -40,6 +41,7 @@ modded class MissionGameplay
 		GetRPCManager().RemoveRPC( RPC_DAYZBR_NAMESPACE, "HideSpawnSelection" );
 		GetRPCManager().RemoveRPC( RPC_DAYZBR_NAMESPACE, "ShowSpawnPoint" );
 		GetRPCManager().RemoveRPC( RPC_DAYZBR_NAMESPACE, "UpdateHeatMap" );
+		GetRPCManager().RemoveRPC( RPC_DAYZBR_NAMESPACE, "ReturnToLobby" );
 	}
 
 	override void OnInit()
@@ -61,6 +63,8 @@ modded class MissionGameplay
 #ifndef NO_GUI
 		DayZPlayerImplement.BR_OnSessionChanged();
 #endif
+		// Set again by the next server that runs serial matches
+		BattleRoyaleRPC.s_StayConnected = false;
 
 		super.OnMissionFinish();
 	}
@@ -73,6 +77,50 @@ modded class MissionGameplay
 		}
 
 		return m_BattleRoyale;
+	}
+
+	//! Serial matches: the server gave this client a new character in the next lobby. Everything the finished match left
+	//! on the client goes: the death (dead screen, locked controls, muted sound), spectating, the win screen, the pending
+	//! leave, the screen effects, and the match state and HUD of the BattleRoyale client, which are built again.
+	//! The vanilla HUD is reset by the game itself when the new character is selected (PlayerBase.OnSelectPlayer)
+	void ReturnToLobby(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		if ( type != CallType.Client )
+			return;
+
+		BattleRoyaleUtils.Info("Serial match: back in the lobby");
+
+#ifndef NO_GUI
+		DayZPlayerImplement.BR_OnSessionChanged();
+#endif
+		BattleRoyaleRPC.ResetSpectating();
+		BattleRoyaleRPC.RestoreAfterDeath();
+		if ( GetHud() )
+			GetHud().Show( true );
+
+		PPERequesterBase outside_zone = PPERequesterBank.GetRequester( PPERequesterBank.REQ_BATTLEROYALE );
+		if ( outside_zone )
+			outside_zone.Stop();
+		PPERequesterBank.GetRequester( PPERequester_BurlapSackEffects ).Stop();
+
+		if ( m_BattleRoyaleWinScreen )
+		{
+			m_BattleRoyaleWinScreen.Unlink();
+			m_BattleRoyaleWinScreen = null;
+		}
+
+		// A new client object resets the shared match state (BattleRoyaleRPC.Reset) and its zone walls
+		m_BattleRoyale = new BattleRoyaleClient;
+
+		if ( m_BattleRoyaleHudRootWidget )
+		{
+			m_BattleRoyaleHudRootWidget.Unlink();
+			m_BattleRoyaleHudRootWidget = null;
+		}
+		m_BattleRoyaleHud = null;
+		m_BattleRoyaleKillFeed = null;
+		m_BattleRoyaleMiniMap = null;
+		InitBRhud();
 	}
 
 	void InitBRhud()
