@@ -10,6 +10,7 @@ class BattleRoyaleSpectators
 	protected ref map<string, float> m_LastRequest;  //!< spectator identity id -> tick time of the last accepted request
 	protected ref map<string, PlayerBase> m_Anchors;  //!< spectator identity id -> anchor body
 	protected ref map<string, PlayerIdentity> m_Identities;  //!< spectator identity id -> identity resolved once, reused until disconnect
+	protected int m_SweepTicks;  //!< UpdateAnchors passes since the last sweep for disconnected spectators
 
 	void BattleRoyaleSpectators()
 	{
@@ -71,6 +72,67 @@ class BattleRoyaleSpectators
 			if (anchor && target)
 				anchor.SetPosition(AnchorPosition(target));
 		}
+
+		// Every 10 passes, drop spectators the disconnect event never reached (it is discarded when the client has no body)
+		m_SweepTicks++;
+		if (m_SweepTicks >= 10)
+		{
+			m_SweepTicks = 0;
+			SweepGone();
+		}
+	}
+
+	//! Drops entries whose identity is no longer connected, or whose identity again owns a living character of its own
+	protected void SweepGone()
+	{
+		map<string, PlayerIdentity> connected = new map<string, PlayerIdentity>;
+		array<PlayerIdentity> identities = new array<PlayerIdentity>;
+		GetGame().GetPlayerIndentities(identities);
+		foreach (PlayerIdentity identity : identities)
+		{
+			if (identity)
+				connected.Set(identity.GetId(), identity);
+		}
+
+		map<string, bool> candidateIds = new map<string, bool>;
+		foreach (string anchorId, PlayerBase anchorBody : m_Anchors)
+			candidateIds.Set(anchorId, true);
+		foreach (string targetId, PlayerBase watched : m_Targets)
+			candidateIds.Set(targetId, true);
+
+		array<string> goneIds = new array<string>;
+		foreach (string candidateId, bool candidateFlag : candidateIds)
+		{
+			PlayerIdentity connectedIdentity = null;
+			if (connected.Contains(candidateId))
+				connectedIdentity = connected.Get(candidateId);
+			if (!connectedIdentity)
+			{
+				goneIds.Insert(candidateId);
+				continue;
+			}
+
+			// A living character of its own is not the anchor: the identity reconnected and the old spectating entry is stale
+			PlayerBase own = PlayerBase.Cast(connectedIdentity.GetPlayer());
+			PlayerBase anchor = m_Anchors.Get(candidateId);
+			if (own && own.IsAlive() && own != anchor)
+				goneIds.Insert(candidateId);
+		}
+
+		foreach (string goneId : goneIds)
+			Drop(goneId);
+	}
+
+	//! Removes one spectator entry and deletes its anchor body; a reconnected identity keeps its own character
+	protected void Drop(string identityId)
+	{
+		PlayerBase anchor = m_Anchors.Get(identityId);
+		m_Targets.Remove(identityId);
+		m_LastRequest.Remove(identityId);
+		m_Identities.Remove(identityId);
+		ClearAnchor(identityId);
+		if (anchor)
+			GetGame().ObjectDelete(anchor);
 	}
 
 	bool IsEnabled()
@@ -102,6 +164,8 @@ class BattleRoyaleSpectators
 				watchers.Insert(id);
 		}
 
+		// The next alive player is the same for every watcher of this death: resolve it once
+		PlayerBase next = NextAlive(player, 1);
 		foreach (string watcherId : watchers)
 		{
 			PlayerIdentity watcherIdentity = null;
@@ -114,7 +178,7 @@ class BattleRoyaleSpectators
 				m_Targets.Remove(watcherId);
 				continue;
 			}
-			Watch(watcherIdentity, NextAlive(player, 1));
+			Watch(watcherIdentity, next);
 		}
 	}
 
