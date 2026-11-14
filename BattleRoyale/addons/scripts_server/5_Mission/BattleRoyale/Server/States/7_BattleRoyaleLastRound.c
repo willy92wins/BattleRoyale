@@ -157,7 +157,8 @@ class BattleRoyaleLastRound: BattleRoyaleState
     override void OnPlayerTick(PlayerBase player, float timeslice)
     {
         //determine if the player needs to take damage
-        bool do_damage = b_IsZoneLocked;
+        //! The final lock only forces damage when zone damage is enabled, same as the normal rounds
+        bool do_damage = b_DoZoneDamage && b_IsZoneLocked;
         if(!do_damage)
         {
             BattleRoyaleZone current_zone = GetPreviousZone();

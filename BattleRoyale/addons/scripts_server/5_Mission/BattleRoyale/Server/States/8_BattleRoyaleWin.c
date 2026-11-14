@@ -147,9 +147,10 @@ class BattleRoyaleWin: BattleRoyaleState
 
     void KickWinner()
     {
-        // Serial matches: the winner stays connected and goes back to the lobby with everyone else.
+        //! Serial matches without a restart due: the winner stays connected and goes back to the lobby with everyone else.
         // The players move on to the restart state with this state; outside every state they would be logged out
-        if (BRMatchDebris.s_Enabled)
+        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+        if (server && !server.WillRestartAfterMatch())
         {
             Deactivate();
             return;
