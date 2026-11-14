@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Serial matches (`serial_matches` in `server_settings.json`, off by default): when a match ends the server
+  stays up and the next match follows in the same run. The players still connected (winner, spectators)
+  get a new character in the lobby without leaving the server; the bodies with their inventory, the items
+  players dropped on the ground, the spectators' bodies and the win fireworks are deleted a few per update,
+  from what the match recorded (no map scan); zones, weather and time are drawn again; the lobby's minimum
+  wait counts from its opening. A turnover took 35-57 ms in tests. `serial_restart_every_matches` exits
+  after that many matches so the restart loop can wipe the world; a turnover that fails or takes over
+  120 s exits as before. Loot is left to the Central Economy. Ignored with `enable_vigrid_api` or
+  `use_autolock`. With the setting off the server exits after every match as before.
+- The winner gets fireworks instead of ten chickens: up to four vanilla launchers 8 m away, lit one after
+  another; a launcher that lands under a roof is left out, as the vanilla one cannot be lit there.
+
+### Changed
+- Notifications start lower (at 12.8 % of the screen height instead of 5 %), under the phase and zone
+  damage lines of the HUD that they used to cover.
+
+### Not tested yet
+- With several players: a spectator going back to the lobby with its camera and anchor body, a player who
+  connects during a turnover, and a winner who reconnects during the logout timer.
+
 ## 1.4.0 (2026-11-14)
 
 ### Changed

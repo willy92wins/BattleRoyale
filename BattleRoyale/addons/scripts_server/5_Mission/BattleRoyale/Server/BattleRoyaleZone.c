@@ -71,6 +71,13 @@ class BattleRoyaleZone
         m_PlayArea = GetBattleRoyalePlayAreas( i_NumRounds - GetZoneNumber() );
     }
 
+    //! Serial matches: the next match draws new zones (the POI list only depends on the settings and stays)
+    static void ResetMatch()
+    {
+        m_Zones = null;
+        m_PlayAreas = null;
+    }
+
     static ref BattleRoyaleZone GetZone(int x = 1)
     {
         BattleRoyaleZone m_Zone;

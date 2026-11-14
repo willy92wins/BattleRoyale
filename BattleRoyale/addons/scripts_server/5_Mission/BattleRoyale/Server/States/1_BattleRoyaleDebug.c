@@ -11,6 +11,18 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
     protected float f_AutoStartDelay;
     protected bool b_AutoStartGame;
     protected int i_FirstPlayerTick;
+    //! Tick time the minimum waiting time counts from: 0 (server start) for the first lobby, the lobby opening after a serial match
+    protected float f_WaitOrigin = 0;
+
+    void SetWaitOrigin(float tick_time)
+    {
+        f_WaitOrigin = tick_time;
+    }
+
+    protected float GetWaitingTime()
+    {
+        return GetGame().GetTickTime() - f_WaitOrigin;
+    }
 
     void BattleRoyaleDebug()
     {
@@ -35,10 +47,15 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
     //returns true when this state is complete
     override bool IsComplete()
     {
+        // Serial matches: the lobby waits until every player of the finished match is back in it
+        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+        if (server && server.IsReturningPlayers())
+            return false;
+
 #ifdef Carim
-        if( IsActive() && !b_UseVoteSystem && GetPlayers().Count() >= i_MinPlayers && GetGame().GetTickTime() >= f_MinWaitingTime && GetGroupsCount() > 1 )
+        if( IsActive() && !b_UseVoteSystem && GetPlayers().Count() >= i_MinPlayers && GetWaitingTime() >= f_MinWaitingTime && GetGroupsCount() > 1 )
 #else
-        if( IsActive() && !b_UseVoteSystem && GetPlayers().Count() >= i_MinPlayers && GetGame().GetTickTime() >= f_MinWaitingTime )
+        if( IsActive() && !b_UseVoteSystem && GetPlayers().Count() >= i_MinPlayers && GetWaitingTime() >= f_MinWaitingTime )
 #endif
         {
             Deactivate();
@@ -70,7 +87,11 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
 
     void CheckReadyState()
     {
-		if( GetGame().GetTickTime() >= f_MinWaitingTime && GetPlayers().Count() > 1 )
+        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+        if (server && server.IsReturningPlayers())
+            return;
+
+		if( GetWaitingTime() >= f_MinWaitingTime && GetPlayers().Count() > 1 )
 		{
 			if( IsActive() && IsVoteReady() )
 				Deactivate();
@@ -102,9 +123,9 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
 			else
 				MessagePlayersUntranslated("STR_BR_PLAYERS_READY_UP", ready_count.ToString());
 
-			if( GetGame().GetTickTime() < f_MinWaitingTime )
+			if( GetWaitingTime() < f_MinWaitingTime )
 			{
-				int seconds_left = Math.Ceil( f_MinWaitingTime - GetGame().GetTickTime() );
+				int seconds_left = Math.Ceil( f_MinWaitingTime - GetWaitingTime() );
 
 				if( !IsVoteReady() )
 					MessagePlayersUntranslated("STR_BR_CANNOT_START_BEFORE_SECOND", seconds_left.ToString());

@@ -3,6 +3,21 @@
 //! Battle royale notifications also get their colour on the icon and a short vanilla sound.
 modded class NotificationUI
 {
+	//! Top of the notification stack, as a fraction of the screen height. Vanilla puts it at 0.05, where the BattleRoyale
+	//! HUD starts (HudPanel, 90 % of the screen, centred) with the phase line (40 units) and the zone damage line under it
+	//! (ending 76 units lower): 0.05 + 84 / 1080 keeps the notifications centred, just below both, at every resolution
+	protected static const float BR_NOTIFICATION_TOP = 0.128;
+
+	void NotificationUI()
+	{
+		if (!m_Root)
+			return;
+
+		float x, y;
+		m_Root.GetPos(x, y);
+		m_Root.SetPos(x, BR_NOTIFICATION_TOP);
+	}
+
 	override void AddNotification(NotificationRuntimeData data)
 	{
 		super.AddNotification(data);

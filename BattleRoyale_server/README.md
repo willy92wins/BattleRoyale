@@ -199,6 +199,31 @@ The profiles folder (BattleRoyale settings and logs) is never touched. To restor
 match: stop the loop and the server, rename `storage_<instanceId>` away, and rename the wanted
 `storage_<instanceId>.prev-*` back to `storage_<instanceId>`.
 
+### Serial matches (no restart between matches)
+
+With `"serial_matches": 1` in `<profiles>/Vigrid-BattleRoyale/server_settings.json` the server stays up when
+a match ends, and the next match follows in the same server run:
+
+- the players still connected (the winner, spectators) get a new character in the lobby without leaving the
+  server; players who left come back to the open lobby whenever they want;
+- the bodies of the match with their inventory, the items players dropped on the ground and that still lie
+  there, the spectators' bodies and the winner's fireworks are deleted, a few per server update. The mod
+  records up to 20,000 dropped items per match; later drops, and items put into a container of the world,
+  are left to the Central Economy;
+- zones, weather and time are drawn again, and the lobby's `min_waiting_time` counts from the moment the
+  lobby opens.
+
+Loot is left to the Central Economy as your mission sets it up: nothing is wiped or respawned by the mod
+between serial matches. In a test, after about 2,300 loose items were deleted around Chernogorsk, the
+vanilla economy had put back a third of them 8 minutes later, so after a big match the next one starts with
+less loot. To start from a fresh world now and then, set `"serial_restart_every_matches"` (for example 5): the
+server exits after that many matches and the restart loop wipes the world as above. Keep using
+`restart_loop.ps1` either way: it also restarts the server if a match turnover fails, which ends in the usual
+exit.
+
+The setting is ignored while `enable_vigrid_api` or `use_autolock` is on: their match id and server lock
+belong to one server run.
+
 ## 6. BattleRoyale settings
 
 On the first start the mod writes its settings to `<profiles>\Vigrid-BattleRoyale\`

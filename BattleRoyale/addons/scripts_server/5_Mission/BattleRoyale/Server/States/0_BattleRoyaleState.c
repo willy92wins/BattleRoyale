@@ -77,6 +77,22 @@ class BattleRoyaleState: Timeable
             OnPlayerCountChanged();
     }
 
+    //! Serial matches: the next match starts without the names and phase of the finished one
+    static void ResetMatchStatics()
+    {
+        i_NumStartingPlayers = 0;
+        if (s_MatchPlayerNames)
+            s_MatchPlayerNames.Clear();
+        s_MatchPhase = 0;
+        s_MatchPhaseSeconds = -1;
+        s_MatchPhaseSentAt = 0;
+    }
+
+    //! Serial matches: removes the delayed calls this state queued, before a new match replaces it
+    void CancelPendingWork()
+    {
+    }
+
     protected void RememberMatchPlayers()
     {
         if (!s_MatchPlayerNames)

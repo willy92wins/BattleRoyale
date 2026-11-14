@@ -17,7 +17,11 @@ class BattleRoyaleRestart: BattleRoyaleState
         if (server_data && server_data.enable_vigrid_api)
             delay = SHUTDOWN_DELAY_SECONDS_WITH_API;
 
-        BroadcastMatchPhase(EBRMatchPhase.RESTARTING, delay);
+        // Serial matches: the server stays up, the clients keep "match over" until they are back in the lobby
+        if (BRMatchDebris.s_Enabled)
+            BroadcastMatchPhase(EBRMatchPhase.FINISHED, -1);
+        else
+            BroadcastMatchPhase(EBRMatchPhase.RESTARTING, delay);
 
         BattleRoyaleUtils.Trace("[Restart State] Restarting!");
 
@@ -47,6 +51,11 @@ class BattleRoyaleRestart: BattleRoyaleState
 
     void Shutdown()
     {
+        // Serial matches: the next match follows in this server run, unless the scheduled full restart is due
+        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+        if (server && server.RequestTurnover())
+            return;
+
         GetGame().RequestExit(0);
     }
 }

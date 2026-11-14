@@ -93,32 +93,63 @@ class BattleRoyaleWin: BattleRoyaleState
 			scoreWebhook.Send( br_instance.match_uuid, player_winner.GetIdentity().GetPlainId(), player_winner.GetBRPosition() );
 		}
 
-        // Spawn chickens
-		ref array<string> chickens = {"Animal_GallusGallusDomesticus", "Animal_GallusGallusDomesticusF_Brown", "Animal_GallusGallusDomesticusF_Spotted", "Animal_GallusGallusDomesticusF_White"};
+        // Fireworks around the winner: launchers in a ring, lit one after another so the shots keep coming
+        // through the win screen (each one has a 3 s fuse, then a shot every 3 s). A shot does 1 damage within 1-2 m
+        // of its launcher (CfgAmmo Fireworks_Ammo), and the launchers stand FIREWORKS_DISTANCE metres away
+        vector winner_position = player_winner.GetPosition();
+        for (int j = 0; j < FIREWORKS_COUNT; j++)
+        {
+            float angle = (j * 360.0 / FIREWORKS_COUNT) * Math.DEG2RAD;
+            vector position;
+            position[0] = winner_position[0] + ( FIREWORKS_DISTANCE * Math.Cos(angle) );
+            position[2] = winner_position[2] + ( FIREWORKS_DISTANCE * Math.Sin(angle) );
+            position[1] = GetGame().SurfaceY(position[0], position[2]);
 
-		for (int j = 0; j < 10; j++)
-		{
-			vector position;
-
-			vector player_position = player_winner.GetPosition();
-			float radius = Math.RandomFloat(1, 5);
-			float angle = Math.RandomFloat(0, 360) * Math.DEG2RAD;
-			position[0] = player_position[0] + ( radius * Math.Cos(angle) );
-			position[2] = player_position[2] + ( radius * Math.Sin(angle) );
-			position[1] = GetGame().SurfaceY(position[0], position[2]);
-
-			EntityAI chicken = EntityAI.Cast(GetGame().CreateObject( chickens.GetRandomElement(), position, false, true ));
-            if (!chicken)
+            FireworksLauncher launcher = FireworksLauncher.Cast( GetGame().CreateObjectEx( "FireworksLauncher", position, ECE_PLACE_ON_SURFACE ) );
+            if (!launcher)
                 continue;
 
-			float dir = Math.RandomFloat(0, 360);
-			vector chickenDir = vector.YawToVector(dir);
-			chicken.SetDirection( Vector(chickenDir[0], 0, chickenDir[1]) );
-		}
+            // Serial matches: the launchers leave with the match
+            BRMatchDebris.Get().AddObject(launcher);
+            GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(this.LightFireworks, j * FIREWORKS_STAGGER_MS, false, launcher);
+        }
+    }
+
+    protected static const int FIREWORKS_COUNT = 4;
+    protected static const float FIREWORKS_DISTANCE = 8.0;
+    protected static const int FIREWORKS_STAGGER_MS = 750;
+
+    //! The vanilla launcher refuses to be lit under a roof (FireworksBase.CanBeIgnitedBy, 60 m roof check); lighting it
+    //! directly skips that check, so a launcher that landed under a roof or inside a building is removed instead
+    void LightFireworks(FireworksLauncher launcher)
+    {
+        if (!launcher)
+            return;
+
+        if (MiscGameplayFunctions.IsUnderRoofEx(launcher, 60))
+        {
+            GetGame().ObjectDelete(launcher);
+            return;
+        }
+
+        launcher.OnIgnitedThis(null);
+    }
+
+    override void CancelPendingWork()
+    {
+        GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(this.LightFireworks);
     }
 
     void KickWinner()
     {
+        // Serial matches: the winner stays connected and goes back to the lobby with everyone else.
+        // The players move on to the restart state with this state; outside every state they would be logged out
+        if (BRMatchDebris.s_Enabled)
+        {
+            Deactivate();
+            return;
+        }
+
 		for ( int k = GetPlayers().Count() - 1; k >= 0; k-- )
 		{
 			PlayerBase winner = GetPlayers()[k];

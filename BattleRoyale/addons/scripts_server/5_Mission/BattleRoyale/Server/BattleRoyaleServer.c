@@ -76,58 +76,13 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         m_LateJoinTimers = new map<string, ref Timer>;
         m_Spectators = new BattleRoyaleSpectators;
+        m_CharacterTypes = new map<string, string>;
 
-        //load config (this may error because GetBattleRoyale would return false)
-        BattleRoyaleGameData m_GameData = config_data.GetGameData();
-        i_NumRounds = m_GameData.num_zones;
-        b_EnableSpawnSelectionMenu = m_GameData.enable_spawn_selection_menu;
+        BRMatchDebris.s_Enabled = m_ServerData.UsesSerialMatches();
+        if (BRMatchDebris.s_Enabled)
+            BattleRoyaleUtils.Info("[Serial] Serial matches on: the server stays up between matches (full restart every " + m_ServerData.serial_restart_every_matches + " matches, 0 = never)");
 
-        //--- initialize all states (in order from start to finish)
-        m_States = new array<ref BattleRoyaleState>;
-
-        // (1) DEBUG ZONE
-        BattleRoyaleDebug debug_state = new BattleRoyaleDebug;
-        m_States.Insert(debug_state); //insert debug state
-
-        // (2) PLAYER COUNT REACHED COUNTDOWN
-        BattleRoyaleCountReached count_reached = new BattleRoyaleCountReached;
-        m_States.Insert(count_reached);
-
-        // (3) SPAWN SELECTION MENU
-        if (b_EnableSpawnSelectionMenu)
-		{
-			BattleRoyaleSpawnSelection spawn_selection = new BattleRoyaleSpawnSelection;
-			m_States.Insert(spawn_selection);
-		}
-
-        // (4) PREPARE CLIENTS & TELEPORT
-        BattleRoyalePrepare prepare_clients = new BattleRoyalePrepare;
-        m_States.Insert(prepare_clients);
-
-        // (5) UNLOCK CLIENTS AND START MATCH WOO
-        BattleRoyaleStartMatch start_match = new BattleRoyaleStartMatch;
-        m_States.Insert(start_match);
-
-		// (6) ROUNDS
-        int num_states = m_States.Count();
-        for(int i = 0; i < i_NumRounds; i++)
-        {
-            BattleRoyaleUtils.Trace("Add Round " + i);
-            int prev_state_ind = i + num_states - 1;
-            BattleRoyaleState previous_state = m_States[prev_state_ind];
-            BattleRoyaleRound round = new BattleRoyaleRound(previous_state);
-            m_States.Insert(round);
-        }
-
-        // (7) LAST ROUND
-        BattleRoyaleLastRound last_round = new BattleRoyaleLastRound(m_States[m_States.Count() - 1]);
-        m_States.Insert(last_round);
-
-        // (8) WINNING PLAYER/TEAM
-        m_States.Insert(new BattleRoyaleWin);
-
-        // (9) RESTART SERVER
-        m_States.Insert(new BattleRoyaleRestart);
+        m_States = BuildStates();
 
         i_CurrentStateIndex = 0;  // start at the first state
         GetCurrentState().Activate();  // activate the first state
@@ -145,10 +100,240 @@ class BattleRoyaleServer: BattleRoyaleBase
 #endif
     }
 
+    //! The states of one match, in order from start to finish; Init builds the first match, a serial match turnover the next ones
+    protected ref array<ref BattleRoyaleState> BuildStates()
+    {
+        //load config (this may error because GetBattleRoyale would return false)
+        BattleRoyaleGameData m_GameData = BattleRoyaleConfig.GetConfig().GetGameData();
+        i_NumRounds = m_GameData.num_zones;
+        b_EnableSpawnSelectionMenu = m_GameData.enable_spawn_selection_menu;
+
+        ref array<ref BattleRoyaleState> states = new array<ref BattleRoyaleState>;
+
+        // (1) DEBUG ZONE
+        BattleRoyaleDebug debug_state = new BattleRoyaleDebug;
+        states.Insert(debug_state); //insert debug state
+
+        // (2) PLAYER COUNT REACHED COUNTDOWN
+        BattleRoyaleCountReached count_reached = new BattleRoyaleCountReached;
+        states.Insert(count_reached);
+
+        // (3) SPAWN SELECTION MENU
+        if (b_EnableSpawnSelectionMenu)
+		{
+			BattleRoyaleSpawnSelection spawn_selection = new BattleRoyaleSpawnSelection;
+			states.Insert(spawn_selection);
+		}
+
+        // (4) PREPARE CLIENTS & TELEPORT
+        BattleRoyalePrepare prepare_clients = new BattleRoyalePrepare;
+        states.Insert(prepare_clients);
+
+        // (5) UNLOCK CLIENTS AND START MATCH WOO
+        BattleRoyaleStartMatch start_match = new BattleRoyaleStartMatch;
+        states.Insert(start_match);
+
+		// (6) ROUNDS
+        int num_states = states.Count();
+        for(int i = 0; i < i_NumRounds; i++)
+        {
+            BattleRoyaleUtils.Trace("Add Round " + i);
+            int prev_state_ind = i + num_states - 1;
+            BattleRoyaleState previous_state = states[prev_state_ind];
+            BattleRoyaleRound round = new BattleRoyaleRound(previous_state);
+            states.Insert(round);
+        }
+
+        // (7) LAST ROUND
+        BattleRoyaleLastRound last_round = new BattleRoyaleLastRound(states[states.Count() - 1]);
+        states.Insert(last_round);
+
+        // (8) WINNING PLAYER/TEAM
+        states.Insert(new BattleRoyaleWin);
+
+        // (9) RESTART SERVER
+        states.Insert(new BattleRoyaleRestart);
+
+        return states;
+    }
+
 	static BattleRoyaleServer GetInstance()
 	{
 		return m_Instance;
 	}
+
+    //--- Serial matches (server_settings.json serial_matches)
+
+    //! Matches ended in this server run
+    protected static int s_MatchesEnded = 0;
+    protected ref BRMatchTurnover m_Turnover;
+    //! identity id -> character class of the last body, so a spectator returns to the lobby with the same look
+    protected ref map<string, string> m_CharacterTypes;
+
+    //! Called by the restart state when a match is over: true when the server stays up and the next match follows,
+    //! false when it must exit as without serial matches (setting off, ignored, or the scheduled full restart)
+    bool RequestTurnover()
+    {
+        if (m_Turnover)
+            return true;
+
+        BattleRoyaleServerData serverData = BattleRoyaleConfig.GetConfig().GetServerData();
+        if (!serverData || !serverData.UsesSerialMatches())
+            return false;
+
+        s_MatchesEnded++;
+        if (serverData.serial_restart_every_matches > 0 && s_MatchesEnded >= serverData.serial_restart_every_matches)
+        {
+            BattleRoyaleUtils.Info("[Serial] Match " + s_MatchesEnded + " ended: scheduled full restart");
+            return false;
+        }
+
+        m_Turnover = new BRMatchTurnover(this, s_MatchesEnded);
+        return true;
+    }
+
+    bool IsTurnoverRunning()
+    {
+        return m_Turnover != null;
+    }
+
+    //! Turnover step 1: nothing of the finished match may run once the next one starts
+    void Turnover_CancelOldMatch()
+    {
+        foreach (BattleRoyaleState state : m_States)
+        {
+            if (state)
+                state.CancelPendingWork();
+        }
+
+        if (m_LateJoinTimers)
+        {
+            foreach (string steamid, Timer kickTimer : m_LateJoinTimers)
+            {
+                if (kickTimer && kickTimer.IsRunning())
+                    kickTimer.Stop();
+            }
+            m_LateJoinTimers.Clear();
+        }
+        GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(this.RemoveLateJoinTimer);
+
+        if (m_Spectators)
+            m_Spectators.CancelPending();
+
+        if (temp_disconnecting)
+            temp_disconnecting.Clear();
+    }
+
+    //! True while the preparation thread of the finished match still runs: the next match must not start under it
+    bool Turnover_IsPrepareRunning()
+    {
+        foreach (BattleRoyaleState state : m_States)
+        {
+            BattleRoyalePrepare prepare;
+            if (Class.CastTo(prepare, state) && prepare.IsProcessing())
+                return true;
+        }
+        return false;
+    }
+
+    //! Turnover step 2: new states, zones and match data, then the lobby opens.
+    //! The states of the finished match are released, not deactivated: their timers stop with them
+    void Turnover_BuildNextMatch()
+    {
+        BattleRoyaleState.ResetMatchStatics();
+        BattleRoyaleZone.ResetMatch();
+
+        m_States = BuildStates();
+        i_CurrentStateIndex = 0;
+        m_TimeSinceLastTick = CHECK_IS_COMPLETE + 1;
+
+        BattleRoyaleDebug lobby = BattleRoyaleDebug.Cast( GetState(0) );
+        if (lobby)
+            lobby.SetWaitOrigin( GetGame().GetTickTime() );
+
+        GetCurrentState().Activate();
+        RandomizeServerEnvironment();
+    }
+
+    //! Results of Turnover_ReturnToLobby
+    static const int RETURN_SKIPPED = 0;   //!< nothing to do for this identity
+    static const int RETURN_DONE = 1;      //!< new lobby character, in the lobby state
+    static const int RETURN_FAILED = -1;   //!< the identity is still connected without a lobby character
+
+    //! Turnover step 3: a connected player gets a new character in the lobby. Skipped for an identity still connecting
+    //! (the normal connection puts it in the lobby) or already in the lobby; failed when no lobby character came out of it
+    int Turnover_ReturnToLobby(PlayerIdentity identity)
+    {
+        if (!identity)
+            return RETURN_SKIPPED;
+
+        PlayerBase previous = PlayerBase.Cast( identity.GetPlayer() );
+        bool spectating = m_Spectators && m_Spectators.IsSpectator(identity);
+        if (!previous && !spectating)
+            return RETURN_SKIPPED;
+
+        // Already a lobby player (an admin who joined the lobby early, for one): nothing to replace
+        if (previous && previous.IsAlive() && previous.br_in_current_state && GetCurrentState().ContainsPlayer(previous))
+            return RETURN_SKIPPED;
+
+        MissionServer mission = MissionServer.Cast( GetGame().GetMission() );
+        if (!mission)
+            return RETURN_FAILED;
+
+        string character_type = "SurvivorM_Mirek";
+        if (previous)
+            character_type = previous.GetType();
+        else if (m_CharacterTypes.Contains(identity.GetId()))
+            character_type = m_CharacterTypes.Get(identity.GetId());
+
+        // The client resets its match state first: the lobby phase and player count sent while the new character
+        // connects (OnPlayerConnected) then land on the fresh state instead of being wiped by the reset
+        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "ReturnToLobby", NULL, true, identity );
+
+        PlayerBase fresh = mission.BR_CreateLobbyCharacter(identity, character_type);
+        if (!fresh)
+            return RETURN_FAILED;
+
+        if (m_Spectators)
+            m_Spectators.Release(identity);
+
+        // A living match body (the winner) has no owner any more; a dead one is a recorded leftover
+        if (previous && previous.IsAlive() && previous != fresh)
+            GetGame().ObjectDelete(previous);
+
+        if (!fresh.br_in_current_state || !GetCurrentState().ContainsPlayer(fresh))
+        {
+            BattleRoyaleUtils.Warn("[Serial] " + identity.GetName() + " got a lobby character outside the lobby state");
+            return RETURN_FAILED;
+        }
+
+        return RETURN_DONE;
+    }
+
+    //! True while connected players are still being given their lobby characters: the lobby must not start a match yet
+    bool IsReturningPlayers()
+    {
+        return m_Turnover && m_Turnover.IsReturning();
+    }
+
+    //! Turnover step 4: the finished match is gone; one line for the server owner
+    void Turnover_Finished(int match_number, float seconds, int returned, BRMatchDebrisBatch debris)
+    {
+        m_CharacterTypes.Clear();
+
+        string deleted = "nothing recorded";
+        if (debris)
+            deleted = debris.m_DeletedBodies.ToString() + " bodies, " + debris.m_DeletedItems.ToString() + " dropped items, " + debris.m_DeletedObjects.ToString() + " other objects";
+
+        BattleRoyaleUtils.Info("[Serial] Match " + match_number + " done, next lobby open: turnover took " + seconds.ToString() + " s, " + returned + " players back in the lobby, deleted " + deleted);
+    }
+
+    //! The turnover could not finish: exit as without serial matches, the restart loop starts a clean server
+    void Turnover_Abort(string reason)
+    {
+        Error("[Serial] Turnover aborted (" + reason + "), restarting the server");
+        GetGame().RequestExit(0);
+    }
 
     override bool IsDebug()
     {
@@ -177,6 +362,11 @@ class BattleRoyaleServer: BattleRoyaleBase
     override void Update(float delta)
     {
         float timeslice = delta; //Legacy
+
+        // A serial match turnover replaces m_States, so it runs before the states are iterated.
+        // Released here, after Step returned, never from inside it
+        if (m_Turnover && !m_Turnover.Step())
+            m_Turnover = null;
 
         foreach(BattleRoyaleState state: m_States)
         {
@@ -236,6 +426,12 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         //Copy PlainID (steamid) to PlayerBase to avoid the disparition of PlayerIdentity (OnPlayerDisconnected)
         player.player_steamid = player.GetIdentity().GetPlainId();
+
+        // Serial matches with spectators: a dead player stays connected (spectating) and returns to the next lobby,
+        // so the client must not leave 15 s after its death
+        BattleRoyaleGameData stayGameData = BattleRoyaleConfig.GetConfig().GetGameData();
+        if (BRMatchDebris.s_Enabled && stayGameData && stayGameData.enable_spectator)
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetStayConnected", new Param1<bool>( true ), true, player.GetIdentity() );
 
         //Dirty way to sync server settings with the client | this should be converted into a generic "sync settings" function
         BattleRoyaleConfig config_data = BattleRoyaleConfig.GetConfig();
@@ -544,6 +740,14 @@ class BattleRoyaleServer: BattleRoyaleBase
 
     override void OnPlayerKilled(PlayerBase killed, Object killer)
     {
+        // Serial matches: the body and its inventory are removed when the match is over
+        if (killed && BRMatchDebris.s_Enabled)
+        {
+            BRMatchDebris.Get().AddBody(killed);
+            if (killed.GetIdentity() && m_CharacterTypes)
+                m_CharacterTypes.Set(killed.GetIdentity().GetId(), killed.GetType());
+        }
+
         if(GetCurrentState().ContainsPlayer(killed))
         {
             //if we are in a round, then we need to call onplayerkilled (since it's not a state based function we must cast)
