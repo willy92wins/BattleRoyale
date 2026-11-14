@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.4.0 (2026-11-14)
 
 ### Changed
 - Kill feed: each death now shows an icon for its cause, a sentence that names killer and victim, and the
@@ -13,6 +13,29 @@
   `Param4<string, string, string, float>`: server and clients must run the same build.
 - A death by a zone tick, a fall, fire, barbed wire, a vehicle or an explosion is no longer credited as a
   bleed out to the last player who hit the victim, even when the victim was low on blood.
+
+### Performance (100 players)
+- The spawn-selection heat map converts map coordinates once per redraw instead of twice per square
+  (up to about 5,000 fewer engine calls per redraw while the map is panned or zoomed); a check point
+  falls back to the old placement if the two ever disagree by more than 1 px.
+- The per-player tick reads a flag to know whether a body is a spectator's anchor instead of scanning
+  the anchor list.
+- With Carim, an accepted spawn click looks the group up once instead of twice, and two trace strings
+  are built only at trace level. Servers without Carim run the same code as before.
+
+### Tools
+- `tools/build.py` warns when a build from a git worktree lacks the gitignored assets (textures,
+  imagesets, models) of the main checkout, and prints the command that copies them;
+  `tools/sync_assets.py` also copies the VPP mod's assets.
+
+### Not tested yet
+- With several players: the kill feed with weapons, distance, headshot, melee, explosives, zone, fall
+  and bleed-out credit, many deaths in a row, and the gold bar with repeated names; spectators and the
+  heat map with these changes. Tested alone: a death in a match shows its row with no script error.
+- The Carim branch of the group lookup (no Carim build available).
+- Known and left for later: a vehicle occupant who dies in a crash while under the fatal blood level is
+  still credited as a bleed out to the last attacker (as in 1.3.0); a run-over gives the driver no kill.
+- `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
 
 ## 1.3.0 (2026-11-13)
 
