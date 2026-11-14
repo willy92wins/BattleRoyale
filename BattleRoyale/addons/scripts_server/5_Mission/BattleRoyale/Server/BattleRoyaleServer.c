@@ -477,6 +477,14 @@ class BattleRoyaleServer: BattleRoyaleBase
         return m_Turnover && m_Turnover.IsReturning();
     }
 
+    //! Turnover: sends the player count held back while a batch returned, after that batch's ReturnToLobby resets
+    void Turnover_BroadcastPlayerCount()
+    {
+        BattleRoyaleState state = GetCurrentState();
+        if (state)
+            state.BroadcastPlayerCount();
+    }
+
     //! Turnover step 4: the finished match is gone; one line for the server owner
     void Turnover_Finished(int match_number, float seconds, int returned, BRMatchDebrisBatch debris)
     {

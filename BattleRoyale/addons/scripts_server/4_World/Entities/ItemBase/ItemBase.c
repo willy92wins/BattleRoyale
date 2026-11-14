@@ -1,6 +1,9 @@
 #ifdef SERVER
 modded class ItemBase
 {
+	//! Serial matches: BRMatchDebris generation that last recorded this item (0 = never), so one drop records once
+	int br_debris_gen;
+
 	//! Serial matches: an item a player puts on the ground (dropped, swapped, thrown, or taken off a body) is a leftover
 	//! of the match. One cheap check per inventory move, and only while the setting is on
 	override void EEItemLocationChanged(notnull InventoryLocation oldLoc, notnull InventoryLocation newLoc)

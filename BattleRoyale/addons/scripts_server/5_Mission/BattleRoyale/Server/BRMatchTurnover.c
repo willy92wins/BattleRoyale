@@ -27,6 +27,8 @@ class BRMatchTurnover
 	protected ref array<int> m_RetryAttempts;
 	protected int m_Returned;
 	protected ref BRMatchDebrisBatch m_Debris;
+	//! Set once the cleanup passes the deadline: it is warned about once and never aborts the turnover
+	protected bool m_CleanDeadlineWarned;
 
 	void BRMatchTurnover(BattleRoyaleServer server, int match_number)
 	{
@@ -53,10 +55,19 @@ class BRMatchTurnover
 		if (!m_Server)
 			return false;
 
-		if (GetGame().GetTickTime() - m_StartedAt > DEADLINE_SECONDS)
+		float elapsed = GetGame().GetTickTime() - m_StartedAt;
+		// The deadline only guards the phases before the new lobby opens: in PHASE_CLEAN IsReturning() is
+		// already false and the lobby can start, so aborting there would exit a server players are using
+		if (m_Phase != PHASE_CLEAN && elapsed > DEADLINE_SECONDS)
 		{
 			m_Server.Turnover_Abort("took more than " + DEADLINE_SECONDS + " s");
 			return false;
+		}
+
+		if (m_Phase == PHASE_CLEAN && !m_CleanDeadlineWarned && elapsed > DEADLINE_SECONDS)
+		{
+			m_CleanDeadlineWarned = true;
+			BattleRoyaleUtils.Warn("[Serial] Match " + m_MatchNumber + " cleanup took more than " + DEADLINE_SECONDS + " s; it continues, the new lobby is already open");
 		}
 
 		switch (m_Phase)
@@ -109,12 +120,16 @@ class BRMatchTurnover
 			}
 		}
 
+		// One count for the whole living batch, after every ReturnToLobby of this step reset the clients
+		m_Server.Turnover_BroadcastPlayerCount();
+
 		m_Phase = PHASE_RETURN;
 		return true;
 	}
 
 	protected bool ReturnSome()
 	{
+		int returned_before = m_Returned;
 		int budget = RETURNS_PER_UPDATE;
 		while (budget > 0 && m_Pending.Count() > 0)
 		{
@@ -145,6 +160,10 @@ class BRMatchTurnover
 				m_RetryAttempts = new array<int>;
 			}
 		}
+
+		// One count per batch that returned someone, also on the step that moves on to PHASE_CLEAN
+		if (m_Returned > returned_before)
+			m_Server.Turnover_BroadcastPlayerCount();
 
 		return true;
 	}

@@ -13,6 +13,9 @@ class BRMatchDebris
 	//! Set by BattleRoyaleServer from server_settings.json; off, nothing is recorded
 	static bool s_Enabled = false;
 
+	//! Recording generation, advanced by TakeAll: an item stamped with it is already recorded in this match
+	static int s_Generation = 1;
+
 	protected ref array<PlayerBase> m_Bodies;
 	protected ref array<EntityAI> m_Items;
 	protected ref array<EntityAI> m_Objects;
@@ -53,6 +56,15 @@ class BRMatchDebris
 			return;
 		}
 
+		// Stamped only once accepted (past the cap), so the same item dropped again in this match records once
+		ItemBase ib = ItemBase.Cast(item);
+		if (ib)
+		{
+			if (ib.br_debris_gen == s_Generation)
+				return;
+			ib.br_debris_gen = s_Generation;
+		}
+
 		m_Items.Insert(item);
 	}
 
@@ -70,6 +82,8 @@ class BRMatchDebris
 		m_Items = new array<EntityAI>;
 		m_Objects = new array<EntityAI>;
 		m_ItemsCapLogged = false;
+		// The next match records afresh: items kept across matches (a waiting player's own kit) stamp again
+		s_Generation++;
 		return batch;
 	}
 }
