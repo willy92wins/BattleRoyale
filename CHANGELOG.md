@@ -12,7 +12,8 @@
   after that many matches so the restart loop can wipe the world; a turnover that fails or takes over
   120 s exits as before. Loot is left to the Central Economy. Ignored with `enable_vigrid_api` or
   `use_autolock`. With the setting off the server exits after every match as before.
-- The winner gets fireworks (four vanilla launchers lit one after another) instead of ten chickens.
+- The winner gets fireworks instead of ten chickens: up to four vanilla launchers 8 m away, lit one after
+  another; a launcher that lands under a roof is left out, as the vanilla one cannot be lit there.
 
 ### Changed
 - Notifications start lower (at 12.8 % of the screen height instead of 5 %), under the phase and zone

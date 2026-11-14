@@ -206,8 +206,10 @@ a match ends, and the next match follows in the same server run:
 
 - the players still connected (the winner, spectators) get a new character in the lobby without leaving the
   server; players who left come back to the open lobby whenever they want;
-- the bodies of the match with their inventory, the items players dropped on the ground, the spectators'
-  bodies and the winner's fireworks are deleted, a few per server update;
+- the bodies of the match with their inventory, the items players dropped on the ground and that still lie
+  there, the spectators' bodies and the winner's fireworks are deleted, a few per server update. The mod
+  records up to 20,000 dropped items per match; later drops, and items put into a container of the world,
+  are left to the Central Economy;
 - zones, weather and time are drawn again, and the lobby's `min_waiting_time` counts from the moment the
   lobby opens.
 
