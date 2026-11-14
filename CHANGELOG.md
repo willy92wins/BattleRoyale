@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.5.0 (2026-11-14)
 
 ### Added
 - Serial matches (`serial_matches` in `server_settings.json`, off by default): when a match ends the server
@@ -8,8 +8,8 @@
   get a new character in the lobby without leaving the server; the bodies with their inventory, the items
   players dropped on the ground, the spectators' bodies and the win fireworks are deleted a few per update,
   from what the match recorded (no map scan); zones, weather and time are drawn again; the lobby's minimum
-  wait counts from its opening. A turnover took 35-57 ms in tests. `serial_restart_every_matches` exits
-  after that many matches so the restart loop can wipe the world; a turnover that fails or takes over
+  wait counts from its opening. A turnover took 29-57 ms in tests. `serial_restart_every_matches` (6 by
+  default, 0 = never) exits after that many matches so the restart loop can wipe the world; a turnover that fails or takes over
   120 s exits as before. Loot is left to the Central Economy. Ignored with `enable_vigrid_api` or
   `use_autolock`. With the setting off the server exits after every match as before.
 - The winner gets fireworks instead of ten chickens: up to four vanilla launchers 8 m away, lit one after
@@ -21,7 +21,11 @@
 
 ### Not tested yet
 - With several players: a spectator going back to the lobby with its camera and anchor body, a player who
-  connects during a turnover, and a winner who reconnects during the logout timer.
+  connects during a turnover, and a winner who reconnects during the logout timer; serial matches with 100
+  players. Tested alone in DayZDiag: three matches in a row in one server run, a death in a round, the
+  scheduled restart, the setting off, and the fireworks.
+- The retry and abort path when a lobby character cannot be created (it cannot be triggered in a test).
+- `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
 
 ## 1.4.0 (2026-11-14)
 

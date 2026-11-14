@@ -39,8 +39,9 @@ class BattleRoyaleServerData: BattleRoyaleDataBase
 	// Ignored while enable_vigrid_api or use_autolock is on (their match id and lock belong to one server run).
 	// Loot is left to the Central Economy as the server is set up.
 	bool serial_matches = false;
-	// With serial_matches: full restart, as without serial matches, when this many matches have ended in one run (0 = never)
-	int serial_restart_every_matches = 0;
+	// With serial_matches: full restart, as without serial matches, when this many matches have ended in one run (0 = never).
+	// The restart loop then wipes the world, which brings the loot back
+	int serial_restart_every_matches = 6;
 
     override string GetProfilePath()
     {
@@ -52,7 +53,7 @@ class BattleRoyaleServerData: BattleRoyaleDataBase
 		if (serial_restart_every_matches < 0)
 		{
 			LogInvalidSetting("server_settings.json", "serial_restart_every_matches", serial_restart_every_matches.ToString(), "must be 0 or more");
-			serial_restart_every_matches = 0;
+			serial_restart_every_matches = 6;
 		}
 	}
 
