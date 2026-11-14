@@ -72,6 +72,11 @@ class BattleRoyaleLastRound: BattleRoyaleState
         //lock zone event
         m_FinalZoneLockTimer = AddTimer( time_till_lock / 1000.0, this, "LockFinalZone", NULL, false);
 
+        // Last round: everyone connected learns now when the server will restart after this match
+        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+        if (server && server.WillRestartAfterMatch())
+            MessagePlayersUntranslated("STR_BR_RESTART_AFTER_MATCH");
+
         //send play area to clients
         ref BattleRoyalePlayArea m_PreviousArea = NULL;
         if(GetPreviousZone())

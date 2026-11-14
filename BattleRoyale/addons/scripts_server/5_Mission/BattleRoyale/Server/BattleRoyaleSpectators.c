@@ -216,9 +216,13 @@ class BattleRoyaleSpectators
 		if (own && own.IsAlive())
 			return;
 
+		// Nobody left to watch: the waiting room takes the player, when it is on
 		PlayerBase target = NextAlive(null, 1);
 		if (!target)
+		{
+			BattleRoyaleServer.GetInstance().MoveToWaitingRoom(identity);
 			return;
+		}
 
 		// The identity owns a new anchor body near the target, then spectates from a camera
 		// Without an anchor the camera never receives the target: the client leaves after its death as before
@@ -226,6 +230,7 @@ class BattleRoyaleSpectators
 		if (!anchor)
 		{
 			BattleRoyaleUtils.Warn("Spectator anchor could not be created for " + identity.GetName());
+			BattleRoyaleServer.GetInstance().MoveToWaitingRoom(identity);
 			return;
 		}
 

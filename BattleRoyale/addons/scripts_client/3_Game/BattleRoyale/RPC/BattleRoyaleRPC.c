@@ -23,6 +23,7 @@ class BattleRoyaleRPC
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "MatchInProgress", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SpectateTarget", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetStayConnected", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetWaitingRoom", this );
 
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
 	}
@@ -70,7 +71,13 @@ class BattleRoyaleRPC
 		if ( help )
 		{
 			string viewKey = InputUtils.GetButtonNameFromInput( "UAPersonView", EInputDeviceType.MOUSE_AND_KEYBOARD );
-			help.SetText( string.Format( Widget.TranslateString( "#STR_BR_SPECTATE_HELP" ), viewKey ) );
+			string helpText = string.Format( Widget.TranslateString( "#STR_BR_SPECTATE_HELP" ), viewKey );
+			if ( s_WaitingRoom )
+			{
+				string readyKey = InputUtils.GetButtonNameFromInput( "UADayZBRReadyUp", EInputDeviceType.MOUSE_AND_KEYBOARD );
+				helpText = helpText + " - " + string.Format( Widget.TranslateString( "#STR_BR_SPECTATE_LOBBY_HELP" ), readyKey );
+			}
+			help.SetText( helpText );
 		}
 
 		s_SpectatorOverlay.Show( true );
@@ -90,6 +97,22 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 			s_StayConnected = data.param1;
+	}
+
+	//! Waiting room on this server (general_settings.json): a spectator can leave spectating with the ready key and wait
+	//! in the lobby. Cleared when the mission finishes
+	static bool s_WaitingRoom = false;
+
+	void SetWaitingRoom(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param1<bool> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ SETWAITINGROOM RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+			s_WaitingRoom = data.param1;
 	}
 
 	// Pending main menu message for a late join, shown once by MainMenu after AbortMission

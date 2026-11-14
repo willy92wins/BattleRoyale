@@ -20,6 +20,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "PlayerReadyUp", this);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "PlayerUnstuck", this);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "SpectateCycle", this);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "SpectatorToLobby", this);
 #ifdef VPPADMINTOOLS
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "NextState", this, SingleplayerExecutionType.Server);
 #endif
@@ -192,6 +193,17 @@ class BattleRoyaleServer: BattleRoyaleBase
         return true;
     }
 
+    //! True when the server exits after the match in progress: always without serial matches, and on the match that
+    //! reaches serial_restart_every_matches with them. Players are warned in the last round and at the end
+    bool WillRestartAfterMatch()
+    {
+        if (!BRMatchDebris.s_Enabled)
+            return true;
+
+        BattleRoyaleServerData serverData = BattleRoyaleConfig.GetConfig().GetServerData();
+        return serverData && serverData.serial_restart_every_matches > 0 && s_MatchesEnded + 1 >= serverData.serial_restart_every_matches;
+    }
+
     bool IsTurnoverRunning()
     {
         return m_Turnover != null;
@@ -216,6 +228,7 @@ class BattleRoyaleServer: BattleRoyaleBase
             m_LateJoinTimers.Clear();
         }
         GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(this.RemoveLateJoinTimer);
+        GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(this.MoveToWaitingRoomById);
 
         if (m_Spectators)
             m_Spectators.CancelPending();
@@ -276,30 +289,22 @@ class BattleRoyaleServer: BattleRoyaleBase
         if (previous && previous.IsAlive() && previous.br_in_current_state && GetCurrentState().ContainsPlayer(previous))
             return RETURN_SKIPPED;
 
-        MissionServer mission = MissionServer.Cast( GetGame().GetMission() );
-        if (!mission)
-            return RETURN_FAILED;
+        // A player of the waiting room already stands in the lobby with a lobby character: it joins the new lobby as it is
+        if (previous && previous.IsAlive() && previous.br_waiting)
+        {
+            previous.br_waiting = false;
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "ReturnToLobby", NULL, true, identity );
+            previous.owner_id = identity.GetPlainId();
+            GetCurrentState().AddPlayer(previous);
+            BattleRoyaleState.SendMatchPhaseTo(identity);
+            if (!previous.br_in_current_state || !GetCurrentState().ContainsPlayer(previous))
+                return RETURN_FAILED;
+            return RETURN_DONE;
+        }
 
-        string character_type = "SurvivorM_Mirek";
-        if (previous)
-            character_type = previous.GetType();
-        else if (m_CharacterTypes.Contains(identity.GetId()))
-            character_type = m_CharacterTypes.Get(identity.GetId());
-
-        // The client resets its match state first: the lobby phase and player count sent while the new character
-        // connects (OnPlayerConnected) then land on the fresh state instead of being wiped by the reset
-        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "ReturnToLobby", NULL, true, identity );
-
-        PlayerBase fresh = mission.BR_CreateLobbyCharacter(identity, character_type);
+        PlayerBase fresh = GiveLobbyCharacter(identity, previous);
         if (!fresh)
             return RETURN_FAILED;
-
-        if (m_Spectators)
-            m_Spectators.Release(identity);
-
-        // A living match body (the winner) has no owner any more; a dead one is a recorded leftover
-        if (previous && previous.IsAlive() && previous != fresh)
-            GetGame().ObjectDelete(previous);
 
         if (!fresh.br_in_current_state || !GetCurrentState().ContainsPlayer(fresh))
         {
@@ -308,6 +313,140 @@ class BattleRoyaleServer: BattleRoyaleBase
         }
 
         return RETURN_DONE;
+    }
+
+    //! A connected player gets a new character in the lobby, without leaving the server: the client resets its match
+    //! state first (ReturnToLobby), so the phase and player count sent while the character connects land on the fresh
+    //! state. The character connects through OnPlayerConnected: into the lobby state between matches, into the waiting
+    //! room during one. The spectator anchor and a living previous body go away; a dead body is a recorded leftover
+    protected PlayerBase GiveLobbyCharacter(PlayerIdentity identity, PlayerBase previous)
+    {
+        MissionServer mission = MissionServer.Cast( GetGame().GetMission() );
+        if (!mission || !identity)
+            return null;
+
+        string character_type = "SurvivorM_Mirek";
+        if (previous)
+            character_type = previous.GetType();
+        else if (m_CharacterTypes.Contains(identity.GetId()))
+            character_type = m_CharacterTypes.Get(identity.GetId());
+
+        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "ReturnToLobby", NULL, true, identity );
+
+        PlayerBase fresh = mission.BR_CreateLobbyCharacter(identity, character_type);
+        if (!fresh)
+            return null;
+
+        if (m_Spectators)
+            m_Spectators.Release(identity);
+
+        if (previous && previous.IsAlive() && previous != fresh)
+            GetGame().ObjectDelete(previous);
+
+        return fresh;
+    }
+
+    //--- Waiting room (general_settings.json enable_waiting_room): during a match, players who joined late, died with
+    //--- nobody to watch or left spectating wait in the lobby, outside the match states, for the next match
+
+    //! identity id -> tick time of the last accepted SpectatorToLobby request
+    protected ref map<string, float> m_LastLobbyRequest;
+    //! True while MoveToWaitingRoom creates the lobby character: OnPlayerConnected then puts an admin in the waiting room too
+    protected bool m_ForceWaitingRoom;
+
+    bool IsWaitingRoomEnabled()
+    {
+        BattleRoyaleGameData gameData = BattleRoyaleConfig.GetConfig().GetGameData();
+        return gameData && gameData.enable_waiting_room;
+    }
+
+    //! Called by OnPlayerConnected for a player who connects, or gets a lobby character, while a match runs
+    protected void EnterWaitingRoom(PlayerBase player)
+    {
+        player.br_waiting = true;
+        player.owner_id = player.GetIdentity().GetPlainId();
+        player.SetAllowDamage(false);
+        player.Heal();
+        if ( !IsInLobbyArea( player.GetPosition() ) )
+            player.SetPosition( GetLobbySpawnPosition() );
+
+        BattleRoyaleUtils.Info("Waiting room: " + player.BR_GetPlayerName() + " waits in the lobby for the next match");
+        BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
+        // With a restart after this match the player will have to join again: the notice says so
+        string notice = "STR_BR_WAITING_ROOM";
+        if (WillRestartAfterMatch())
+            notice = "STR_BR_WAITING_ROOM_RESTART";
+        GetCurrentState().MessagePlayerUntranslated(player, notice, GetMatchMinutesLeft().ToString());
+    }
+
+    //! A waiting player stays inside the lobby radius, immune and healed, like a lobby player
+    protected void TickWaitingPlayer(PlayerBase player, float timeslice)
+    {
+        if (!player.IsAlive())
+            return;
+
+        if ( !IsInLobbyArea( player.GetPosition() ) )
+            player.SetPosition( GetLobbySpawnPosition() );
+
+        if (player.time_until_heal <= 0)
+        {
+            BattleRoyaleGameData gameData = BattleRoyaleConfig.GetConfig().GetGameData();
+            player.time_until_heal = DAYZBR_DEBUG_HEAL_TICK;
+            if (gameData)
+                player.time_until_heal = gameData.debug_heal_tick_seconds;
+            player.Heal();
+        }
+        player.time_until_heal -= timeslice;
+    }
+
+    //! Moves a connected player out of the running match into the waiting room, with a new lobby character.
+    //! Does nothing between matches (the lobby takes the player) or with the setting off
+    bool MoveToWaitingRoom(PlayerIdentity identity)
+    {
+        if (!identity || !IsWaitingRoomEnabled() || !IsMatchInProgress() || m_Turnover)
+            return false;
+
+        PlayerBase previous = PlayerBase.Cast( identity.GetPlayer() );
+        if (previous && previous.IsAlive() && (previous.br_waiting || previous.br_in_current_state))
+            return false;
+
+        m_ForceWaitingRoom = true;
+        PlayerBase fresh = GiveLobbyCharacter(identity, previous);
+        m_ForceWaitingRoom = false;
+        return fresh && fresh.br_waiting;
+    }
+
+    //! CallLater target: a dead player with nobody to watch, by identity id
+    void MoveToWaitingRoomById(string identity_id)
+    {
+        array<PlayerIdentity> identities = new array<PlayerIdentity>;
+        GetGame().GetPlayerIndentities(identities);
+        foreach (PlayerIdentity identity : identities)
+        {
+            if (identity && identity.GetId() == identity_id)
+            {
+                MoveToWaitingRoom(identity);
+                return;
+            }
+        }
+    }
+
+    //! Asked by a spectator's client (the ready key): leave spectating and wait in the lobby
+    void SpectatorToLobby(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server || !sender || !m_Spectators || !m_Spectators.IsSpectator(sender))
+            return;
+
+        // One request every 2 s per identity; the rest are dropped
+        string id = sender.GetId();
+        float now = GetGame().GetTickTime();
+        if (!m_LastLobbyRequest)
+            m_LastLobbyRequest = new map<string, float>;
+        if (m_LastLobbyRequest.Contains(id) && now - m_LastLobbyRequest.Get(id) < 2.0)
+            return;
+        m_LastLobbyRequest.Set(id, now);
+
+        MoveToWaitingRoom(sender);
     }
 
     //! True while connected players are still being given their lobby characters: the lobby must not start a match yet
@@ -427,11 +566,14 @@ class BattleRoyaleServer: BattleRoyaleBase
         //Copy PlainID (steamid) to PlayerBase to avoid the disparition of PlayerIdentity (OnPlayerDisconnected)
         player.player_steamid = player.GetIdentity().GetPlainId();
 
-        // Serial matches with spectators: a dead player stays connected (spectating) and returns to the next lobby,
-        // so the client must not leave 15 s after its death
+        // A dead player stays connected when the server takes care of it: spectating until a serial match ends, or the
+        // waiting room. The client must then not leave 15 s after its death
         BattleRoyaleGameData stayGameData = BattleRoyaleConfig.GetConfig().GetGameData();
-        if (BRMatchDebris.s_Enabled && stayGameData && stayGameData.enable_spectator)
+        bool waitingRoom = IsWaitingRoomEnabled();
+        if (waitingRoom || (BRMatchDebris.s_Enabled && stayGameData && stayGameData.enable_spectator))
             GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetStayConnected", new Param1<bool>( true ), true, player.GetIdentity() );
+        if (waitingRoom)
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetWaitingRoom", new Param1<bool>( true ), true, player.GetIdentity() );
 
         //Dirty way to sync server settings with the client | this should be converted into a generic "sync settings" function
         BattleRoyaleConfig config_data = BattleRoyaleConfig.GetConfig();
@@ -458,7 +600,16 @@ class BattleRoyaleServer: BattleRoyaleBase
 
 			//NOTE: calling this will immediately crash the server (as the player hasn't fully established his connection yet) GetGame().DisconnectPlayer(player.GetIdentity());
 
-			if ( IsLateJoinAdmin( player.GetIdentity() ) )
+			// Waiting room: the player waits in the lobby for the next match. An admin who joins late keeps the free
+			// connection below, unless the server is moving that admin out of the match (death, spectating)
+			bool lateAdmin = IsLateJoinAdmin( player.GetIdentity() );
+			if ( IsWaitingRoomEnabled() && ( m_ForceWaitingRoom || !lateAdmin ) )
+			{
+				EnterWaitingRoom(player);
+				return;
+			}
+
+			if ( lateAdmin )
 			{
 				BattleRoyaleUtils.Info("Admin " + player.BR_GetPlayerName() + " has connected during non-debug state, allowing connection.");
 				BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
@@ -757,9 +908,14 @@ class BattleRoyaleServer: BattleRoyaleBase
             //remove player from the state (this would take place in on-disconnect, but some players would choose not to disconnect)
             GetCurrentState().RemovePlayer(killed);
 
-            // Dead players of a running match watch the ones still alive
+            // Dead players of a running match watch the ones still alive; with spectating off they wait in the lobby
             if (m_Spectators && i_CurrentStateIndex > 2 && i_CurrentStateIndex < m_States.Count() - 2)
-                m_Spectators.OnPlayerDied(killed);
+            {
+                if (m_Spectators.IsEnabled())
+                    m_Spectators.OnPlayerDied(killed);
+                else if (IsWaitingRoomEnabled() && killed.GetIdentity())
+                    GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(this.MoveToWaitingRoomById, BattleRoyaleConfig.GetConfig().GetGameData().spectator_delay_seconds * 1000, false, killed.GetIdentity().GetId());
+            }
         }
 
         // Whoever watched the dead player moves on, even if the state already removed them
@@ -784,6 +940,13 @@ class BattleRoyaleServer: BattleRoyaleBase
         // Spectator anchor bodies are not match players
         if (m_Spectators && m_Spectators.IsAnchor(player))
             return;
+
+        // Waiting room players are outside the match: kept in the lobby, never logged out as strays
+        if (player.br_waiting)
+        {
+            TickWaitingPlayer(player, timeslice);
+            return;
+        }
 
         if(!temp_disconnecting)
         {

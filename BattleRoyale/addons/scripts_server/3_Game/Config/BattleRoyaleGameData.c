@@ -21,6 +21,9 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
     bool enable_unstuck = true;  // the unstuck key (F2) teleports a player stuck at the start of the match (0 = off, 1 = on)
     bool enable_spectator = true;  // dead players watch the players still alive until the match ends (0 = off, 1 = on)
     int spectator_delay_seconds = 5;  // seconds between a death and the start of spectating (0 to 10)
+    // Waiting room: during a match, players who join late, players who die with spectating off (or with nobody left to watch)
+    // and spectators who press the ready key wait in the lobby for the next match instead of leaving the server (0 = off, 1 = on)
+    bool enable_waiting_room = true;
 
     ref array<int> zone_notification_minutes = { 1, 2 };  // minutes when notification about the zone shrinking will be displayed
     ref array<int> zone_notification_seconds = { 30, 10 };  // seconds when notification about the zone shrinking will be displayed, when under the minute

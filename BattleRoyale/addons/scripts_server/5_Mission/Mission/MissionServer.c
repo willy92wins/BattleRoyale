@@ -77,8 +77,9 @@ modded class MissionServer
 
 		// Tell a late joiner before the world loads; the client then leaves on its own.
 		// Admin tool permissions are not loaded yet here, so only listed admins are exempt at this point.
+		// With the waiting room on, nobody is turned away: the character waits in the lobby (BattleRoyaleServer.OnPlayerConnected)
 		BattleRoyaleServer br = BattleRoyaleServer.Cast( m_BattleRoyale );
-		if ( br && identity && br.IsMatchInProgress() && !br.IsListedAdmin( identity ) )
+		if ( br && identity && br.IsMatchInProgress() && !br.IsListedAdmin( identity ) && !br.IsWaitingRoomEnabled() )
 		{
 			BattleRoyaleUtils.Info("Match in progress, notifying " + identity.GetName() + " during prepare.");
 			GetGame().RPCSingleParam( null, BR_RPC_MATCH_IN_PROGRESS, new Param1<int>( br.GetMatchMinutesLeft() ), true, identity );
@@ -87,7 +88,7 @@ modded class MissionServer
 		// Lobby states: create a new character directly in the lobby, so the client loads one world area.
 		// Characters are never saved (PlayerBase.Save), so skipping the database loses nothing.
 		// During a match the database path stays, and OnPlayerConnected moves the player if needed.
-		if ( br && identity && !br.IsMatchInProgress() && !BR_IsLoggingOut( identity ) )
+		if ( br && identity && ( !br.IsMatchInProgress() || br.IsWaitingRoomEnabled() ) && !BR_IsLoggingOut( identity ) )
 		{
 			useDB = false;
 			pos = br.GetLobbySpawnPosition();

@@ -512,6 +512,13 @@ class BattleRoyaleClient: BattleRoyaleBase
 
     void ReadyUp()
     {
+        // A spectator with the waiting room on: the ready key leaves spectating and waits in the lobby
+        if (BattleRoyaleRPC.s_Spectating && BattleRoyaleRPC.s_WaitingRoom)
+        {
+            GetRPCManager().SendRPC( RPC_DAYZBRSERVER_NAMESPACE, "SpectatorToLobby", NULL, true );
+            return;
+        }
+
         //if(b_IsReady)
         //    return; //already ready!
 

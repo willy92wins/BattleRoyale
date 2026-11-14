@@ -19,6 +19,7 @@ modded class PlayerBase
 	string player_steamid = "";
 	bool br_in_current_state = false;
 	bool br_spectator_anchor = false;  //!< set by BattleRoyaleSpectators while this body is a spectator's anchor
+	bool br_waiting = false;  //!< in the lobby waiting room while a match runs, outside the match states
 
 	vector spawn_pos = vector.Zero;
 

@@ -40,6 +40,11 @@ class BattleRoyaleWin: BattleRoyaleState
 		}
 
 		m_KickTimer = AddTimer(i_SecondsTillKick, this, "KickWinner", NULL, false);
+
+		// The match ends here: spectators and the waiting room are told again when the server restarts after it
+		BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+		if (server && server.WillRestartAfterMatch())
+			MessagePlayersUntranslated("STR_BR_RESTART_AFTER_MATCH");
 	}
 
     override string GetName()

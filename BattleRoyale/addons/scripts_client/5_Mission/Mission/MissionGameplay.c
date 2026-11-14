@@ -63,8 +63,9 @@ modded class MissionGameplay
 #ifndef NO_GUI
 		DayZPlayerImplement.BR_OnSessionChanged();
 #endif
-		// Set again by the next server that runs serial matches
+		// Set again by the next server that runs serial matches or the waiting room
 		BattleRoyaleRPC.s_StayConnected = false;
+		BattleRoyaleRPC.s_WaitingRoom = false;
 
 		super.OnMissionFinish();
 	}
