@@ -40,6 +40,16 @@ class BattleRoyaleSpectatorCamera: Camera
 				return;
 		}
 
+		// Serial matches: the server gave this client a new lobby character. The view goes back to the player only once
+		// that character is here, so the client is never left without an active camera in between
+		if (!BattleRoyaleRPC.s_Spectating)
+		{
+			Man local_player = GetGame().GetPlayer();
+			if (local_player && local_player.IsAlive())
+				SetActive(false);
+			return;
+		}
+
 		HandleInput(timeSlice);
 
 		// Target sent by the server (SpectateTarget RPC)

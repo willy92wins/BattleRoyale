@@ -47,6 +47,11 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
     //returns true when this state is complete
     override bool IsComplete()
     {
+        // Serial matches: the lobby waits until every player of the finished match is back in it
+        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+        if (server && server.IsReturningPlayers())
+            return false;
+
 #ifdef Carim
         if( IsActive() && !b_UseVoteSystem && GetPlayers().Count() >= i_MinPlayers && GetWaitingTime() >= f_MinWaitingTime && GetGroupsCount() > 1 )
 #else
@@ -82,6 +87,10 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
 
     void CheckReadyState()
     {
+        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+        if (server && server.IsReturningPlayers())
+            return;
+
 		if( GetWaitingTime() >= f_MinWaitingTime && GetPlayers().Count() > 1 )
 		{
 			if( IsActive() && IsVoteReady() )

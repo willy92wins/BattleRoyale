@@ -255,25 +255,30 @@ class BattleRoyaleServer: BattleRoyaleBase
         RandomizeServerEnvironment();
     }
 
-    //! Turnover step 3: a connected player gets a new character in the lobby. False when there is nothing to do
-    //! for this identity (still connecting: the normal connection puts it in the lobby) or the character failed
-    bool Turnover_ReturnToLobby(PlayerIdentity identity)
+    //! Results of Turnover_ReturnToLobby
+    static const int RETURN_SKIPPED = 0;   //!< nothing to do for this identity
+    static const int RETURN_DONE = 1;      //!< new lobby character, in the lobby state
+    static const int RETURN_FAILED = -1;   //!< the identity is still connected without a lobby character
+
+    //! Turnover step 3: a connected player gets a new character in the lobby. Skipped for an identity still connecting
+    //! (the normal connection puts it in the lobby) or already in the lobby; failed when no lobby character came out of it
+    int Turnover_ReturnToLobby(PlayerIdentity identity)
     {
         if (!identity)
-            return false;
+            return RETURN_SKIPPED;
 
         PlayerBase previous = PlayerBase.Cast( identity.GetPlayer() );
         bool spectating = m_Spectators && m_Spectators.IsSpectator(identity);
         if (!previous && !spectating)
-            return false;
+            return RETURN_SKIPPED;
 
         // Already a lobby player (an admin who joined the lobby early, for one): nothing to replace
         if (previous && previous.IsAlive() && previous.br_in_current_state && GetCurrentState().ContainsPlayer(previous))
-            return false;
+            return RETURN_SKIPPED;
 
         MissionServer mission = MissionServer.Cast( GetGame().GetMission() );
         if (!mission)
-            return false;
+            return RETURN_FAILED;
 
         string character_type = "SurvivorM_Mirek";
         if (previous)
@@ -281,19 +286,34 @@ class BattleRoyaleServer: BattleRoyaleBase
         else if (m_CharacterTypes.Contains(identity.GetId()))
             character_type = m_CharacterTypes.Get(identity.GetId());
 
+        // The client resets its match state first: the lobby phase and player count sent while the new character
+        // connects (OnPlayerConnected) then land on the fresh state instead of being wiped by the reset
+        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "ReturnToLobby", NULL, true, identity );
+
         PlayerBase fresh = mission.BR_CreateLobbyCharacter(identity, character_type);
         if (!fresh)
-            return false;
+            return RETURN_FAILED;
 
         if (m_Spectators)
             m_Spectators.Release(identity);
 
         // A living match body (the winner) has no owner any more; a dead one is a recorded leftover
-        if (previous && previous.IsAlive())
+        if (previous && previous.IsAlive() && previous != fresh)
             GetGame().ObjectDelete(previous);
 
-        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "ReturnToLobby", NULL, true, identity );
-        return true;
+        if (!fresh.br_in_current_state || !GetCurrentState().ContainsPlayer(fresh))
+        {
+            BattleRoyaleUtils.Warn("[Serial] " + identity.GetName() + " got a lobby character outside the lobby state");
+            return RETURN_FAILED;
+        }
+
+        return RETURN_DONE;
+    }
+
+    //! True while connected players are still being given their lobby characters: the lobby must not start a match yet
+    bool IsReturningPlayers()
+    {
+        return m_Turnover && m_Turnover.IsReturning();
     }
 
     //! Turnover step 4: the finished match is gone; one line for the server owner
