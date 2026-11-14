@@ -37,6 +37,12 @@ a match; `enable_unstuck` in `general_settings.json` turns it off (on by default
 Dead players watch the players still alive until the match ends (left and right click change player,
 the person view key switches first and third person); `enable_spectator` turns it off and
 `spectator_delay_seconds` (5) sets the wait after a death, both in `general_settings.json`.
+While a match runs, a player who connects, a player who dies with spectating off and a spectator who presses
+F1 wait in the lobby (waiting room): immune, healed, kept inside the lobby and outside the match, with the
+match on their HUD. With serial matches they join the next lobby; with the classic restart the restart
+disconnects them like everyone. `enable_waiting_room` in `general_settings.json` turns it off (on by
+default): a player who connects during a match is then told it is running and leaves. When the server will
+restart after a match, players are told at the start of the last round and when the match ends.
 
 ## 1. Mods and load order
 
