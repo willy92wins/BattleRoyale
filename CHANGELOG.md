@@ -1,5 +1,64 @@
 # Changelog
 
+## 1.6.0 (2026-11-14)
+
+### Added
+- Waiting room in the lobby (`enable_waiting_room` in `general_settings.json`, on by default). While a match
+  runs, a player who connects, a player who dies with spectating off (after `spectator_delay_seconds`) and a
+  spectator who presses F1 wait in the lobby with a new character: immune, healed, kept inside the lobby
+  radius and outside the match (no zone damage, not counted). Their HUD follows the match (phase, player
+  count, kill feed) without zone distance or zone warnings. With serial matches they join the next lobby with
+  the same character; with the classic restart the restart disconnects everyone as before. A waiting player
+  who reconnects gets its state again. With the setting off, a player who connects during a match is told it
+  is running and leaves, as in 1.5.0.
+- Restart warning: when the server will restart after the match (no serial matches, or the serial restart
+  count reached), players are told when the last round starts and when the match ends; the waiting room
+  notice says so too.
+
+### Changed
+- Notifications are at the top left corner of the HUD. The kill feed is at the top right, level with the match
+  icons and right next to what that corner shows (counters, zone distance, group count, minimap); its rows are
+  right aligned, grow to the left and stay clear of the centred phase lines (a row too wide drops the weapon
+  and distance, then shortens the names). Text widths are converted to layout units, so the rows keep their
+  size at every resolution.
+- The winner is immune and healed when the match is won.
+- Unstuck: a pending unstuck is cancelled when the match start ends, and a player waits 30 s after an unstuck
+  before asking for the next one.
+- With `enable_zone_damage` off, the final zone no longer forces the end of the match by damage.
+- When a serial match is the one before a scheduled restart, the winner is disconnected and the clients are
+  told the server restarts, as with the classic restart.
+- Admin "Next" does nothing during the restart state (it stopped the shutdown timer and left the server stuck).
+- A player faces the village from its spawn point at the start of a match, not from the lobby.
+- Back in the lobby after a match, voice is limited to whisper again, as in the first lobby.
+
+### Performance and fixes (council review, 100 players)
+- Log strings are only built when their log level is on (hits, players added to and removed from a state,
+  spawn search traces).
+- The spawn preparation resolves the first zone once; its periodic heal runs only when the vitals need it.
+- Spawn with ammo: magazine capacity, chamberable ammo and the ammo economy check are cached per class; ammo
+  without an economy profile is no longer created only to be deleted.
+- The waiting room reads the ground height once per tick and heals only when needed.
+- Serial turnover: the player count is broadcast once per batch of returning players instead of once per
+  player; a turnover request that arrives while the previous turnover is still cleaning is kept instead of
+  leaving the server stuck in the restart state; the cleaning no longer aborts after 120 s; an item dropped
+  again in the same match is recorded once.
+- Spectators: the anchors of spectators who left are swept every 10 s; the next target is found once per
+  death instead of once per watcher; a player who is alive again is never put into spectator mode.
+- The late-join kick timer is cancelled when that player leaves, and lobby request times are dropped on
+  disconnect.
+- Client: the player count starts unknown (no "0" before the first count), no ghost future zone after the
+  final lock, and the spectator state is cleared when the mission ends.
+- The death webhook checks its source before using it; a player's character type is remembered without
+  serial matches too.
+- Every change was reviewed by a second model family (adversarial review) and tested in DayZDiag.
+
+### Not tested yet
+- With several players: watching another player and the anchor sweep, F1 from spectating to the waiting
+  room, a waiting player who reconnects within the logout time, 100 players.
+- Keys and tools the test harness cannot drive: the unstuck key, the minimap key, admin "Next", voice and
+  push-to-talk; resolutions other than 1920x1080.
+- Server and clients must run 1.6.0. `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
+
 ## 1.5.0 (2026-11-14)
 
 ### Added
