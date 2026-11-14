@@ -112,15 +112,23 @@ class BattleRoyaleSpectators
 				continue;
 			}
 
-			// A living character of its own is not the anchor: the identity reconnected and the old spectating entry is stale
-			PlayerBase own = PlayerBase.Cast(connectedIdentity.GetPlayer());
-			PlayerBase anchor = m_Anchors.Get(candidateId);
-			if (own && own.IsAlive() && own != anchor)
+			if (HasLivingCharacterOfItsOwn(connectedIdentity, candidateId))
 				goneIds.Insert(candidateId);
 		}
 
 		foreach (string goneId : goneIds)
 			Drop(goneId);
+	}
+
+	//! True when the identity again controls a living character that is not its anchor: its spectating entry is stale
+	protected bool HasLivingCharacterOfItsOwn(PlayerIdentity identity, string identityId)
+	{
+		if (!identity)
+			return false;
+
+		PlayerBase own = PlayerBase.Cast(identity.GetPlayer());
+		PlayerBase anchor = m_Anchors.Get(identityId);
+		return own && own.IsAlive() && own != anchor;
 	}
 
 	//! Removes one spectator entry and deletes its anchor body; a reconnected identity keeps its own character
@@ -337,6 +345,13 @@ class BattleRoyaleSpectators
 		int alive = 0;
 		if (state && state.GetPlayers())
 			alive = state.GetPlayers().Count();
+
+		// The watcher may have reconnected with a living character since its entry was made: drop the stale entry instead of putting that client into spectator mode
+		if (HasLivingCharacterOfItsOwn(identity, identityId))
+		{
+			Drop(identityId);
+			return;
+		}
 
 		GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SpectateTarget", new Param5<int, int, vector, string, int>(low, high, HeadPosition(target), name, alive), true, identity);
 	}
