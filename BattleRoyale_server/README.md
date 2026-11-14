@@ -216,8 +216,9 @@ a match ends, and the next match follows in the same server run:
 Loot is left to the Central Economy as your mission sets it up: nothing is wiped or respawned by the mod
 between serial matches. In a test, after about 2,300 loose items were deleted around Chernogorsk, the
 vanilla economy had put back a third of them 8 minutes later, so after a big match the next one starts with
-less loot. To start from a fresh world now and then, set `"serial_restart_every_matches"` (for example 5): the
-server exits after that many matches and the restart loop wipes the world as above. Keep using
+less loot. So that the world starts fresh now and then, the server makes a full restart after 6 matches by
+default: it exits and the restart loop wipes the world as above. `"serial_restart_every_matches"` changes the
+number (0 = never restart). Keep using
 `restart_loop.ps1` either way: it also restarts the server if a match turnover fails, which ends in the usual
 exit.
 
