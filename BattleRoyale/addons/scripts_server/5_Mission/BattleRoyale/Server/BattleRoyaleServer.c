@@ -235,6 +235,9 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         if (temp_disconnecting)
             temp_disconnecting.Clear();
+
+        if (m_LastLobbyRequest)
+            m_LastLobbyRequest.Clear();
     }
 
     //! True while the preparation thread of the finished match still runs: the next match must not start under it
@@ -366,11 +369,9 @@ class BattleRoyaleServer: BattleRoyaleBase
             player.SetPosition( GetLobbySpawnPosition() );
 
         BattleRoyaleUtils.Info("Waiting room: " + player.BR_GetPlayerName() + " waits in the lobby for the next match");
-        BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
         // The client reset its HUD when this character was made: it learns that it waits (no zone warnings) and the
         // player count, broadcast only when it changes
-        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetWaiting", new Param1<bool>( true ), true, player.GetIdentity() );
-        GetCurrentState().SendPlayerCountTo(player.GetIdentity());
+        ResyncWaitingPlayer(player);
         // With a restart after this match the player will have to join again: the notice says so
         string notice = "STR_BR_WAITING_ROOM";
         if (WillRestartAfterMatch())
@@ -378,6 +379,18 @@ class BattleRoyaleServer: BattleRoyaleBase
         // Enforce cannot call ToString on a call result: the minutes go through a local first
         int minutesLeft = GetMatchMinutesLeft();
         GetCurrentState().MessagePlayerUntranslated(player, notice, minutesLeft.ToString());
+    }
+
+    //! Resends phase, waiting flag and player count to a waiting client whose mission restarted (reconnect):
+    //! no notice, teleport or heal, the body never left the lobby
+    void ResyncWaitingPlayer(PlayerBase player)
+    {
+        if (!player || !player.GetIdentity())
+            return;
+
+        BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
+        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetWaiting", new Param1<bool>( true ), true, player.GetIdentity() );
+        GetCurrentState().SendPlayerCountTo(player.GetIdentity());
     }
 
     //! A player of the waiting room joins the lobby state with its lobby character, after its client reset its match
@@ -416,7 +429,8 @@ class BattleRoyaleServer: BattleRoyaleBase
             player.time_until_heal = DAYZBR_DEBUG_HEAL_TICK;
             if (gameData)
                 player.time_until_heal = gameData.debug_heal_tick_seconds;
-            player.Heal();
+            if (BattleRoyaleState.VitalsNeedHeal(player))
+                player.Heal();
         }
         player.time_until_heal -= timeslice;
     }
@@ -580,6 +594,42 @@ class BattleRoyaleServer: BattleRoyaleBase
         }
     }
 
+    //! The client flags a fresh client mission starts without: stay connected after death, and the waiting room
+    //! exists. Sent on connect and again on reconnect, with the same conditions in both cases
+    void SendClientFlags(PlayerIdentity identity)
+    {
+        if (!identity)
+            return;
+
+        // A dead player stays connected when the server takes care of it: spectating until a serial match ends, or the
+        // waiting room. The client must then not leave 15 s after its death
+        BattleRoyaleGameData stayGameData = BattleRoyaleConfig.GetConfig().GetGameData();
+        bool waitingRoom = IsWaitingRoomEnabled();
+        if (waitingRoom || (BRMatchDebris.s_Enabled && stayGameData && stayGameData.enable_spectator))
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetStayConnected", new Param1<bool>( true ), true, identity );
+        if (waitingRoom)
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetWaitingRoom", new Param1<bool>( true ), true, identity );
+    }
+
+    //! A reconnected client restarted its mission and lost every server-sent flag and state, whatever the player
+    //! was doing: resend the client flags to everyone, then the waiting resync or the plain phase and count
+    void OnPlayerReconnected(PlayerBase player)
+    {
+        if (!player || !player.GetIdentity())
+            return;
+
+        SendClientFlags(player.GetIdentity());
+        if (player.IsAlive() && player.br_waiting)
+        {
+            ResyncWaitingPlayer(player);
+        }
+        else
+        {
+            BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
+            GetCurrentState().SendPlayerCountTo(player.GetIdentity());
+        }
+    }
+
     void OnPlayerConnected(PlayerBase player)
     {
         //Teleport player into debug zone
@@ -588,14 +638,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         //Copy PlainID (steamid) to PlayerBase to avoid the disparition of PlayerIdentity (OnPlayerDisconnected)
         player.player_steamid = player.GetIdentity().GetPlainId();
 
-        // A dead player stays connected when the server takes care of it: spectating until a serial match ends, or the
-        // waiting room. The client must then not leave 15 s after its death
-        BattleRoyaleGameData stayGameData = BattleRoyaleConfig.GetConfig().GetGameData();
-        bool waitingRoom = IsWaitingRoomEnabled();
-        if (waitingRoom || (BRMatchDebris.s_Enabled && stayGameData && stayGameData.enable_spectator))
-            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetStayConnected", new Param1<bool>( true ), true, player.GetIdentity() );
-        if (waitingRoom)
-            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetWaitingRoom", new Param1<bool>( true ), true, player.GetIdentity() );
+        SendClientFlags(player.GetIdentity());
 
         //Dirty way to sync server settings with the client | this should be converted into a generic "sync settings" function
         BattleRoyaleConfig config_data = BattleRoyaleConfig.GetConfig();
@@ -638,6 +681,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 			{
 				BattleRoyaleUtils.Info("Admin " + player.BR_GetPlayerName() + " has connected during non-debug state, allowing connection.");
 				BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
+				GetCurrentState().SendPlayerCountTo(player.GetIdentity());
 				return; //allow admins to connect during non-debug state
 			}
 
@@ -682,7 +726,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         if (!lobby)
             return false;
 
-        vector center = lobby.GetCenter();
+        vector center = lobby.GetCenterXZ();
         float distance = vector.Distance( Vector( pos[0], 0, pos[2] ), Vector( center[0], 0, center[2] ) );
         if (distance > lobby.GetRadius())
             return false;
@@ -790,6 +834,20 @@ class BattleRoyaleServer: BattleRoyaleBase
         return minutes;
     }
 
+    //! Stops and drops a pending late-join kick, keyed as ScheduleLateJoinKick keys it
+    protected void CancelLateJoinKick(string steamid)
+    {
+        if (steamid == "" || !m_LateJoinTimers || !m_LateJoinTimers.Contains(steamid))
+            return;
+
+        Timer kickTimer = m_LateJoinTimers.Get(steamid);
+        if (kickTimer && kickTimer.IsRunning())
+            kickTimer.Stop();
+        // The map is the only strong ref to the Timer: if DisconnectPlayer fired this from inside that timer's own
+        // callback, removing it now would free the Timer while it runs, so drop it on the next call-queue turn
+        GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(this.RemoveLateJoinTimer, 0, false, steamid);
+    }
+
     void ScheduleLateJoinKick(PlayerIdentity identity)
     {
         if (!identity)
@@ -811,10 +869,12 @@ class BattleRoyaleServer: BattleRoyaleBase
 
     void Disconnect(PlayerIdentity identity)
     {
+        if (!identity)
+            return;
+
         // The map is the only strong ref to the Timer that is running this callback.
         // Drop it on the next call-queue turn, after Timer.OnTimer finishes.
-        if (identity)
-            GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(this.RemoveLateJoinTimer, 0, false, identity.GetPlainId());
+        GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(this.RemoveLateJoinTimer, 0, false, identity.GetPlainId());
 
         GetGame().DisconnectPlayer( identity ); //can't directly call disconnectplayer with timer, so we use this method
     }
@@ -897,6 +957,16 @@ class BattleRoyaleServer: BattleRoyaleBase
 
     void OnPlayerDisconnected(PlayerBase player, PlayerIdentity identity)
     {
+        // The identity may already be deleted here, so the steamid cached on connect is the fallback key
+        if (player)
+            CancelLateJoinKick(player.player_steamid);
+        if (identity)
+        {
+            CancelLateJoinKick(identity.GetPlainId());
+            if (m_LastLobbyRequest)
+                m_LastLobbyRequest.Remove(identity.GetId());
+        }
+
         if(GetCurrentState().ContainsPlayer(player))
         {
             //if we are in a round, then we need to call OnPlayerDisconnected (since it's not a state based function we must cast)
@@ -918,11 +988,11 @@ class BattleRoyaleServer: BattleRoyaleBase
     {
         // Serial matches: the body and its inventory are removed when the match is over
         if (killed && BRMatchDebris.s_Enabled)
-        {
             BRMatchDebris.Get().AddBody(killed);
-            if (killed.GetIdentity() && m_CharacterTypes)
-                m_CharacterTypes.Set(killed.GetIdentity().GetId(), killed.GetType());
-        }
+
+        // The last character type is remembered with or without serial matches, so a spectator returns as itself
+        if (killed && killed.GetIdentity() && m_CharacterTypes)
+            m_CharacterTypes.Set(killed.GetIdentity().GetId(), killed.GetType());
 
         if(GetCurrentState().ContainsPlayer(killed))
         {

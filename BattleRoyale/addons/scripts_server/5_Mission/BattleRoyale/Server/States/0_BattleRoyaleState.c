@@ -242,7 +242,7 @@ class BattleRoyaleState: Timeable
         return result_array;
     }
 
-    protected bool VitalsNeedHeal(PlayerBase player)
+    static bool VitalsNeedHeal(PlayerBase player)
     {
         if (!player)
             return false;
@@ -1113,6 +1113,12 @@ class BattleRoyaleDebugState: BattleRoyaleState
     vector GetCenter()
     {
         v_Center[1] = GetGame().SurfaceY(v_Center[0], v_Center[2]);
+        return v_Center;
+    }
+
+    //! The stored center without resolving its surface height, for 2D checks that do their own SurfaceY on the player
+    vector GetCenterXZ()
+    {
         return v_Center;
     }
 

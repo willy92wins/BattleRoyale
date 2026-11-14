@@ -246,6 +246,16 @@ modded class MissionServer
 		}
 	}
 
+	override void OnClientReconnectEvent(PlayerIdentity identity, PlayerBase player)
+	{
+		super.OnClientReconnectEvent(identity, player);
+
+		// Any reconnected client restarted its mission and lost the server-sent flags and state, waiting or not
+		BattleRoyaleServer br = BattleRoyaleServer.Cast( m_BattleRoyale );
+		if (br && player && player.GetIdentity())
+			br.OnPlayerReconnected(player);
+	}
+
 	override void OnClientDisconnectedEvent(PlayerIdentity identity, PlayerBase player, int logoutTime, bool authFailed)
 	{
 		if(player)
