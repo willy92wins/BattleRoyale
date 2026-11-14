@@ -376,7 +376,9 @@ class BattleRoyaleServer: BattleRoyaleBase
         string notice = "STR_BR_WAITING_ROOM";
         if (WillRestartAfterMatch())
             notice = "STR_BR_WAITING_ROOM_RESTART";
-        GetCurrentState().MessagePlayerUntranslated(player, notice, GetMatchMinutesLeft().ToString());
+        // Enforce cannot call ToString on a call result: the minutes go through a local first
+        int minutesLeft = GetMatchMinutesLeft();
+        GetCurrentState().MessagePlayerUntranslated(player, notice, minutesLeft.ToString());
     }
 
     //! A waiting player stays inside the lobby radius, immune and healed, like a lobby player
@@ -603,7 +605,10 @@ class BattleRoyaleServer: BattleRoyaleBase
 			// Waiting room: the player waits in the lobby for the next match. An admin who joins late keeps the free
 			// connection below, unless the server is moving that admin out of the match (death, spectating)
 			bool lateAdmin = IsLateJoinAdmin( player.GetIdentity() );
-			if ( IsWaitingRoomEnabled() && ( m_ForceWaitingRoom || !lateAdmin ) )
+			// Consumed here: a script error later in this connection cannot leave it set for the next player
+			bool forced = m_ForceWaitingRoom;
+			m_ForceWaitingRoom = false;
+			if ( IsWaitingRoomEnabled() && ( forced || !lateAdmin ) )
 			{
 				EnterWaitingRoom(player);
 				return;

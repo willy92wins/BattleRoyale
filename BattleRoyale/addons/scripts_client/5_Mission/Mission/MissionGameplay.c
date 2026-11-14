@@ -220,7 +220,8 @@ modded class MissionGameplay
 		if (!m_BattleRoyaleKillFeed)
 			return;
 
-		m_BattleRoyaleKillFeed.Update();
+		// The kill feed sits beside the top right corner of the HUD, whatever it shows
+		m_BattleRoyaleKillFeed.Update( m_BattleRoyaleHud, m_BattleRoyaleMiniMap );
 	}
 
 	//! Called once per frame by the client with the zones to outline: locked_area red, open_area yellow
