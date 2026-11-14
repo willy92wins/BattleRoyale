@@ -300,11 +300,12 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 
 #ifdef Carim
 				BattleRoyaleUtils.Trace("Test if player is in a group");
-				if(GetGroup(pbTarget))
+				// GetGroup rebuilds every group of the match: one call per accepted click
+				set<PlayerBase> groupMembers = GetGroup(pbTarget);
+				if(groupMembers)
 				{
 					BattleRoyaleUtils.Trace("Player " + pbTarget.BR_GetPlayerName() + " is in a group, sharing spawn point with group");
 
-					set<PlayerBase> groupMembers = GetGroup(pbTarget);
 					foreach (PlayerBase member : groupMembers)
 					{
 						BattleRoyaleUtils.Trace("Sharing spawn point with " + member.BR_GetPlayerName());
