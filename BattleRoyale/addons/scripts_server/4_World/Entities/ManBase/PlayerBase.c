@@ -45,6 +45,7 @@ modded class PlayerBase
 	string br_last_damage_ammo;  //!< ammo name, such as "FallDamageHealth" or "TransportHit"
 	string br_last_damage_zone;  //!< damage zone, such as "Brain" or "Torso"
 	int br_zone_damage_time;  //!< GetGame().GetTime() of the damage tick outside the play area that killed this player; 0 when none did
+	int br_crash_damage_time;  //!< GetGame().GetTime() of the vehicle crash that killed this player while seated; 0 when none did
 
 	//! Damage tick taken outside the play area. The stamp stays only when the tick killed, so that the
 	//! kill feed names the zone for that death and for no other
@@ -54,6 +55,44 @@ modded class PlayerBase
 		DecreaseHealthCoef( damage_coef );
 		if ( BR_IsAlive() )
 			br_zone_damage_time = 0;
+	}
+
+	//! A crash hurts the crew of a vehicle by setting its health, without a damage hit
+	//! (CarScript.DamageCrew, MotorbikeScript.DamageCrew). Stamps every player seated in transport
+	//! before that and returns them, to be handed to BR_CrashDamageEnd once the crew has been hurt
+	static array<PlayerBase> BR_CrashDamageStart( Transport transport )
+	{
+		array<PlayerBase> crew = new array<PlayerBase>;
+		if ( !transport )
+			return crew;
+
+		int now = GetGame().GetTime();
+		int crew_size = transport.CrewSize();
+		for ( int i = 0; i < crew_size; i++ )
+		{
+			PlayerBase member = PlayerBase.Cast( transport.CrewMember( i ) );
+			if ( !member )
+				continue;
+
+			member.br_crash_damage_time = now;
+			crew.Insert( member );
+		}
+
+		return crew;
+	}
+
+	//! The crash has hurt the crew: the stamp stays only on the players it killed, so that the kill
+	//! feed names the crash for those deaths and for no other
+	static void BR_CrashDamageEnd( array<PlayerBase> crew )
+	{
+		if ( !crew )
+			return;
+
+		foreach ( PlayerBase member : crew )
+		{
+			if ( member && member.BR_IsAlive() )
+				member.br_crash_damage_time = 0;
+		}
 	}
 
 	//! True while the player is neither destroyed nor out of health. Either sign alone means dead: which
