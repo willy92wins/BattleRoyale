@@ -150,6 +150,7 @@ class BRMatchTurnover
 			if (m_Retry.Count() == 0)
 			{
 				m_Phase = PHASE_CLEAN;
+				m_Server.Turnover_ReturnsDone();
 				// This step can return nobody while a connect or disconnect changed the held count since
 				// the last batch: publish it once here, so this also replaces the per-batch send below
 				m_Server.Turnover_BroadcastPlayerCount();

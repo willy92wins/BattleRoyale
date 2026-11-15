@@ -51,7 +51,15 @@ modded class VONManagerImplementation
 		if ( GetGame() && GetGame().GetVoiceLevel() > max_voice_level )
 		{
 			GetGame().SetVoiceLevel( max_voice_level );
-			ShowVoiceNotification( max_voice_level, true );
+			Mission mission = GetGame().GetMission();
+			if ( mission && mission.IsVoNActive() ) // icon is already visible, just update the range
+			{
+				UpdateVoiceIcon();
+			}
+			else // show the icon and let it fade out
+			{
+				ShowVoiceNotification( GetGame().GetVoiceLevel(), true );
+			}
 		}
 	}
 }

@@ -508,11 +508,16 @@ class BattleRoyaleServer: BattleRoyaleBase
             state.BroadcastPlayerCount();
     }
 
+    //! Turnover: every player of the finished match is back in the lobby; the next match may now start and record its own deaths
+    void Turnover_ReturnsDone()
+    {
+        if (m_CharacterTypes)
+            m_CharacterTypes.Clear();
+    }
+
     //! Turnover step 4: the finished match is gone; one line for the server owner
     void Turnover_Finished(int match_number, float seconds, int returned, BRMatchDebrisBatch debris)
     {
-        m_CharacterTypes.Clear();
-
         string deleted = "nothing recorded";
         if (debris)
             deleted = debris.m_DeletedBodies.ToString() + " bodies, " + debris.m_DeletedItems.ToString() + " dropped items, " + debris.m_DeletedObjects.ToString() + " other objects";
