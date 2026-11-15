@@ -52,24 +52,23 @@ Online Tools (COT), VPPAdminTools or none.
 | # | Folder | Steam Workshop id | Key in its `keys` folder | Load it |
 |---|---|---|---|---|
 | 1 | `@CF` | 1559212036 | `Jacob_Mango_V3.bikey` | always |
-| 2 | `@Dabs Framework` | 2545327648 | `dab.bikey` | always |
-| 3 | `@Community-Online-Tools` | 1564026768 | `Jacob_Mango_V3.bikey` | optional, admin tool |
-| 4 | `@VPPAdminTools` | 1828439124 | `VPP.bikey` | optional, admin tool |
-| 5 | `@BattleRoyale` | 3834219016 | the key shipped in `@BattleRoyale\keys` | always |
-| 6 | `@BattleRoyale-VPP` | 3834226297 | the same key as `@BattleRoyale` | only with `@VPPAdminTools` |
+| 2 | `@Community-Online-Tools` | 1564026768 | `Jacob_Mango_V3.bikey` | optional, admin tool |
+| 3 | `@VPPAdminTools` | 1828439124 | `VPP.bikey` | optional, admin tool |
+| 4 | `@BattleRoyale` | 3834219016 | the key shipped in `@BattleRoyale\keys` | always |
+| 5 | `@BattleRoyale-VPP` | 3834226297 | the same key as `@BattleRoyale` | only with `@VPPAdminTools` |
 
 DayZ Expansion is not needed: the map opens with the map key without a map item and shows the zones.
 
 Without an admin tool:
 
 ```
--mod=@CF;@Dabs Framework;@BattleRoyale
+-mod=@CF;@BattleRoyale
 ```
 
 With COT, nothing else is needed:
 
 ```
--mod=@CF;@Dabs Framework;@Community-Online-Tools;@BattleRoyale
+-mod=@CF;@Community-Online-Tools;@BattleRoyale
 ```
 
 With VPPAdminTools, `@VPPAdminTools` goes before `@BattleRoyale` (VPP sets its `VPPADMINTOOLS` define
@@ -77,7 +76,7 @@ in a script, which only reaches the mods compiled after it; without it the Battl
 are not registered and every VPP admin action is denied), and `@BattleRoyale-VPP` goes after both:
 
 ```
--mod=@CF;@Dabs Framework;@VPPAdminTools;@BattleRoyale;@BattleRoyale-VPP
+-mod=@CF;@VPPAdminTools;@BattleRoyale;@BattleRoyale-VPP
 ```
 
 `@BattleRoyale` holds both the client and the server script PBOs, so nothing is needed in
@@ -85,7 +84,7 @@ are not registered and every VPP admin action is denied), and `@BattleRoyale-VPP
 BattleRoyale menu to the VPP toolbar; it requires VPPAdminTools, so load it only with VPP.
 
 Copy every mod folder into the server folder (next to `DayZServer_x64.exe`) with exactly these names;
-a name with spaces (`@Dabs Framework`) is fine, the restart script quotes it.
+a name with spaces is fine, the restart script quotes it.
 
 ### Admin tools
 
@@ -175,7 +174,7 @@ The mod shuts the server down when a match ends (`9_BattleRoyaleRestart.c`). Sta
 
 ```powershell
 cd D:\DayZServer\BattleRoyale_server\tools
-.\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Dabs Framework;@Community-Online-Tools;@BattleRoyale'
+.\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Community-Online-Tools;@BattleRoyale'
 ```
 
 This example uses the COT list; pass the `-mod=` list of section 1 that matches your admin tool.

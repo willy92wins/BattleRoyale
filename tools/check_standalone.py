@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Report remaining dependencies of the BattleRoyale mod on DayZ Expansion.
+"""Report remaining dependencies of the BattleRoyale mod on DayZ Expansion and Dabs Framework.
 
 Checks (errors unless noted):
   text               the word "expansion" (any case) in mod text files
-  required_addon     requiredAddons entries naming DayZExpansion* in config.cpp
+  required_addon     requiredAddons entries naming DayZExpansion* or DF_* (Dabs
+                     Framework) in config.cpp
   resource           Expansion imagesets or paths (set:expansion_*, DayZExpansion\\),
                      also inside #define values
   symbol             identifiers used in the mod's .c files that resolve to a
                      declaration made only by the Expansion sources, plus
                      Expansion-named identifiers declared nowhere (modules missing
-                     from the references)
+                     from the references), plus uses of the types retired with
+                     Dabs Framework (DABS_TYPES), which no reference declares
   ambiguous_homonym  (warning) a member name declared both by Expansion and
                      elsewhere, used on a receiver whose type was not resolved
   ifdef              (warning) #if/#ifdef/#ifndef/#elif conditions on Expansion defines
@@ -59,11 +61,17 @@ DEFAULT_ALLOW = ("CHANGELOG.md", "*.md")
 DEFAULT_REF_ROOT = r"C:\Users\guill\Repos\br-ref"
 DEFAULT_VANILLA = r"C:\Users\guill\OneDrive\Documentos\DayZ Projects\scripts"
 EXPANSION_REFS = ("exp_core_scripts", "expansion_scripts", "navigation_scripts")
-OTHER_REFS = ("cf_scripts", "dabs_scripts", "cot", "vpp")
-REQUIRED_OTHER_REFS = ("cf_scripts", "dabs_scripts")
+OTHER_REFS = ("cf_scripts", "cot", "vpp")
+REQUIRED_OTHER_REFS = ("cf_scripts",)
 DEFAULT_REVIEWED = os.path.join(os.path.dirname(os.path.abspath(__file__)), "check_standalone_reviewed.txt")
 
 RE_TEXT = re.compile(r"expansion", re.I)
+# Dabs Framework is neither a dependency nor a reference: the types the mod used
+# from it are named here (replaced by BRNamedLocation, BRHttpArguments and
+# BRHttpArgument), and its addons all start with DF_ (DF_Scripts, ...).
+DABS_TYPES = frozenset(("NamedLocation", "HttpArguments", "HttpArgument"))
+DABS_KIND = "Dabs Framework type"
+DABS_ADDON_PREFIX = "df_"
 RE_RESOURCE = re.compile(r"set:expansion_\w*|DayZExpansion(?:\\\\|\\|/)", re.I)
 RE_PREPROC_COND = re.compile(r"^\s*#\s*(ifdef|ifndef|if|elif)\b(.*)$")
 RE_EXP_DEFINE = re.compile(r"\b\w*EXPANSION\w*\b", re.I)
@@ -753,6 +761,11 @@ class UseAnalyzer(object):
         fid = self.fs.ctx_func[i]
         if self.local_type(fid, t, i):
             return
+        if t in DABS_TYPES:
+            # Checked before resolution: a reference that declares the name must
+            # not make the retired type acceptable again.
+            self.report(errors, t, i, DABS_KIND, None)
+            return
         if cctx:
             info = self.r.member(cctx[0], t)
             if info:
@@ -832,12 +845,14 @@ def scan_text_content(rel, text, prefix=""):
         stripped = re.sub(r"//[^\n]*|/\*.*?\*/", _blank, text, flags=re.S)
         for block in RE_REQUIRED.finditer(stripped):
             for q in RE_QUOTED.finditer(block.group(1)):
-                if q.group(1).lower().startswith("dayzexpansion"):
+                name = q.group(1).lower()
+                if name.startswith("dayzexpansion") or name.startswith(DABS_ADDON_PREFIX):
                     pos = block.start(1) + q.start()
                     errors.append({
                         "category": prefix + "required_addon", "file": rel,
-                        "line": stripped.count("\n", 0, pos) + 1,
-                        "match": q.group(1), "detail": "requiredAddons",
+                        "line": stripped.count("\n", 0, pos) + 1, "match": q.group(1),
+                        "detail": "requiredAddons" if name.startswith("dayzexpansion")
+                        else "requiredAddons, Dabs Framework addon",
                     })
     return errors, warnings
 
@@ -928,6 +943,8 @@ def _symbol_rows(sink, category, ref_root, lines_of):
             except ValueError:
                 pass
             where = "declared %s:%d" % (path.replace(os.sep, "/"), line)
+        elif entry["kind"] == DABS_KIND:
+            where = "retired with Dabs Framework; use BR%s" % name
         else:
             where = "Expansion-named, not declared in any reference"
         if category == "ambiguous_homonym":
@@ -1009,6 +1026,12 @@ CATEGORY_ORDER = ("symbol", "required_addon", "resource", "text",
                   "pbo:required_addon", "pbo:resource", "pbo:text")
 
 
+def _is_dabs(row):
+    if row["category"].endswith("required_addon"):
+        return row["match"].lower().startswith(DABS_ADDON_PREFIX)
+    return row.get("kind") == DABS_KIND
+
+
 def format_table(report):
     out = []
     errs = report["errors"]
@@ -1048,7 +1071,9 @@ def format_table(report):
     counts = ", ".join("%s=%d" % (c, len(by_cat[c])) for c in cats) or "none"
     s = report["stats"]
     if errs:
-        verdict = "DEPENDS ON EXPANSION"
+        deps = [d for d, hit in (("EXPANSION", any(not _is_dabs(f) for f in errs)),
+                                 ("DABS", any(_is_dabs(f) for f in errs))) if hit]
+        verdict = "DEPENDS ON " + " AND ".join(deps)
     elif strict and unreviewed:
         verdict = "UNREVIEWED HOMONYMS"
     else:
@@ -1101,11 +1126,11 @@ def apply_strict(report, reviewed, reviewed_file):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="Report BattleRoyale dependencies on DayZ Expansion.")
+    ap = argparse.ArgumentParser(description="Report BattleRoyale dependencies on DayZ Expansion and Dabs Framework.")
     ap.add_argument("root", help="repository root containing BattleRoyale/, BattleRoyale_VPP/, BattleRoyale_server/")
     ap.add_argument("--json", action="store_true", help="print the report as JSON")
     ap.add_argument("--ref-root", default=DEFAULT_REF_ROOT,
-                    help="folder with exp_core_scripts, expansion_scripts, navigation_scripts, cf_scripts, dabs_scripts (cot, vpp optional)")
+                    help="folder with exp_core_scripts, expansion_scripts, navigation_scripts, cf_scripts (cot, vpp optional)")
     ap.add_argument("--vanilla", default=DEFAULT_VANILLA, help="vanilla scripts folder")
     ap.add_argument("--allow", action="append", default=None, metavar="GLOB",
                     help="path glob excluded from text checks (repeatable; default: %s)" % ", ".join(DEFAULT_ALLOW))

@@ -4,9 +4,10 @@ Run from the repository root:
     python -I -m unittest discover -s tools/tests -t . -p test_check_standalone.py
 or  python -I tools/tests/test_check_standalone.py
 
-The symbol checks read the local reference sources (Expansion, CF, Dabs,
-vanilla) at the checker's default paths; no network is used. Input-error
-tests use a tiny fake reference tree and inject PermissionError on os.scandir.
+The symbol checks read the local reference sources (Expansion, CF, vanilla;
+COT and VPP when present) at the checker's default paths; no network is used.
+Dabs Framework is not a reference: its retired types are named in the checker.
+Input-error tests use a tiny fake reference tree and inject PermissionError on os.scandir.
 
 Coverage limits: the checker is a heuristic scanner, not a compiler; these
 tests pin its negative controls, and a compile without Expansion (V3)
@@ -446,6 +447,81 @@ class BRProbe
         self.write("BattleRoyale/addons/scripts/config.cpp",
                    CLEAN_CONFIG.replace('"JM_CF_Scripts"', '"JM_CF_Scripts",\n\t\t\t"DayZExpansion_Core_Scripts"'))
         self.assert_finding("required_addon", "DayZExpansion_Core_Scripts")
+
+    # -- Dabs Framework, retired: types and addon must not come back --------
+
+    DABS_CONFIG = CLEAN_CONFIG.replace('"JM_CF_Scripts"', '"JM_CF_Scripts",\n\t\t\t"DF_Scripts"')
+
+    @staticmethod
+    def dabs_probe(member="", body=""):
+        # Same shape as the mod's server scripts: inside #ifdef SERVER. `member`
+        # lands on line 4, `body` on line 6 (when member is empty).
+        return ("#ifdef SERVER\nclass BRDabsProbe\n{\n%s\tvoid Run()\n\t{\n%s\t}\n};\n#endif\n"
+                % (member, body))
+
+    def assert_dabs(self, category, name):
+        report = self.assert_finding(category, name)
+        code, out, _ = run_cli([self.root])
+        self.assertEqual(code, 1)
+        self.assertNotIn("CLEAN", out)
+        self.assertIn("DEPENDS ON DABS", out)
+        self.assertIn("Dabs Framework", out)
+        return report
+
+    def assert_clean_cli(self):
+        code, out, _ = run_cli([self.root])
+        self.assertEqual(code, 0, out)
+        self.assertIn("Result: CLEAN - 0 error(s)", out)
+
+    def check_dabs_type(self, name, member="", body=""):
+        self.add_script(self.dabs_probe(member, body))
+        report = self.assert_dabs("symbol", name)
+        row = [f for f in report["errors"] if f["match"] == name][0]
+        self.assertEqual(row["kind"], cs.DABS_KIND)
+        self.assertEqual(row["line"], 4 if member else 6)
+        # Control: the same tree without the added line is clean.
+        self.add_script(self.dabs_probe())
+        self.assert_clean_cli()
+
+    def test_dabs_named_location_type(self):
+        self.check_dabs_type("NamedLocation", member="\tNamedLocation m_Probe;\n")
+
+    def test_dabs_http_arguments_constructor(self):
+        self.check_dabs_type("HttpArguments", body="\t\tauto args = new HttpArguments();\n")
+
+    def test_dabs_http_argument_type_and_constructor(self):
+        self.check_dabs_type("HttpArgument", body='\t\tHttpArgument a = new HttpArgument("k", "v");\n')
+
+    def test_dabs_names_in_comments_strings_and_br_types_ignored(self):
+        self.add_script(self.dabs_probe(body=
+            '\t\t// NamedLocation, HttpArguments and HttpArgument came from Dabs\n'
+            '\t\tstring s = "NamedLocation HttpArguments HttpArgument";\n'
+            '\t\tBRHttpArguments args = new BRHttpArguments();\n'
+            '\t\targs.Insert(new BRHttpArgument("k", s));\n'
+            '\t\tBRNamedLocation loc;\n'))
+        self.write("BattleRoyale/addons/scripts/5_Mission/BRDabsTypes.c",
+                   "typedef Param2<string, string> BRHttpArgument;\n"
+                   "class BRHttpArguments: array<ref BRHttpArgument> {};\n"
+                   "class BRNamedLocation {};\n")
+        self.assert_clean_cli()
+
+    def test_dabs_required_addon(self):
+        self.write("BattleRoyale/addons/scripts/config.cpp", self.DABS_CONFIG)
+        report = self.assert_dabs("required_addon", "DF_Scripts")
+        self.assertEqual(matches(report, "symbol"), set())
+        self.write("BattleRoyale/addons/scripts/config.cpp", CLEAN_CONFIG)
+        self.assert_clean_cli()
+
+    def test_dabs_type_and_required_addon_together(self):
+        # The case the lint gate misses: with DF_Scripts declared, the validator
+        # turns the unresolved NamedLocation into a SKIP and the gate stays green.
+        self.write("BattleRoyale/addons/scripts/config.cpp", self.DABS_CONFIG)
+        self.add_script(self.dabs_probe(member="\tNamedLocation m_Probe;\n"))
+        report = self.assert_dabs("symbol", "NamedLocation")
+        self.assertEqual(matches(report, "required_addon"), {"DF_Scripts"})
+        self.write("BattleRoyale/addons/scripts/config.cpp", CLEAN_CONFIG)
+        self.add_script(self.dabs_probe())
+        self.assert_clean_cli()
 
     def test_commented_required_addon_ignored_by_addon_rule(self):
         self.write("BattleRoyale/addons/scripts/config.cpp",

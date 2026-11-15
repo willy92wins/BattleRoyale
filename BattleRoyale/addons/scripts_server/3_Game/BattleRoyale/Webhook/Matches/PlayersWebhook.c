@@ -22,9 +22,9 @@ class PlayersWebhook
 			return;
 		}
 
-		HttpArguments arguments = {
-			new HttpArgument("version", "1"),
-			new HttpArgument("tick", GetGame().GetTickTime().ToString())
+		BRHttpArguments arguments = {
+			new BRHttpArgument("version", "1"),
+			new BRHttpArgument("tick", GetGame().GetTickTime().ToString())
 		};
 
 		JATPlayers jatPlayers = new JATPlayers( s_ServerToken, players );

@@ -6,8 +6,7 @@ class CfgPatches
 		{
 			"DZ_Data",
 			"DZ_Scripts",
-			"JM_CF_Scripts",
-			"DF_Scripts"
+			"JM_CF_Scripts"
 		};
 	};
 };

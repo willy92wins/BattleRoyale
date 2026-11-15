@@ -14,7 +14,7 @@ class BattleRoyalePrepare: BattleRoyaleState
     private BattleRoyaleServerData m_ServerData;
     private BattleRoyalePOIsData m_POIsSettings;
 
-    private ref array<ref NamedLocation> villages;
+    private ref array<ref BRNamedLocation> villages;
     private int i_VillagesIndex;
 
     private string last_village_spawn = "";
@@ -226,14 +226,14 @@ class BattleRoyalePrepare: BattleRoyaleState
         process_player.DisableInput(true);
     }
 
-    protected NamedLocation GetRandomVillage(BattleRoyalePlayArea area = NULL, bool use_radius = false)
+    protected BRNamedLocation GetRandomVillage(BattleRoyalePlayArea area = NULL, bool use_radius = false)
     {
 		BattleRoyaleUtils.Trace("GetRandomVillage()");
 
         // https://github.com/InclementDab/DayZ-Dabs-Framework/blob/production/DabsFramework/Scripts/3_Game/DabsFramework/!Core/NamedLocation.c
         if(!villages)
         {
-            villages = new array<ref NamedLocation>;
+            villages = new array<ref BRNamedLocation>;
 
             //ref array<ref NamedLocation> temp_villages = NamedLocation.GetMapTowns(TownFlags.CAPITAL | TownFlags.CITY | TownFlags.VILLAGE | TownFlags.CAMP);
 
@@ -268,7 +268,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 
 				BattleRoyaleUtils.Trace("cfg "+city+" "+GetGame().ConfigGetTextOut(string.Format("%1 %2 name", cfg, city))+" "+GetGame().ConfigGetTextOut(string.Format("%1 %2 type", cfg, city)));
 
-				NamedLocation town_entry = new NamedLocation(string.Format("%1 %2", cfg, city));
+				BRNamedLocation town_entry = new BRNamedLocation(string.Format("%1 %2", cfg, city));
 //				town_entry.Entry = city;
 //				town_entry.Type = GetGame().ConfigGetTextOut(string.Format("%1 %2 type", cfg, city));
 //				town_entry.Name = GetGame().ConfigGetTextOut(string.Format("%1 %2 name", cfg, city));
@@ -290,9 +290,9 @@ class BattleRoyalePrepare: BattleRoyaleState
 					if(use_radius)
 					{
 						// TODO: Move this to configuration file
-						if (town_entry.Type == NamedLocation.CITY)
+						if (town_entry.Type == BRNamedLocation.CITY)
 							village_pad = 300.0;
-						else if (town_entry.Type == NamedLocation.CAPITAL)
+						else if (town_entry.Type == BRNamedLocation.CAPITAL)
 							village_pad = 500.0;
 						else
 							village_pad = 150.0;
@@ -306,9 +306,9 @@ class BattleRoyalePrepare: BattleRoyaleState
 				}
 
 				int pond = 1;
-				if(town_entry.Type == NamedLocation.CAPITAL)
+				if(town_entry.Type == BRNamedLocation.CAPITAL)
 					pond = 5;
-				else if(town_entry.Type == NamedLocation.CITY)
+				else if(town_entry.Type == BRNamedLocation.CITY)
 					pond = 3;
 
 				for(int p = 0; p < pond; p++)
@@ -322,7 +322,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 			villages.ShuffleArray();
 
 			BattleRoyaleUtils.Trace("Final village list:");
-			foreach(NamedLocation village: villages)
+			foreach(BRNamedLocation village: villages)
 			{
 				BattleRoyaleUtils.Trace("- " + village.Name + " (" + village.Type + ")");
 			}
@@ -339,15 +339,15 @@ class BattleRoyalePrepare: BattleRoyaleState
             return NULL;
     }
 
-    protected vector GetRandomVillagePosition(NamedLocation village)
+    protected vector GetRandomVillagePosition(BRNamedLocation village)
     {
         float village_x = village.Position[0];
         float village_z = village.Position[2];
         float village_pad;
 
-        if (village.Type == NamedLocation.CITY)
+        if (village.Type == BRNamedLocation.CITY)
             village_pad = 300.0;
-        else if (village.Type == NamedLocation.CAPITAL)
+        else if (village.Type == BRNamedLocation.CAPITAL)
             village_pad = 500.0;
         else
             village_pad = 100.0;
@@ -373,10 +373,10 @@ class BattleRoyalePrepare: BattleRoyaleState
         return Vector(x, y, z);
     }
 
-    protected ref Param2<vector, NamedLocation> GetRandomSpawnPosition()
+    protected ref Param2<vector, BRNamedLocation> GetRandomSpawnPosition()
     {
         vector random_pos = "0 0 0";
-        NamedLocation village;
+        BRNamedLocation village;
 
         if (m_SpawnsSettings.spawn_in_villages)
         {
@@ -458,7 +458,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 
                     if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Found village position " + village_pos);
                     random_pos = village_pos; // Found a valid village position
-                    if( village.Type == NamedLocation.CAPITAL || village.Type == NamedLocation.CITY )
+                    if( village.Type == BRNamedLocation.CAPITAL || village.Type == BRNamedLocation.CITY )
                     	last_village_spawn = village.Name; // Save last village spawn to avoid it next time
                     break;
                 } else {
@@ -503,7 +503,7 @@ class BattleRoyalePrepare: BattleRoyaleState
             }
         }
 
-        return new Param2<vector, NamedLocation>(random_pos, village);
+        return new Param2<vector, BRNamedLocation>(random_pos, village);
     }
 
     protected vector GetRandomSafePosition(vector position = "0 0 0", float radius = 100.0)
@@ -675,9 +675,9 @@ class BattleRoyalePrepare: BattleRoyaleState
 
     protected bool Teleport(PlayerBase process_player)
     {
-        ref Param2<vector, NamedLocation> random_pos = GetRandomSpawnPosition();
+        ref Param2<vector, BRNamedLocation> random_pos = GetRandomSpawnPosition();
         vector position = ResolveFinalSpawn(random_pos.param1, true);
-        NamedLocation village = random_pos.param2;
+        BRNamedLocation village = random_pos.param2;
         if (position == vector.Zero)
         {
             string steamid = "unknown";
@@ -692,9 +692,9 @@ class BattleRoyalePrepare: BattleRoyaleState
 
     protected void TeleportGroup(set<PlayerBase> group)
     {
-        ref Param2<vector, NamedLocation> random_pos = GetRandomSpawnPosition();
+        ref Param2<vector, BRNamedLocation> random_pos = GetRandomSpawnPosition();
         vector position = random_pos.param1;
-        NamedLocation village = random_pos.param2;
+        BRNamedLocation village = random_pos.param2;
 
         int tmpNbPlayers = group.Count();
         for(int i = 0; i < tmpNbPlayers; i++)
@@ -736,7 +736,7 @@ class BattleRoyalePrepare: BattleRoyaleState
     // teleport, sleep or world change in between. It either passed IsAcceptedSpawn there or is
     // the deliberate last-resort point, so only the cheap bounds checks run again here. The
     // expanded first-zone bound is used, not the strict one, matching IsAcceptedSpawn.
-    protected bool TeleportPlayer(PlayerBase player, vector position, NamedLocation village = NULL, bool spawn_resolved = false)
+    protected bool TeleportPlayer(PlayerBase player, vector position, BRNamedLocation village = NULL, bool spawn_resolved = false)
     {
         if (!player || !player.GetIdentity())
             return false;

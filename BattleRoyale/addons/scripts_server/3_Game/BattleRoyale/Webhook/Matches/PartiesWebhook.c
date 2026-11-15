@@ -22,9 +22,9 @@ class PartiesWebhook
 			return;
 		}
 
-		HttpArguments arguments = {
-			new HttpArgument("version", "2"),
-			new HttpArgument("tick", GetGame().GetTickTime().ToString())
+		BRHttpArguments arguments = {
+			new BRHttpArgument("version", "2"),
+			new BRHttpArgument("tick", GetGame().GetTickTime().ToString())
 		};
 
 		JATParties jatParties = new JATParties( s_ServerToken, parties );
