@@ -24,7 +24,7 @@ class BattleRoyaleHud
     protected static const int DISTANCE_UNREACHABLE = 3;
 
     //! The zone arrow icon (dayz_gui icon_arrow) points down at rest; this turns it to point up at angle 0
-    protected static const float ZONE_ARROW_ICON_OFFSET = 180;
+    protected static const float ZONE_ARROW_ICON_OFFSET = 0;  //!< br_zone_arrow_ca.paa points up
 
     protected Widget m_Root;
 

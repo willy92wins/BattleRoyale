@@ -13,7 +13,7 @@ class BattleRoyaleKillFeed
     static const float SLIDE_IN_PX = 12;        //!< a new row starts this far to the right
 
     // Geometry of killfeed.layout, in layout units (set from the script times PxPerUnit)
-    static const float ROW_PITCH = 34;
+    static const float ROW_PITCH = 40;          //!< pitch of the match info rows: the first rows line up with them
     static const float ROW_HEIGHT = 30;
     static const float TEXT_X = 42;
     static const float DETAIL_Y = 5;
@@ -23,7 +23,7 @@ class BattleRoyaleKillFeed
     static const string ELLIPSIS = "...";
 
     // Place of KillFeedPanel, right aligned in the HUD frame, in layout units
-    static const float PANEL_TOP = 4;           //!< below the top of the HUD frame: level with the match info column
+    static const float PANEL_TOP = 1;           //!< below the top of the HUD frame: row centres level with the match info rows
     static const float PANEL_GAP = 16;          //!< between the rows and what the top right corner shows
     static const float PLACE_HYSTERESIS = 24;   //!< the panel moves right only once the room grew this much
     static const float CENTRE_GAP = 16;         //!< between the rows and the centred phase lines
@@ -404,11 +404,36 @@ class BattleRoyaleKillFeed
                 return;
         }
 
-        sentence = BuildSentence( kill_type, ClipName( killer, NAME_SHORT_CHARS ), ClipName( victim, NAME_SHORT_CHARS ) );
-        width = LayoutRow( row, sentence, "" );
-        if ( width <= max_width )
-            return;
+        // Names cut to the most characters that fit, between NAME_SHORT_CHARS and NAME_MAX_CHARS - 1, so the row
+        // uses all the room it has (binary search, a few measures on a refresh only)
+        int fit = 0;
+        int low = NAME_SHORT_CHARS;
+        int high = NAME_MAX_CHARS - 1;
+        int mid;
+        while ( low <= high )
+        {
+            mid = ( low + high ) / 2;
+            sentence = BuildSentence( kill_type, ClipName( killer, mid ), ClipName( victim, mid ) );
+            if ( LayoutRow( row, sentence, "" ) <= max_width )
+            {
+                fit = mid;
+                low = mid + 1;
+            }
+            else
+            {
+                high = mid - 1;
+            }
+        }
 
+        if ( fit > 0 )
+        {
+            // The search can end on a failed measure: the text that fits is written again
+            sentence = BuildSentence( kill_type, ClipName( killer, fit ), ClipName( victim, fit ) );
+            LayoutRow( row, sentence, "" );
+            return;
+        }
+
+        sentence = BuildSentence( kill_type, ClipName( killer, NAME_SHORT_CHARS ), ClipName( victim, NAME_SHORT_CHARS ) );
         CutRow( row, sentence, max_width );
     }
 

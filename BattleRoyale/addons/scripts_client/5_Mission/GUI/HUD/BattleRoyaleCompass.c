@@ -230,7 +230,23 @@ class BattleRoyaleCompass
 	//! Heading of the camera: 0 north (+Z), clockwise, in [0, 360)
 	protected float GetHeading()
 	{
+		return CameraHeading();
+	}
+
+	//! Heading of the camera: 0 north (+Z), clockwise, in [0, 360). The map's compass and arrow use it too, so every
+	//! heading on screen is the one of the view (the body lags the camera when turning on the spot)
+	static float CameraHeading()
+	{
 		return Math.NormalizeAngle(GetGame().GetCurrentCameraDirection().VectorToAngles()[0]);
+	}
+
+	//! Whole degrees of a heading as the compass writes them, 0 to 359
+	static int HeadingDegrees(float heading)
+	{
+		int degrees = Math.Round(heading);
+		if (degrees >= 360)
+			degrees = 0;
+		return degrees;
 	}
 
 	protected void UpdateTape()
@@ -287,9 +303,7 @@ class BattleRoyaleCompass
 			label.SetAlpha(alpha);
 		}
 
-		int degrees = Math.Round(heading);
-		if (degrees >= 360)
-			degrees = 0;
+		int degrees = HeadingDegrees(heading);
 
 		if (degrees != m_LastHeadingText)
 		{

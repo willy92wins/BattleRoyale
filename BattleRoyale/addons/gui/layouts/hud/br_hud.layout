@@ -186,7 +186,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         image0 "set:dayz_gui image:icon_arrow"
+         image0 "Vigrid-BattleRoyale/GUI/textures/hud/br_zone_arrow_ca.paa"
          mode blend
          "src alpha" 1
          "no wrap" 1
