@@ -157,8 +157,14 @@ class BattleRoyaleKillFeedClassifier
 				return;
 			}
 
-			// The driver is not named: the kill counter and the webhook do not credit a run over to anyone
+			// Run over: the driver is named when another player is at the wheel, nobody otherwise
 			entry.m_Type = EBRKillFeedType.VEHICLE;
+			PlayerBase driver = GetRunOverDriver(victim, source, ammo);
+			if (driver && driver.GetIdentity())
+			{
+				entry.m_KillerName = driver.GetIdentity().GetName();
+				entry.m_KillerId = driver.GetIdentity().GetPlayerId();
+			}
 			return;
 		}
 
@@ -222,6 +228,33 @@ class BattleRoyaleKillFeedClassifier
 			entry.m_Type = EBRKillFeedType.EXPLOSIVE;
 		if (entry.m_Type == EBRKillFeedType.EXPLOSIVE)
 			entry.m_ItemClass = source.GetType();
+	}
+
+	//! Living player at the wheel of the vehicle source when ammo is a vehicle hit; null when the hit is
+	//! not one, when nobody drives or when the victim does. Passengers are never named
+	static PlayerBase GetRunOverDriver(PlayerBase victim, Object source, string ammo)
+	{
+		if (!victim || ammo != AMMO_TRANSPORT)
+			return null;
+
+		Transport transport = Transport.Cast(source);
+		if (!transport)
+			return null;
+
+		PlayerBase driver = PlayerBase.Cast(transport.CrewDriver());
+		if (!driver || driver == victim || !driver.IsAlive())
+			return null;
+
+		return driver;
+	}
+
+	//! Driver who ran the victim over with the hit that killed it; null when the death was not such a hit
+	static PlayerBase GetRunOverKiller(PlayerBase victim, Object source)
+	{
+		if (!victim || !IsDamageInFlight(victim, GetGame().GetTime()))
+			return null;
+
+		return GetRunOverDriver(victim, source, victim.br_last_damage_ammo);
 	}
 
 	//! Cause named by the damage alone; DIED when it names none
