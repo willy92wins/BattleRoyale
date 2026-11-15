@@ -127,8 +127,8 @@ class BattleRoyaleKillFeed
 
     //! Called every frame; rebuilds the rows only when an event arrived or a row expired, keeps the panel beside
     //! the top right corner of the HUD while rows are on screen, and moves the fade of the rows.
-    //! hud and minimap may be null
-    void Update( BattleRoyaleHud hud, BattleRoyaleMiniMap minimap )
+    //! hud, minimap and compass may be null
+    void Update( BattleRoyaleHud hud, BattleRoyaleMiniMap minimap, BattleRoyaleCompass compass )
     {
         if ( !m_Root )
             return;
@@ -143,9 +143,16 @@ class BattleRoyaleKillFeed
 
         Place( hud, minimap );
 
+        // Rows stay clear of everything centred at the top: the phase lines and the compass under them
         float centre_right = -1;
         if ( hud )
             centre_right = hud.GetCentreLinesRight();
+        if ( compass )
+        {
+            float compass_right = compass.GetScreenRight();
+            if ( compass_right > centre_right )
+                centre_right = compass_right;
+        }
 
         int screen_w;
         int screen_h;

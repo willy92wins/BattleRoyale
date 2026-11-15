@@ -5,6 +5,7 @@ modded class MissionGameplay
 	protected ref BattleRoyaleHud m_BattleRoyaleHud;
 	protected ref BattleRoyaleKillFeed m_BattleRoyaleKillFeed;
 	protected ref BattleRoyaleMiniMap m_BattleRoyaleMiniMap;
+	protected ref BattleRoyaleCompass m_BattleRoyaleCompass;
 	protected Widget m_BattleRoyaleWinScreen;
 
 	void MissionGameplay()
@@ -125,6 +126,7 @@ modded class MissionGameplay
 		m_BattleRoyaleHud = null;
 		m_BattleRoyaleKillFeed = null;
 		m_BattleRoyaleMiniMap = null;
+		m_BattleRoyaleCompass = null;
 		InitBRhud();
 	}
 
@@ -149,6 +151,9 @@ modded class MissionGameplay
 
 			// The minimap panel is part of the HUD layout
 			m_BattleRoyaleMiniMap = new BattleRoyaleMiniMap( m_BattleRoyaleHudRootWidget );
+
+			// So is the compass, at the top centre
+			m_BattleRoyaleCompass = new BattleRoyaleCompass( m_BattleRoyaleHudRootWidget );
 			BattleRoyaleUtils.Trace("HUD Initialized");
 		}
 	}
@@ -224,8 +229,17 @@ modded class MissionGameplay
 		if (!m_BattleRoyaleKillFeed)
 			return;
 
-		// The kill feed sits beside the top right corner of the HUD, whatever it shows
-		m_BattleRoyaleKillFeed.Update( m_BattleRoyaleHud, m_BattleRoyaleMiniMap );
+		// The kill feed sits beside the top right corner of the HUD, whatever it shows, and right of the compass
+		m_BattleRoyaleKillFeed.Update( m_BattleRoyaleHud, m_BattleRoyaleMiniMap, m_BattleRoyaleCompass );
+	}
+
+	//! Called once per frame by the client; the compass follows the visibility of the vanilla HUD
+	void UpdateCompass()
+	{
+		if (!m_BattleRoyaleCompass)
+			return;
+
+		m_BattleRoyaleCompass.Update( m_Hud );
 	}
 
 	//! Called once per frame by the client with the zones to outline: locked_area red, open_area yellow
@@ -271,6 +285,11 @@ modded class MissionGameplay
 				}
 				if (GetUApi().GetInputByID(UADayZBRMiniMapZoom).LocalPress()) {
 					m_BattleRoyaleMiniMap.CycleZoom();
+				}
+			}
+			if (m_BattleRoyaleCompass && !m_UIManager.GetMenu()) {
+				if (GetUApi().GetInputByID(UADayZBRToggleCompass).LocalPress()) {
+					m_BattleRoyaleCompass.ToggleVisible();
 				}
 			}
 		}

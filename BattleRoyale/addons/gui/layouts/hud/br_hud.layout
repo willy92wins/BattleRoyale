@@ -313,6 +313,583 @@ FrameWidgetClass BattleRoyaleHudFrame {
       }
      }
     }
+    PanelWidgetClass CompassPanel {
+     visible 0
+     ignorepointer 1
+     position 0 80
+     size 420 66
+     halign center_ref
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass CompassTape {
+       ignorepointer 1
+       clipchildren 1
+       position 0 0
+       size 420 26
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       {
+        PanelWidgetClass CompassBaseLine {
+         ignorepointer 1
+         color 1 1 1 0.35
+         position 0 24
+         size 420 2
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style rover_sim_colorable
+        }
+        FrameWidgetClass CompassMark0 {
+         ignorepointer 1
+         position 0 0
+         size 60 26
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          TextWidgetClass CompassMark0Label {
+           ignorepointer 1
+           position 0 0
+           size 60 15
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style Bold
+           text ""
+           font "gui/fonts/etelkatextpro"
+           "exact text" 0
+           "outline size" 1
+           "outline color" 0 0 0 1
+           "text halign" center
+           "text valign" center
+          }
+          PanelWidgetClass CompassMark0Tick {
+           ignorepointer 1
+           color 1 1 1 1
+           position 0 19
+           size 2 5
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        FrameWidgetClass CompassMark1 {
+         ignorepointer 1
+         position 0 0
+         size 60 26
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          TextWidgetClass CompassMark1Label {
+           ignorepointer 1
+           position 0 0
+           size 60 15
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style Bold
+           text ""
+           font "gui/fonts/etelkatextpro"
+           "exact text" 0
+           "outline size" 1
+           "outline color" 0 0 0 1
+           "text halign" center
+           "text valign" center
+          }
+          PanelWidgetClass CompassMark1Tick {
+           ignorepointer 1
+           color 1 1 1 1
+           position 0 19
+           size 2 5
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        FrameWidgetClass CompassMark2 {
+         ignorepointer 1
+         position 0 0
+         size 60 26
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          TextWidgetClass CompassMark2Label {
+           ignorepointer 1
+           position 0 0
+           size 60 15
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style Bold
+           text ""
+           font "gui/fonts/etelkatextpro"
+           "exact text" 0
+           "outline size" 1
+           "outline color" 0 0 0 1
+           "text halign" center
+           "text valign" center
+          }
+          PanelWidgetClass CompassMark2Tick {
+           ignorepointer 1
+           color 1 1 1 1
+           position 0 19
+           size 2 5
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        FrameWidgetClass CompassMark3 {
+         ignorepointer 1
+         position 0 0
+         size 60 26
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          TextWidgetClass CompassMark3Label {
+           ignorepointer 1
+           position 0 0
+           size 60 15
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style Bold
+           text ""
+           font "gui/fonts/etelkatextpro"
+           "exact text" 0
+           "outline size" 1
+           "outline color" 0 0 0 1
+           "text halign" center
+           "text valign" center
+          }
+          PanelWidgetClass CompassMark3Tick {
+           ignorepointer 1
+           color 1 1 1 1
+           position 0 19
+           size 2 5
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        FrameWidgetClass CompassMark4 {
+         ignorepointer 1
+         position 0 0
+         size 60 26
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          TextWidgetClass CompassMark4Label {
+           ignorepointer 1
+           position 0 0
+           size 60 15
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style Bold
+           text ""
+           font "gui/fonts/etelkatextpro"
+           "exact text" 0
+           "outline size" 1
+           "outline color" 0 0 0 1
+           "text halign" center
+           "text valign" center
+          }
+          PanelWidgetClass CompassMark4Tick {
+           ignorepointer 1
+           color 1 1 1 1
+           position 0 19
+           size 2 5
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        FrameWidgetClass CompassMark5 {
+         ignorepointer 1
+         position 0 0
+         size 60 26
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          TextWidgetClass CompassMark5Label {
+           ignorepointer 1
+           position 0 0
+           size 60 15
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style Bold
+           text ""
+           font "gui/fonts/etelkatextpro"
+           "exact text" 0
+           "outline size" 1
+           "outline color" 0 0 0 1
+           "text halign" center
+           "text valign" center
+          }
+          PanelWidgetClass CompassMark5Tick {
+           ignorepointer 1
+           color 1 1 1 1
+           position 0 19
+           size 2 5
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        FrameWidgetClass CompassMark6 {
+         ignorepointer 1
+         position 0 0
+         size 60 26
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          TextWidgetClass CompassMark6Label {
+           ignorepointer 1
+           position 0 0
+           size 60 15
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style Bold
+           text ""
+           font "gui/fonts/etelkatextpro"
+           "exact text" 0
+           "outline size" 1
+           "outline color" 0 0 0 1
+           "text halign" center
+           "text valign" center
+          }
+          PanelWidgetClass CompassMark6Tick {
+           ignorepointer 1
+           color 1 1 1 1
+           position 0 19
+           size 2 5
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        FrameWidgetClass CompassMark7 {
+         ignorepointer 1
+         position 0 0
+         size 60 26
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          TextWidgetClass CompassMark7Label {
+           ignorepointer 1
+           position 0 0
+           size 60 15
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style Bold
+           text ""
+           font "gui/fonts/etelkatextpro"
+           "exact text" 0
+           "outline size" 1
+           "outline color" 0 0 0 1
+           "text halign" center
+           "text valign" center
+          }
+          PanelWidgetClass CompassMark7Tick {
+           ignorepointer 1
+           color 1 1 1 1
+           position 0 19
+           size 2 5
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        FrameWidgetClass CompassMark8 {
+         ignorepointer 1
+         position 0 0
+         size 60 26
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          TextWidgetClass CompassMark8Label {
+           ignorepointer 1
+           position 0 0
+           size 60 15
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style Bold
+           text ""
+           font "gui/fonts/etelkatextpro"
+           "exact text" 0
+           "outline size" 1
+           "outline color" 0 0 0 1
+           "text halign" center
+           "text valign" center
+          }
+          PanelWidgetClass CompassMark8Tick {
+           ignorepointer 1
+           color 1 1 1 1
+           position 0 19
+           size 2 5
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        FrameWidgetClass CompassMark9 {
+         ignorepointer 1
+         position 0 0
+         size 60 26
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          TextWidgetClass CompassMark9Label {
+           ignorepointer 1
+           position 0 0
+           size 60 15
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style Bold
+           text ""
+           font "gui/fonts/etelkatextpro"
+           "exact text" 0
+           "outline size" 1
+           "outline color" 0 0 0 1
+           "text halign" center
+           "text valign" center
+          }
+          PanelWidgetClass CompassMark9Tick {
+           ignorepointer 1
+           color 1 1 1 1
+           position 0 19
+           size 2 5
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        FrameWidgetClass CompassMark10 {
+         ignorepointer 1
+         position 0 0
+         size 60 26
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          TextWidgetClass CompassMark10Label {
+           ignorepointer 1
+           position 0 0
+           size 60 15
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style Bold
+           text ""
+           font "gui/fonts/etelkatextpro"
+           "exact text" 0
+           "outline size" 1
+           "outline color" 0 0 0 1
+           "text halign" center
+           "text valign" center
+          }
+          PanelWidgetClass CompassMark10Tick {
+           ignorepointer 1
+           color 1 1 1 1
+           position 0 19
+           size 2 5
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        FrameWidgetClass CompassMark11 {
+         ignorepointer 1
+         position 0 0
+         size 60 26
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          TextWidgetClass CompassMark11Label {
+           ignorepointer 1
+           position 0 0
+           size 60 15
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style Bold
+           text ""
+           font "gui/fonts/etelkatextpro"
+           "exact text" 0
+           "outline size" 1
+           "outline color" 0 0 0 1
+           "text halign" center
+           "text valign" center
+          }
+          PanelWidgetClass CompassMark11Tick {
+           ignorepointer 1
+           color 1 1 1 1
+           position 0 19
+           size 2 5
+           halign center_ref
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        PanelWidgetClass CompassCenterMark {
+         ignorepointer 1
+         color 1 0.7686 0 1
+         position 0 12
+         size 3 14
+         halign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         priority 2
+         style rover_sim_colorable
+        }
+       }
+      }
+      TextWidgetClass CompassHeading {
+       ignorepointer 1
+       position 0 28
+       size 80 19
+       halign center_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style Bold
+       text "000"
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" center
+       "text valign" center
+      }
+      TextWidgetClass CompassCoords {
+       ignorepointer 1
+       color 0.8627 0.8627 0.8627 1
+       position 0 49
+       size 300 17
+       halign center_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       text ""
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" center
+       "text valign" center
+      }
+     }
+    }
     PanelWidgetClass MiniMapPanel {
      ignorepointer 1
      clipchildren 1

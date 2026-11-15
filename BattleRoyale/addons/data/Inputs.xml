@@ -7,6 +7,7 @@
             <input name="UADayZBRDebug" loc="BR Debug" />
             <input name="UADayZBRToggleMiniMap" loc="BR Minimap Show/Hide" />
             <input name="UADayZBRMiniMapZoom" loc="BR Minimap Zoom" />
+            <input name="UADayZBRToggleCompass" loc="BR Compass Show/Hide" />
         </actions>
 
         <sorting name="dayzbr" loc="BATTLE ROYALE">
@@ -15,6 +16,7 @@
             <input name="UADayZBRDebug" />
             <input name="UADayZBRToggleMiniMap" />
             <input name="UADayZBRMiniMapZoom" />
+            <input name="UADayZBRToggleCompass" />
         </sorting>
     </inputs>
     <preset>
@@ -32,6 +34,9 @@
         </input>
         <input name="UADayZBRMiniMapZoom">
             <btn name="kAdd" />
+        </input>
+        <input name="UADayZBRToggleCompass">
+            <btn name="kK" />
         </input>
     </preset>
 </modded_inputs>

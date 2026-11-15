@@ -178,6 +178,9 @@ class BattleRoyaleClient: BattleRoyaleBase
 		// The minimap outlines the same zones as the walls
 		gameplay.UpdateMiniMap( delta, locked_area, open_area );
 
+		// The compass hides itself without a living local player
+		gameplay.UpdateCompass();
+
 		// Everything below needs the local player. Without one there is no distance to show, and hiding it also
 		// turns the phase text back to white
 		PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
