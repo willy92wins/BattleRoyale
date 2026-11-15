@@ -608,6 +608,9 @@ class BattleRoyaleRPC
 			game.GetSoundScene().SetVOIPVolume( game.m_volume_VOIP, 1 );
 			game.GetSoundScene().SetRadioVolume( game.m_volume_radio, 1 );
 		}
+
+		// The voices stay muted in silent mode
+		BattleRoyaleSilentMode.Apply();
 	}
 
 	// Match already in progress: leave to the main menu and show the reason there

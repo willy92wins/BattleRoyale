@@ -248,6 +248,37 @@ FrameWidgetClass BattleRoyaleHudFrame {
       }
      }
     }
+    PanelWidgetClass SilentModePanel {
+     visible 0
+     ignorepointer 1
+     position 210 4
+     size 200 24
+     halign right_ref
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      TextWidgetClass SilentModeText {
+       ignorepointer 1
+       color 0.9529 0.6118 0.0706 1
+       position 0 0
+       size 1 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 0
+       vexactsize 0
+       style Bold
+       text "#STR_BR_HUD_SILENT_MODE"
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" right
+       "text valign" center
+      }
+     }
+    }
     PanelWidgetClass PhasePanel {
      visible 0
      ignorepointer 1

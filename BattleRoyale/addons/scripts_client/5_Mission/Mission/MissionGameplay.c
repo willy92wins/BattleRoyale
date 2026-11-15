@@ -8,6 +8,9 @@ modded class MissionGameplay
 	protected ref BattleRoyaleCompass m_BattleRoyaleCompass;
 	protected Widget m_BattleRoyaleWinScreen;
 
+	//! Seconds the silent mode notification stays
+	protected static const float BR_SILENT_MODE_MSG_TIME = 3;
+
 	void MissionGameplay()
 	{
 		Print("MissionGameplay::MissionGameplay");
@@ -57,6 +60,9 @@ modded class MissionGameplay
 		m_BattleRoyale = new BattleRoyaleClient;
 
 		InitBRhud();
+
+		// Silent mode switched on in an earlier mission mutes this one too
+		BattleRoyaleSilentMode.Apply();
 	}
 
 	override void OnMissionFinish()
@@ -64,6 +70,8 @@ modded class MissionGameplay
 #ifndef NO_GUI
 		DayZPlayerImplement.BR_OnSessionChanged();
 #endif
+		// The VOIP volume goes back at once; the next mission mutes it again if silent mode is still on
+		BattleRoyaleSilentMode.Restore(0);
 		// Set again by the next server that runs serial matches or the waiting room
 		BattleRoyaleRPC.s_StayConnected = false;
 		BattleRoyaleRPC.s_WaitingRoom = false;
@@ -71,6 +79,14 @@ modded class MissionGameplay
 		BattleRoyaleRPC.ResetSpectating();
 
 		super.OnMissionFinish();
+	}
+
+	//! Vanilla gives every volume back on a respawn; silent mode keeps the voices muted
+	override void OnPlayerRespawned(Man player)
+	{
+		super.OnPlayerRespawned(player);
+
+		BattleRoyaleSilentMode.Apply();
 	}
 
 	override BattleRoyaleClient GetBattleRoyale()
@@ -292,7 +308,30 @@ modded class MissionGameplay
 					m_BattleRoyaleCompass.ToggleVisible();
 				}
 			}
+			if (!m_UIManager.GetMenu()) {
+				if (GetUApi().GetInputByID(UADayZBRToggleSilentMode).LocalPress()) {
+					BR_NotifySilentMode( BattleRoyaleSilentMode.Toggle() );
+				}
+			}
 		}
+
+		if (m_BattleRoyaleHud)
+			m_BattleRoyaleHud.UpdateSilentMode( BattleRoyaleSilentMode.IsActive() );
+	}
+
+	//! Short notification of the new state; switching on plays no sound, the mode is already on
+	protected void BR_NotifySilentMode(bool active)
+	{
+		string key = "#STR_BR_SILENT_MODE_OFF";
+		if (active)
+			key = "#STR_BR_SILENT_MODE_ON";
+
+		// Created locally with the text already translated, like the notifications of the server
+		StringLocaliser title = new StringLocaliser("");
+		title.Set(-1, DAYZBR_MSG_TITLE, false);
+		StringLocaliser text = new StringLocaliser("");
+		text.Set(-1, Widget.TranslateString(key), false);
+		NotificationSystem.Create(title, text, DAYZBR_MSG_IMAGE, COLOR_BR_INFO, BR_SILENT_MODE_MSG_TIME);
 	}
 
 	void ShowSpawnSelection(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
