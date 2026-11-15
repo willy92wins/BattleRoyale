@@ -74,6 +74,11 @@ class BattleRoyaleZoneData: BattleRoyaleDataBase
     ref array<int> static_timers = { 110, 135, 180, 225, 250, 270, 120 };  // zone duration in seconds, the zone locks at 80%; the first zone also waits (60 * round_duration_minutes) / 2 seconds before it starts
     ref array<int> min_players = { 10, 10, 10, 10, 10, 30, 60 };  // dynamic zones: the match starts in the first zone (last index first) whose value is below the player count, at the latest in zone num_zones - min_zone_num
 
+    // Closing: the zone in force shrinks to the next one instead of jumping to it, and the final zone shrinks to nothing.
+    // Metres per second of the edge point that moves the most, the rest of the edge moves slower; the closing ends when the
+    // zone locks. 9 is faster than a running player and slower than a vehicle. 0 = the zone jumps at the lock (before 1.8.0)
+    float zone_shrink_speed = 9;
+
     // Constant (NOT USED ANYMORE)
     float constant_scale = 0.65;
 
@@ -117,6 +122,16 @@ class BattleRoyaleZoneData: BattleRoyaleDataBase
 		string errorMessage;
 		if (!JsonFileLoader<BattleRoyaleZoneData>.SaveFile(GetProfilePath(), this, errorMessage))
 			ErrorEx(errorMessage);
+	}
+
+	override void Validate()
+	{
+		if (zone_shrink_speed < 0)
+		{
+			BattleRoyaleZoneData defaults = new BattleRoyaleZoneData;
+			LogInvalidSetting("zone_settings.json", "zone_shrink_speed", zone_shrink_speed.ToString(), "must not be negative, 0 turns the closing off");
+			zone_shrink_speed = defaults.zone_shrink_speed;
+		}
 	}
 
 	// BattleRoyaleZone and the round states index the tables directly with num_zones from general_settings.json

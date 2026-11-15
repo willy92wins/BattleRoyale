@@ -11,6 +11,7 @@ class BattleRoyaleZoneWall
 	static const float SINK = 2;  //!< panels go this far below the lowest ground under them, so slopes leave no gap
 	static const float VIEW_RANGE = 500;  //!< panels further than this from the camera are not created
 	static const float REFRESH_SECONDS = 0.5;
+	static const float MOVING_REFRESH_SECONDS = 0.2;  //!< while the zone closes: under 2 m of edge travel per refresh at 9 m/s
 
 	protected string m_Model;
 	protected vector m_Center;
@@ -18,6 +19,7 @@ class BattleRoyaleZoneWall
 	protected int m_Count;  //!< number of panel slots around the whole edge
 	protected float m_Elapsed;
 	protected bool m_ModelMissing;
+	protected bool m_Moved;  //!< the circle changed since the panels were placed: the ones kept are placed again
 
 	//! panel slot index -> local object
 	protected ref map<int, Object> m_Panels;
@@ -34,11 +36,15 @@ class BattleRoyaleZoneWall
 		Clear();
 	}
 
-	//! area null hides the wall
-	void Update(float delta, vector camera_pos, BattleRoyalePlayArea area)
+	//! area null hides the wall; moving (the zone closes) refreshes it more often
+	void Update(float delta, vector camera_pos, BattleRoyalePlayArea area, bool moving = false)
 	{
+		float refresh_seconds = REFRESH_SECONDS;
+		if (moving)
+			refresh_seconds = MOVING_REFRESH_SECONDS;
+
 		m_Elapsed += delta;
-		if (m_Elapsed < REFRESH_SECONDS)
+		if (m_Elapsed < refresh_seconds)
 			return;
 		m_Elapsed = 0;
 
@@ -48,12 +54,13 @@ class BattleRoyaleZoneWall
 			return;
 		}
 
+		// A new circle keeps the panels: Refresh moves them onto it and only creates or deletes the difference
 		if (area.GetCenter() != m_Center || area.GetRadius() != m_Radius)
 		{
-			Clear();
 			m_Center = area.GetCenter();
 			m_Radius = area.GetRadius();
 			m_Count = Math.Max(8, Math.Ceil(Math.PI2 * m_Radius / SPACING));
+			m_Moved = true;
 		}
 
 		Refresh(camera_pos);
@@ -100,6 +107,7 @@ class BattleRoyaleZoneWall
 		int first = Math.Round(bearing / step);
 		float range_sq = VIEW_RANGE * VIEW_RANGE;
 		set<int> wanted = new set<int>;
+		array<int> wanted_order = new array<int>;
 
 		for (int i = -half_span; i <= half_span; i++)
 		{
@@ -115,17 +123,66 @@ class BattleRoyaleZoneWall
 			if (px * px + pz * pz > range_sq)
 				continue;
 
+			// A small zone can bring the same slot twice around the circle
+			if (wanted.Find(index) != -1)
+				continue;
+
 			wanted.Insert(index);
-			if (!m_Panels.Contains(index))
-			{
-				Object panel = CreatePanel(angle, x, z);
-				if (!panel)
-					return;
-				m_Panels.Insert(index, panel);
-			}
+			wanted_order.Insert(index);
 		}
 
-		RemoveAllBut(wanted);
+		// Panels of slots no longer wanted are spares: they move to the new slots before any panel is created
+		array<Object> spares = new array<Object>;
+		array<int> stale = new array<int>;
+		foreach (int panel_index, Object panel : m_Panels)
+		{
+			if (wanted.Find(panel_index) == -1)
+			{
+				if (panel)
+					spares.Insert(panel);
+				stale.Insert(panel_index);
+			}
+		}
+		foreach (int stale_index : stale)
+		{
+			m_Panels.Remove(stale_index);
+		}
+
+		bool moved = m_Moved;
+		m_Moved = false;
+		foreach (int slot : wanted_order)
+		{
+			float slot_angle = slot * step;
+			float slot_x = m_Center[0] + m_Radius * Math.Cos(slot_angle);
+			float slot_z = m_Center[2] + m_Radius * Math.Sin(slot_angle);
+
+			Object kept = m_Panels.Get(slot);
+			if (kept)
+			{
+				if (moved)
+					PlacePanel(kept, slot_angle, slot_x, slot_z);
+				continue;
+			}
+
+			Object reused = null;
+			if (spares.Count() > 0)
+			{
+				reused = spares[spares.Count() - 1];
+				spares.Remove(spares.Count() - 1);
+			}
+
+			Object placed = PlacePanel(reused, slot_angle, slot_x, slot_z);
+			if (!placed)
+				break;
+			m_Panels.Set(slot, placed);
+		}
+
+		// Spares nobody took, now out of range
+		foreach (Object spare : spares)
+		{
+			if (spare)
+				GetGame().ObjectDelete(spare);
+		}
 	}
 
 	//! Point of the edge at angle, on the ground
@@ -136,7 +193,8 @@ class BattleRoyaleZoneWall
 		return Vector(x, GetGame().SurfaceY(x, z), z);
 	}
 
-	protected Object CreatePanel(float angle, float x, float z)
+	//! Puts panel on the slot at angle, or creates it there when panel is null; null when it cannot be created
+	protected Object PlacePanel(Object panel, float angle, float x, float z)
 	{
 		// The panel runs from one slot boundary to the next on the ground, so neighbours share their
 		// ends and the top edge follows the terrain instead of stepping
@@ -160,16 +218,20 @@ class BattleRoyaleZoneWall
 		transform[2] = dir;
 		transform[3] = middle - up * (SINK + bulge);
 
-		Object panel = GetGame().CreateStaticObjectUsingP3D(m_Model, transform[3], "0 0 0", 1.0, true);
-		if (!panel)
+		Object placed = panel;
+		if (!placed)
 		{
-			BattleRoyaleUtils.Warn("ZoneWall: cannot create " + m_Model);
-			m_ModelMissing = true;
-			return null;
+			placed = GetGame().CreateStaticObjectUsingP3D(m_Model, transform[3], "0 0 0", 1.0, true);
+			if (!placed)
+			{
+				BattleRoyaleUtils.Warn("ZoneWall: cannot create " + m_Model);
+				m_ModelMissing = true;
+				return null;
+			}
 		}
 
-		panel.SetTransform(transform);
-		return panel;
+		placed.SetTransform(transform);
+		return placed;
 	}
 
 	//! Deletes every panel whose slot is not in keep (all of them when keep is null)

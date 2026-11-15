@@ -316,6 +316,11 @@ class BattleRoyaleSpectators
 		BattleRoyaleUtils.Info("Spectator started for " + identity.GetName());
 
 		Watch(identity, target);
+
+		// The spectator's map and walls keep showing the zones, including a closing under way
+		BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+		if (server)
+			server.SendZoneStateTo(identity);
 	}
 
 	protected void Watch(PlayerIdentity identity, PlayerBase target)

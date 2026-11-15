@@ -255,9 +255,9 @@ the file is fixed. What is checked:
 - times and radii: `round_duration_minutes` (the first zone starts `(60 * round_duration_minutes) / 2`
   seconds after the match start and must come after `time_until_teleport_unlock`),
   `spawn_selection_duration`, `spawn_selection_extra_time`, `spawn_selection_radius`,
-  `debug_heal_tick_seconds`, `zone_damage_tick_seconds`, `min_waiting_time`,
-  `time_to_start_match_seconds`, `autostart_delay`, the lobby `radius`, `extra_spawn_radius`, and the
-  `override_poi_positions` entries.
+  `debug_heal_tick_seconds`, `zone_damage_tick_seconds`, `zone_shrink_speed` (not negative),
+  `min_waiting_time`, `time_to_start_match_seconds`, `autostart_delay`, the lobby `radius`,
+  `extra_spawn_radius`, and the `override_poi_positions` entries.
 
 ### Default zone tables
 
@@ -275,6 +275,34 @@ Index 0 is the final zone, the last index the first one.
 
 With `round_duration_minutes = 5` the first zone starts 150 s after the match start. When the round of
 zone 7 ends, the final zone stays 55 s more and then every player left takes damage until one remains.
+
+### Zone closing
+
+`zone_shrink_speed` in `zone_settings.json` (metres per second, default 9; 0 = the zone jumps to the next
+one at the lock, as before 1.8.0). From zone 2 on, the zone in force shrinks to the announced one instead of
+jumping to it: center and radius move together, and the edge point that moves the most covers the radius
+difference plus the shift of the center at that speed, faster than a running player and slower than a
+vehicle. The closing ends exactly when the zone locks and starts its duration before it, so a match lasts as
+long as before. Players the edge passes over are outside the zone from that moment. The zone notices count
+down to the start of the closing, when the danger starts ("The zone starts closing in ..."), and so does the
+HUD timer (ZONE CLOSING), which then shows the seconds until the lock while the zone closes. For the final
+zone the HUD timer (ZONE DISAPPEARS IN) still counts down to the moment it is gone. The first zone of the
+match still appears at its lock, there is no zone before it. The final zone also shrinks to nothing on its center at the same speed and is gone when it
+collapses today. If a closing does not fit before the lock, it starts with the round and the lock and the
+end of the round come that much later.
+
+With the default tables the closing lasts (the shift of the center is random between 25 % and 75 % of the
+radius difference):
+
+| Closing | Radius (m) | Closing at 9 m/s (s) | Starts after the round start (s) | Lock (s) |
+|---|---|---|---|---|
+| 1 to 2 | 3000 to 2100 | 125 to 175 | 41 to 91 | 216 |
+| 2 to 3 | 2100 to 1350 | 104 to 146 | 54 to 96 | 200 |
+| 3 to 4 | 1350 to 750 | 83 to 117 | 63 to 97 | 180 |
+| 4 to 5 | 750 to 350 | 56 to 78 | 66 to 88 | 144 |
+| 5 to 6 | 350 to 150 | 28 to 39 | 69 to 80 | 108 |
+| 6 to 7 | 150 to 50 | 14 to 19 | 69 to 74 | 88 |
+| final | 50 to 0 | 6 | 49 | 55 |
 A full match takes about 25 minutes. The first zone is shown from the start, so players get about
 4.5 minutes in it before zone 2 is announced. Every zone closes faster than in 1.1; the early ones deal
 little damage (zone k deals k/7 of `zone_damage_delta`). The final-zone avoid list

@@ -212,7 +212,8 @@ modded class MapMenu
 
 		vector current_center = vector.Zero;
 		float current_radius = 0;
-		BattleRoyalePlayArea current_area = br_client.GetPlayArea();
+		// While the zone closes this area changes at most 10 times a second, so the canvas redraws no more often
+		BattleRoyalePlayArea current_area = br_client.GetMapPlayArea();
 		if (current_area)
 		{
 			current_center = current_area.GetCenter();

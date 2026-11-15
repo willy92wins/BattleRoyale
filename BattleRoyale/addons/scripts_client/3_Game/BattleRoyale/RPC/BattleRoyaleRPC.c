@@ -13,6 +13,7 @@ class BattleRoyaleRPC
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetCountdownSeconds", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "StartZoneShrink", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetTopPosition", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "ShowWinScreen", this );
 
@@ -175,6 +176,9 @@ class BattleRoyaleRPC
 		current_play_area_received = false;
 		future_play_area_center = "0 0 0";
 		future_play_area_radius = 0.0;
+		zone_shrinking = false;
+		zone_shrink_start_time = 0;
+		zone_shrink_duration = 0.0;
 		top_position = 0;
 		winner_screen = false;
 		match_phase = -1;
@@ -329,7 +333,77 @@ class BattleRoyaleRPC
 			current_play_area_center = data.param1;
 			current_play_area_radius = data.param2;
 			current_play_area_received = true;
+			// The lock (or a resync) sets the zone in force: any closing is over
+			zone_shrinking = false;
 		}
+	}
+
+	// Closing of the zone in force: the client draws the circle of each frame from these, with its own clock
+
+	bool zone_shrinking = false;  //!< from StartZoneShrink until the next UpdateCurrentPlayArea
+	vector zone_shrink_from_center = "0 0 0";
+	float zone_shrink_from_radius = 0.0;
+	vector zone_shrink_to_center = "0 0 0";
+	float zone_shrink_to_radius = 0.0;
+	float zone_shrink_duration = 0.0;  //!< seconds
+	int zone_shrink_start_time = 0;  //!< GetGame().GetTime() at which the closing started on this client's clock
+
+	void StartZoneShrink(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		// start center, start radius, end center, end radius, total seconds, seconds already gone
+		Param6<vector, float, vector, float, float, float> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ STARTZONESHRINK RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+		{
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("StartZoneShrink: %1 %2 -> %3 %4 in %5 s, %6 s gone", data.param1, data.param2, data.param3, data.param4, data.param5, data.param6));
+			zone_shrink_from_center = data.param1;
+			zone_shrink_from_radius = data.param2;
+			zone_shrink_to_center = data.param3;
+			zone_shrink_to_radius = data.param4;
+			zone_shrink_duration = data.param5;
+			zone_shrink_start_time = GetGame().GetTime() - Math.Round( data.param6 * 1000 );
+			zone_shrinking = true;
+		}
+	}
+
+	//! Lerp factor of the closing on this client's clock, within [0, 1]
+	protected float GetZoneShrinkProgress()
+	{
+		if ( zone_shrink_duration <= 0 )
+			return 1;
+
+		float seconds = ( GetGame().GetTime() - zone_shrink_start_time ) / 1000.0;
+		return Math.Clamp( seconds / zone_shrink_duration, 0, 1 );
+	}
+
+	//! Circle of the closing at this frame; false when no closing runs
+	bool GetZoneShrinkCircle(out vector center, out float radius)
+	{
+		if ( !zone_shrinking )
+			return false;
+
+		float s = GetZoneShrinkProgress();
+		center = zone_shrink_from_center + ( zone_shrink_to_center - zone_shrink_from_center ) * s;
+		radius = zone_shrink_from_radius + ( zone_shrink_to_radius - zone_shrink_from_radius ) * s;
+		return true;
+	}
+
+	//! Whole seconds until the closing ends, 0 when it is over or none runs
+	int GetZoneShrinkSecondsLeft()
+	{
+		if ( !zone_shrinking )
+			return 0;
+
+		float seconds_left = zone_shrink_duration * ( 1 - GetZoneShrinkProgress() );
+		if ( seconds_left <= 0 )
+			return 0;
+
+		return Math.Ceil( seconds_left );
 	}
 
 	// Update the future play area
