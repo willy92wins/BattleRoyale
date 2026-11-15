@@ -63,6 +63,7 @@ class BattleRoyaleCompass
 	protected int m_LastZ;
 
 	protected float m_TapeWidth;              //!< width of the tape now, in layout units
+	protected float m_PxPerUnit;              //!< screen pixels per exact layout unit (screen height / 1080)
 	protected int m_FitScreenW;               //!< screen size the tape width was fitted to, -1 for none
 	protected int m_FitScreenH;
 
@@ -70,6 +71,7 @@ class BattleRoyaleCompass
 	{
 		m_LastHeadingText = -1;
 		m_TapeWidth = TAPE_WIDTH;
+		m_PxPerUnit = 1;
 		m_FitScreenW = -1;
 		m_FitScreenH = -1;
 
@@ -180,7 +182,9 @@ class BattleRoyaleCompass
 
 	//! Width of the tape for the screen size, set when the HUD is built and when the screen changes size: as wide as
 	//! fits between the notification stack and its mirror on the right, from TAPE_MIN_WIDTH to TAPE_WIDTH. The scale
-	//! stays, so a narrower tape shows fewer degrees
+	//! stays, so a narrower tape shows fewer degrees.
+	//! The layout scales exact units with the screen height, but SetPos and SetSize from a script take screen pixels,
+	//! so every size and place the script sets is converted with m_PxPerUnit, refreshed here with the screen size
 	protected void FitWidth()
 	{
 		int screen_w;
@@ -193,20 +197,24 @@ class BattleRoyaleCompass
 		m_FitScreenH = screen_h;
 
 		// Exact layout units are 1/1080 of the screen height; the panel is centred on the screen
+		m_PxPerUnit = screen_h / 1080.0;
 		float screen_units = screen_w * 1080.0 / screen_h;
 		float notifications_right = screen_units * NOTIFICATION_LEFT + NOTIFICATION_WIDTH;
 		float width = Math.Floor((screen_units * 0.5 - notifications_right - NOTIFICATION_GAP) * 2);
 		width = Math.Clamp(width, TAPE_MIN_WIDTH, TAPE_WIDTH);
-		if (width == m_TapeWidth)
-			return;
 
+		// Applied even when the width in units did not change: the pixels per unit may have
 		m_TapeWidth = width;
-		m_Panel.SetSize(width, PANEL_HEIGHT);
-		m_Tape.SetSize(width, TAPE_HEIGHT);
-		m_BaseLine.SetSize(width, BASE_LINE_HEIGHT);
+		m_Panel.SetSize(width * m_PxPerUnit, PANEL_HEIGHT * m_PxPerUnit);
+		m_Tape.SetSize(width * m_PxPerUnit, TAPE_HEIGHT * m_PxPerUnit);
+		m_BaseLine.SetSize(width * m_PxPerUnit, BASE_LINE_HEIGHT * m_PxPerUnit);
 
-		// The marks are placed again for the new width
+		// The marks are placed again, and their ticks sized again, for the new width and scale
 		m_HasHeading = false;
+		for (int i = 0; i < MARK_COUNT; i++)
+		{
+			m_MarkStep[i] = -1;
+		}
 	}
 
 	protected void SetShown(bool show)
@@ -271,7 +279,8 @@ class BattleRoyaleCompass
 			label = m_Labels[slot];
 			SetMarkStep(slot, ((step % STEP_COUNT) + STEP_COUNT) % STEP_COUNT, tick, label);
 
-			mark.SetPos(half_tape + offset - MARK_WIDTH * 0.5, 0);
+			// Placed in layout units, set in screen pixels
+			mark.SetPos((half_tape + offset - MARK_WIDTH * 0.5) * m_PxPerUnit, 0);
 
 			alpha = Math.Clamp((half_tape - Math.AbsFloat(offset)) / FADE_WIDTH, 0, 1);
 			tick.SetAlpha(alpha);
@@ -305,15 +314,15 @@ class BattleRoyaleCompass
 				label.SetColor(COLOR_NORTH);
 			else
 				label.SetColor(COLOR_LETTER);
-			tick.SetSize(TICK_WIDTH, MAJOR_TICK_HEIGHT);
-			tick.SetPos(0, TICK_BOTTOM - MAJOR_TICK_HEIGHT);
+			tick.SetSize(TICK_WIDTH * m_PxPerUnit, MAJOR_TICK_HEIGHT * m_PxPerUnit);
+			tick.SetPos(0, (TICK_BOTTOM - MAJOR_TICK_HEIGHT) * m_PxPerUnit);
 		}
 		else
 		{
 			label.SetText(degrees.ToString());
 			label.SetColor(COLOR_NUMBER);
-			tick.SetSize(TICK_WIDTH, MINOR_TICK_HEIGHT);
-			tick.SetPos(0, TICK_BOTTOM - MINOR_TICK_HEIGHT);
+			tick.SetSize(TICK_WIDTH * m_PxPerUnit, MINOR_TICK_HEIGHT * m_PxPerUnit);
+			tick.SetPos(0, (TICK_BOTTOM - MINOR_TICK_HEIGHT) * m_PxPerUnit);
 		}
 	}
 
