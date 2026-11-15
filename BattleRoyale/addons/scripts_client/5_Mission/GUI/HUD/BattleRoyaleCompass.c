@@ -10,7 +10,7 @@ class BattleRoyaleCompass
 
 	// Geometry of the tape in br_hud.layout, in layout units
 	protected static const float TAPE_WIDTH = 420;     //!< widest tape, the one of the layout; it sets the scale too
-	protected static const float TAPE_MIN_WIDTH = 180; //!< narrowest tape on a narrow screen
+	protected static const float TAPE_MIN_WIDTH = 120; //!< narrowest tape: a 5:4 screen leaves 121 units between the notification stack and its mirror
 	protected static const float PANEL_HEIGHT = 66;
 	protected static const float TAPE_HEIGHT = 26;
 	protected static const float BASE_LINE_HEIGHT = 2;
