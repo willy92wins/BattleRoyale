@@ -12,7 +12,7 @@ class BattleRoyaleKillFeed
     static const int FADE_OUT_MS = 700;
     static const float SLIDE_IN_PX = 12;        //!< a new row starts this far to the right
 
-    // Geometry of killfeed.layout, in pixels
+    // Geometry of killfeed.layout, in layout units (set from the script times PxPerUnit)
     static const float ROW_PITCH = 34;
     static const float ROW_HEIGHT = 30;
     static const float TEXT_X = 42;
@@ -38,7 +38,8 @@ class BattleRoyaleKillFeed
 
     protected Widget m_Root;
     protected Widget m_Panel;
-    protected float m_PanelOffset;  //!< x of KillFeedPanel last set by Place, -1 while it has the one of the layout
+    protected float m_PanelOffset;  //!< x of KillFeedPanel last set by Place (layout units), -1 while it has the one of the layout
+    protected float m_PanelPxPerUnit;       //!< PxPerUnit() m_PanelOffset was set with
     protected float m_LayoutOffset;         //!< m_PanelOffset the rows on screen were laid out for
     protected float m_LayoutCentreRight;    //!< right edge of the centred lines the rows were laid out for, -1 for none
     protected int m_LayoutScreenW;          //!< screen width the rows on screen were laid out for, -1 for none
@@ -67,6 +68,7 @@ class BattleRoyaleKillFeed
         m_NextExpiry = -1;
         m_LocalPlayerId = -1;
         m_PanelOffset = -1;
+        m_PanelPxPerUnit = -1;
         m_LayoutOffset = -1;
         m_LayoutCentreRight = -1;
         m_LayoutScreenW = -1;
@@ -205,7 +207,8 @@ class BattleRoyaleKillFeed
 
         // KillFeedPanel is right aligned in the HUD frame: its x is the distance between both right edges
         float offset = ( root_x + root_w - corner_left ) / px_per_unit + PANEL_GAP;
-        if ( m_PanelOffset >= 0 )
+        // A new screen height places the panel again: the same offset in units is another one in pixels
+        if ( m_PanelOffset >= 0 && px_per_unit == m_PanelPxPerUnit )
         {
             if ( offset < m_PanelOffset && m_PanelOffset - offset < PLACE_HYSTERESIS )
                 return;
@@ -214,7 +217,9 @@ class BattleRoyaleKillFeed
         }
 
         m_PanelOffset = offset;
-        m_Panel.SetPos( offset, PANEL_TOP );
+        m_PanelPxPerUnit = px_per_unit;
+        // Placed in layout units, set in screen pixels
+        m_Panel.SetPos( offset * px_per_unit, PANEL_TOP * px_per_unit );
     }
 
     //! Widest a row can be, in layout units, to stay CENTRE_GAP right of centre_right (screen pixels, the right
@@ -240,7 +245,8 @@ class BattleRoyaleKillFeed
         return Math.Max( room, 0 );
     }
 
-    //! Screen pixels per exact layout unit: the units are 1/1080 of the screen height
+    //! Screen pixels per exact layout unit: the units are 1/1080 of the screen height. The layout is scaled with it,
+    //! but SetPos and SetSize from a script take screen pixels: every place and size the script sets goes through it
     protected float PxPerUnit()
     {
         int screen_w;
@@ -310,6 +316,10 @@ class BattleRoyaleKillFeed
         TextWidget text;
         TextWidget detail;
 
+        float px_per_unit = PxPerUnit();
+        if ( px_per_unit <= 0 )
+            px_per_unit = 1;
+
         for ( int row = 0; row < m_ShownRows; row++ )
         {
             age = now - m_RowTime[row];
@@ -348,8 +358,9 @@ class BattleRoyaleKillFeed
             icon.SetAlpha( alpha );
             text.SetAlpha( alpha );
             detail.SetAlpha( alpha );
-            // Right aligned row: x is measured from the right edge of the panel, a negative x is to the right
-            row_widget.SetPos( slide, row * ROW_PITCH );
+            // Right aligned row: x is measured from the right edge of the panel, a negative x is to the right.
+            // The slide is in screen pixels already, the pitch in layout units
+            row_widget.SetPos( slide, row * ROW_PITCH * px_per_unit );
         }
     }
 
@@ -435,8 +446,11 @@ class BattleRoyaleKillFeed
             return;
         }
 
-        row_widget.SetSize( TEXT_X, ROW_HEIGHT );
-        back.SetSize( TEXT_X, ROW_HEIGHT );
+        float px_per_unit = PxPerUnit();
+        if ( px_per_unit <= 0 )
+            px_per_unit = 1;
+        row_widget.SetSize( TEXT_X * px_per_unit, ROW_HEIGHT * px_per_unit );
+        back.SetSize( TEXT_X * px_per_unit, ROW_HEIGHT * px_per_unit );
     }
 
     //! Writes the sentence and the detail (empty for none) in the row, sizes the row to them and returns its width
@@ -453,6 +467,12 @@ class BattleRoyaleKillFeed
         int text_height;
         text_widget.GetTextSize( text_width, text_height );
 
+        // GetTextSize measures in screen pixels and SetPos/SetSize take them; the row is laid out in layout units
+        float px_per_unit = PxPerUnit();
+        if ( px_per_unit <= 0 )
+            px_per_unit = 1;
+        float units_per_px = 1.0 / px_per_unit;
+
         float width;
         if ( text_width <= 0 )
         {
@@ -464,12 +484,6 @@ class BattleRoyaleKillFeed
         }
         else
         {
-            // GetTextSize measures in screen pixels; the row is laid out in layout units
-            float units_per_px = 1;
-            float px_per_unit = PxPerUnit();
-            if ( px_per_unit > 0 )
-                units_per_px = 1.0 / px_per_unit;
-
             float end = TEXT_X + text_width * units_per_px;
             if ( detail != "" )
             {
@@ -477,7 +491,7 @@ class BattleRoyaleKillFeed
                 int detail_height;
                 detail_widget.Show( true );
                 detail_widget.SetText( detail );
-                detail_widget.SetPos( end + DETAIL_GAP, DETAIL_Y );
+                detail_widget.SetPos( ( end + DETAIL_GAP ) * px_per_unit, DETAIL_Y * px_per_unit );
                 detail_widget.GetTextSize( detail_width, detail_height );
                 end = end + DETAIL_GAP + detail_width * units_per_px;
             }
@@ -490,8 +504,8 @@ class BattleRoyaleKillFeed
         }
 
         // The row hugs its content; it is right aligned, so its width moves its left edge and the content with it
-        row_widget.SetSize( width, ROW_HEIGHT );
-        back.SetSize( width, ROW_HEIGHT );
+        row_widget.SetSize( width * px_per_unit, ROW_HEIGHT * px_per_unit );
+        back.SetSize( width * px_per_unit, ROW_HEIGHT * px_per_unit );
         return width;
     }
 
