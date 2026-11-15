@@ -15,18 +15,20 @@ class BattleRoyaleKillFeedEntry
 //! state of the victim. It only reads; the caller sends the result
 class BattleRoyaleKillFeedClassifier
 {
-	//! The damage that kills is still being applied when the death is reported, and a zone tick that kills
-	//! was stamped in the same call; anything older than this is not the cause
+	//! The damage that kills is still being applied when the death is reported, and a zone tick or a
+	//! vehicle crash that kills was stamped in the same call; anything older than this is not the cause
 	static const int LETHAL_DAMAGE_WINDOW_MS = 1000;
 	static const int ZONE_DAMAGE_WINDOW_MS = 1000;
+	static const int CRASH_DAMAGE_WINDOW_MS = 1000;
 
 	static const string AMMO_FALL_PREFIX = "FallDamage";  //!< DayZPlayerImplementFallDamage.FALL_DAMAGE_AMMO_*
 	static const string AMMO_FIRE = "FireDamage";         //!< area damage of fireplaces and burning objects
 	static const string AMMO_BARBED_WIRE = "BarbedWireHit";  //!< area damage of BarbedWire
 	static const string AMMO_TRANSPORT = "TransportHit";  //!< EntityAI: body hit by a moving vehicle
 
-	//! True when what killed the victim is on record: a zone tick or a damage that names its cause
-	//! (fall, fire, barbed wire, vehicle, explosion). Such a death is not a blood loss, whatever the blood level
+	//! True when what killed the victim is on record: a zone tick, a vehicle crash or a damage that names
+	//! its cause (fall, fire, barbed wire, vehicle, explosion). Such a death is not a blood loss, whatever
+	//! the blood level
 	static bool HasRecordedCause(PlayerBase victim)
 	{
 		if (!victim)
@@ -34,6 +36,9 @@ class BattleRoyaleKillFeedClassifier
 
 		int now = GetGame().GetTime();
 		if (IsZoneKill(victim, now))
+			return true;
+
+		if (IsCrashKill(victim, now))
 			return true;
 
 		if (!IsDamageInFlight(victim, now))
@@ -46,6 +51,12 @@ class BattleRoyaleKillFeedClassifier
 	protected static bool IsZoneKill(PlayerBase victim, int now)
 	{
 		return victim.br_zone_damage_time > 0 && now - victim.br_zone_damage_time <= ZONE_DAMAGE_WINDOW_MS;
+	}
+
+	//! Only the vehicle crash that killed keeps its stamp (PlayerBase.BR_CrashDamageEnd)
+	protected static bool IsCrashKill(PlayerBase victim, int now)
+	{
+		return victim.br_crash_damage_time > 0 && now - victim.br_crash_damage_time <= CRASH_DAMAGE_WINDOW_MS;
 	}
 
 	//! A damage was being applied when the victim died (PlayerBase forgets a damage it survived)
@@ -101,6 +112,8 @@ class BattleRoyaleKillFeedClassifier
 			// What killed, when it is on record, comes before what the victim was doing or how much
 			// blood it had: a zone tick or a fall can kill during a suicide animation or a bleeding
 			entry.m_Type = ClassifyRecordedCause(victim, ammo, damage_type, now);
+			if (entry.m_Type == EBRKillFeedType.VEHICLE_CRASH)
+				entry.m_ItemClass = GetVehicleClass(victim);
 			if (entry.m_Type != EBRKillFeedType.DIED)
 				return;
 
@@ -232,12 +245,16 @@ class BattleRoyaleKillFeedClassifier
 		return EBRKillFeedType.DIED;
 	}
 
-	//! Cause of a death without a killer that is on record: the zone tick that killed, or the damage
-	//! being applied; DIED when there is neither
+	//! Cause of a death without a killer that is on record: the zone tick that killed, the vehicle crash
+	//! that killed, or the damage being applied; DIED when there is none
 	protected static int ClassifyRecordedCause(PlayerBase victim, string ammo, int damage_type, int now)
 	{
 		if (IsZoneKill(victim, now))
 			return EBRKillFeedType.ZONE;
+
+		// Comes before the blood level: a crash can kill a crew member who was already low on blood
+		if (IsCrashKill(victim, now))
+			return EBRKillFeedType.VEHICLE_CRASH;
 
 		return ClassifyByDamage(ammo, damage_type);
 	}
