@@ -23,9 +23,9 @@ class EventWebhook
 			return;
 		}
 
-		HttpArguments arguments = {
-			new HttpArgument("version", "1"),
-			new HttpArgument("tick", GetGame().GetTickTime().ToString())
+		BRHttpArguments arguments = {
+			new BRHttpArgument("version", "1"),
+			new BRHttpArgument("tick", GetGame().GetTickTime().ToString())
 		};
 
 		JATEvent jatEvent = new JATEvent( s_ServerToken, event_name, json_data );

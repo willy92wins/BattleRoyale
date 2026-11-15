@@ -62,10 +62,10 @@
     Extra command line parameters for DayZServer_x64.exe.
 
 .EXAMPLE
-    .\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Dabs Framework;@Community-Online-Tools;@BattleRoyale'
+    .\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Community-Online-Tools;@BattleRoyale'
 
 .EXAMPLE
-    .\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@Dabs Framework' -WhatIf
+    .\restart_loop.ps1 -ServerRoot 'D:\DayZServer' -InstanceId 1 -Mod '@CF;@BattleRoyale' -WhatIf
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
