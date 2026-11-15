@@ -631,7 +631,7 @@ class BattleRoyaleState: Timeable
 							group.Insert(plr);  // Insert guild leader into group
 							if (registered_parties.GetElement(i))
 							{
-								array<string, bool> tmpPlayPart = registered_parties.GetElement(i).ToArray();  // Get party members
+								array<string> tmpPlayPart = registered_parties.GetElement(i).ToArray();  // Get party members
 								int tmpPlayPartCount = tmpPlayPart.Count();
 								BattleRoyaleUtils.Trace("Party have " + tmpPlayPartCount + " more members");
 								for(int j = 0; j < tmpPlayPartCount; j++)  // Iterate over party members

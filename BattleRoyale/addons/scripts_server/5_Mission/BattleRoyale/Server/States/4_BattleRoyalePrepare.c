@@ -19,7 +19,8 @@ class BattleRoyalePrepare: BattleRoyaleState
 
     private string last_village_spawn = "";
 
-    //! First play area, resolved once in Activate: i_NumStartingPlayers is fixed for the whole state
+    //! First zone index and play area, resolved once in Activate: i_NumStartingPlayers is fixed for the whole state
+    protected int m_FirstZoneIndex;
     protected ref BattleRoyalePlayArea m_FirstArea;
 
     ref map<string, vector> m_OverrideSpawnPositions;
@@ -55,8 +56,12 @@ class BattleRoyalePrepare: BattleRoyaleState
         RememberMatchPlayers();
         BroadcastMatchPhase(EBRMatchPhase.PREPARE, -1);
 
-        //! Resolve the starting area once for this match instead of per spawn candidate
-        m_FirstArea = BattleRoyaleZone.GetZone(GetDynamicStartingZone(i_NumStartingPlayers)).GetArea();
+        // Resolve the starting zone and area once for this match instead of per spawn candidate
+        m_FirstZoneIndex = GetDynamicStartingZone(i_NumStartingPlayers);
+        BattleRoyaleZone first_zone = BattleRoyaleZone.GetZone(m_FirstZoneIndex);
+        m_FirstArea = null;
+        if (first_zone)
+            m_FirstArea = first_zone.GetArea();
 
 		if ( m_ServerData.enable_vigrid_api )
 		{
@@ -377,7 +382,7 @@ class BattleRoyalePrepare: BattleRoyaleState
         {
             vector village_pos = "0 0 0";
             bool village_pos_fresh = false;
-            if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Spawn in zone " + GetDynamicStartingZone(i_NumStartingPlayers));
+            if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE)) BattleRoyaleUtils.Trace("Spawn in zone " + m_FirstZoneIndex);
             ref BattleRoyalePlayArea spawn_area = m_FirstArea;
             int spawn_checks = 0;
             for(int village_spawn_try = 1; village_spawn_try <= 40 && spawn_checks < 600; village_spawn_try++)
