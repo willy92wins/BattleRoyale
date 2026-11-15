@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.7.0 (2026-11-15)
+
+### Changed
+- Dabs Framework is no longer needed. The two things the mod took from it, the list of named places of the map used
+  to pick spawn villages and the query string of the webhooks, are now the mod's own server code and give the same
+  results. Servers drop `@Dabs Framework` from `-mod`, and players no longer download it (34 MB, more than half of
+  what a player downloaded for BattleRoyale, CF, Dabs and COT).
+- Kill feed: a player run over by a vehicle with another player at the wheel is credited to the driver. The kill feed
+  names the driver, the kill counts for them, the webhook names them, and a later bleed-out within the usual time
+  credits them too. Without a driver, a run-over still names nobody.
+
+### Fixed
+- Kill feed: a player killed in a vehicle crash is shown as killed in the crash, not as bled out with the kill
+  credited to the last player who hit them.
+
+### Notes
+- The message the server sends the clients for the kill feed keeps its format; a run-over now carries the driver's
+  name, which the client already shows. Server and clients should run 1.7.0.
+- Reviewed by a second model family (adversarial review of each change and of the three together) and tested in
+  DayZDiag with one player: the mod starts without Dabs and the match preparation reads the same 77 places of the map
+  as before. Not tested yet in game: a deadly crash (the test harness could not produce one), motorbikes, a run-over
+  (needs two players) and the webhooks.
+- `tools/check_standalone.py` now fails if a Dabs type or a `DF_*` required addon comes back.
+- `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
+
 ## 1.6.1 (2026-11-15)
 
 ### Fixed
