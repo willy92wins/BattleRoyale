@@ -824,7 +824,14 @@ class BattleRoyaleState: Timeable
 				else {
 					json_data.Insert( "killer_position", source.GetPosition().ToString() );
 
-					if (playerSource && playerSource.GetIdentity())
+					// Run over: the player at the wheel, with the vehicle as the weapon
+					PlayerBase driver = BattleRoyaleKillFeedClassifier.GetRunOverKiller( player, source );
+					if (driver && driver.GetIdentity())
+					{
+						json_data.Insert( "killer", driver.GetIdentity().GetPlainId() );
+						json_data.Insert( "weapon", source.GetType() );
+					}
+					else if (playerSource && playerSource.GetIdentity())
 					{
 						json_data.Insert( "killer", playerSource.GetIdentity().GetPlainId() );
 						if (source.IsWeapon() || source.IsMeleeWeapon())
@@ -924,6 +931,10 @@ class BattleRoyaleState: Timeable
 				killer = PlayerBase.Cast(source_ai.GetHierarchyParent());
 			if (!killer)
 				killer = PlayerBase.Cast(source);
+
+			// Run over: the player at the wheel
+			if (!killer)
+				killer = BattleRoyaleKillFeedClassifier.GetRunOverKiller(victim, source);
 
 			// A grenade or mine names who set it off by plain id. That player can be dead by now and still
 			// connected, so the identity is looked up among every connected player, not only the living ones

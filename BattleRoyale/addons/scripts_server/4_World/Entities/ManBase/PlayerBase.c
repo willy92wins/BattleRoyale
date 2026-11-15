@@ -32,8 +32,8 @@ modded class PlayerBase
 	PlayerBase br_last_player_hit_by;
 	string br_last_player_hit_name;  //!< empty until another player hits this one
 	int br_last_player_hit_time;  //!< GetGame().GetTime() of that hit, in ms
-	string br_last_player_hit_weapon;  //!< class name of the weapon, empty for fists
-	int br_last_player_hit_type;  //!< EBRKillFeedType of that hit: FIREARM, MELEE or FISTS
+	string br_last_player_hit_weapon;  //!< class name of the weapon or vehicle, empty for fists
+	int br_last_player_hit_type;  //!< EBRKillFeedType of that hit: FIREARM, MELEE, FISTS or VEHICLE
 	float br_last_player_hit_distance;  //!< metres between the two players at the hit, 0 in melee
 	bool br_bled_out;  //!< set when this player dies: its blood was under the fatal level, so the death was blood loss
 
@@ -169,6 +169,11 @@ modded class PlayerBase
 		else
 			playerSource = PlayerBase.Cast( source.GetHierarchyParent() );
 
+		// Run over: the player at the wheel is the one who hit, with the vehicle as the weapon
+		PlayerBase driver = BattleRoyaleKillFeedClassifier.GetRunOverDriver( this, source, ammo );
+		if ( driver )
+			playerSource = driver;
+
 		// Test if the source is a player
 		if ( playerSource )
 		{
@@ -189,6 +194,8 @@ modded class PlayerBase
 				{
 					br_last_player_hit_weapon = source.GetType();
 					br_last_player_hit_type = EBRKillFeedType.MELEE;
+					if ( driver )
+						br_last_player_hit_type = EBRKillFeedType.VEHICLE;
 				}
 				// A firearm used to strike stays a melee hit
 				if ( source.IsWeapon() && damageType != DamageType.CLOSE_COMBAT )
