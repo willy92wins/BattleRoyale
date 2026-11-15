@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.6.1 (2026-11-15)
+
+### Fixed
+- Voice: back in the lobby, the microphone icon no longer fades out while push-to-talk is held. When the voice
+  level drops to whisper, the icon only updates its range while the player talks, as when the range is changed
+  by key.
+- Serial matches: when a match starts and ends while the previous one is still being cleaned up, its spectators
+  come back to the lobby with their own character instead of the default one. The character types of a match
+  are now cleared as soon as every player is back in the lobby, not when the cleanup ends.
+- The spawn trace of the match preparation (trace log level only) reuses the starting zone resolved when the
+  preparation starts instead of resolving it again for every random spawn.
+- The Carim party code (only compiled with Carim) declares the party members with the right type.
+
+### Notes
+- No network change: a 1.6.0 client can play on a 1.6.1 server; the microphone fix needs the 1.6.1 client.
+- Reviewed by a second model family (adversarial review) and tested in DayZDiag with one player. Not tested yet:
+  a spectator going back to the lobby (needs several players) and push-to-talk.
+- `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
+
 ## 1.6.0 (2026-11-14)
 
 ### Added
