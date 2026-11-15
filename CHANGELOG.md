@@ -2,6 +2,14 @@
 
 ## 1.7.0 (2026-11-15)
 
+### Added
+- HUD compass at the very top centre of the screen: a heading tape with the heading in degrees and the player's coordinates
+  under it; the match phase and zone damage lines now sit under the compass. It narrows on narrow screens to stay clear of
+  the notifications, and hides with the HUD, when dead, spectating or waiting. Shown by default; the «BR Compass Show/Hide»
+  action in Controls has no default key (K and H are taken by VPP and COT admin actions).
+- Map: a clear arrow of constant size marks the player's position and facing (the vanilla marker shrank as the map zoomed
+  out), and the map and the minimap show satellite imagery at every zoom.
+
 ### Changed
 - Dabs Framework is no longer needed. The two things the mod took from it, the list of named places of the map used
   to pick spawn villages and the query string of the webhooks, are now the mod's own server code and give the same
@@ -12,16 +20,18 @@
   credits them too. Without a driver, a run-over still names nobody.
 
 ### Fixed
+- Kill feed rows are cut to the room they have, so long names no longer run towards the centre of the screen.
 - Kill feed: a player killed in a vehicle crash is shown as killed in the crash, not as bled out with the kill
   credited to the last player who hit them.
 
 ### Notes
 - The message the server sends the clients for the kill feed keeps its format; a run-over now carries the driver's
   name, which the client already shows. Server and clients should run 1.7.0.
-- Reviewed by a second model family (adversarial review of each change and of the three together) and tested in
-  DayZDiag with one player: the mod starts without Dabs and the match preparation reads the same 77 places of the map
-  as before. Not tested yet in game: a deadly crash (the test harness could not produce one), motorbikes, a run-over
-  (needs two players) and the webhooks.
+- Reviewed by a second model family (adversarial review of each change, and of the first three together) and tested
+  in DayZDiag with one player at 1920x1080: the mod starts without Dabs, the match preparation reads the same 77
+  places of the map as before, the compass reads the right heading, and the map arrow and the satellite map show at
+  every zoom. Not tested yet in game: a deadly crash (the test harness could not produce one), motorbikes, a run-over
+  (needs two players), the webhooks, the compass key, narrow screens and the minimap's satellite view.
 - `tools/check_standalone.py` now fails if a Dabs type or a `DF_*` required addon comes back.
 - `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
 

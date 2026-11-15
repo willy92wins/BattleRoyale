@@ -20,7 +20,7 @@ class BattleRoyaleKillFeed
     static const float DETAIL_GAP = 12;         //!< between the sentence and the detail
     static const float ROW_PADDING = 10;        //!< after the last text
     static const float ROW_WIDTH_UNMEASURED = 620;  //!< row width when the text could not be measured
-    static const float ROW_MIN_WIDTH = 200;     //!< a row is never squeezed narrower to clear the phase lines
+    static const string ELLIPSIS = "...";
 
     // Place of KillFeedPanel, right aligned in the HUD frame, in layout units
     static const float PANEL_TOP = 4;           //!< below the top of the HUD frame: level with the match info column
@@ -127,8 +127,8 @@ class BattleRoyaleKillFeed
 
     //! Called every frame; rebuilds the rows only when an event arrived or a row expired, keeps the panel beside
     //! the top right corner of the HUD while rows are on screen, and moves the fade of the rows.
-    //! hud and minimap may be null
-    void Update( BattleRoyaleHud hud, BattleRoyaleMiniMap minimap )
+    //! hud, minimap and compass may be null
+    void Update( BattleRoyaleHud hud, BattleRoyaleMiniMap minimap, BattleRoyaleCompass compass )
     {
         if ( !m_Root )
             return;
@@ -143,9 +143,16 @@ class BattleRoyaleKillFeed
 
         Place( hud, minimap );
 
+        // Rows stay clear of everything centred at the top: the phase lines and the compass under them
         float centre_right = -1;
         if ( hud )
             centre_right = hud.GetCentreLinesRight();
+        if ( compass )
+        {
+            float compass_right = compass.GetScreenRight();
+            if ( compass_right > centre_right )
+                centre_right = compass_right;
+        }
 
         int screen_w;
         int screen_h;
@@ -228,8 +235,9 @@ class BattleRoyaleKillFeed
         m_Panel.GetScreenPos( panel_x, panel_y );
         m_Panel.GetScreenSize( panel_w, panel_h );
 
+        // The floor never goes past the room there is: FillRow cuts a row down to it instead
         float room = ( panel_x + panel_w - centre_right ) / px_per_unit - CENTRE_GAP;
-        return Math.Max( room, ROW_MIN_WIDTH );
+        return Math.Max( room, 0 );
     }
 
     //! Screen pixels per exact layout unit: the units are 1/1080 of the screen height
@@ -346,7 +354,8 @@ class BattleRoyaleKillFeed
     }
 
     //! own: the event names the local player as killer or victim. max_width: widest the row can be (layout units),
-    //! -1 for no limit; a wider row drops the weapon and the distance, then shortens the names
+    //! -1 for no limit; a wider row drops the weapon and the distance, then shortens the names, then cuts the sentence
+    //! as measured, and with no room for any text keeps the icon alone or hides the row: it is never wider than max_width
     protected void FillRow( int row, int kill_type, int flags, string killer, string victim, string item, int distance, bool own, float max_width )
     {
         m_RowOwn[row] = own;
@@ -384,7 +393,50 @@ class BattleRoyaleKillFeed
                 return;
         }
 
-        LayoutRow( row, BuildSentence( kill_type, ClipName( killer, NAME_SHORT_CHARS ), ClipName( victim, NAME_SHORT_CHARS ) ), "" );
+        sentence = BuildSentence( kill_type, ClipName( killer, NAME_SHORT_CHARS ), ClipName( victim, NAME_SHORT_CHARS ) );
+        width = LayoutRow( row, sentence, "" );
+        if ( width <= max_width )
+            return;
+
+        CutRow( row, sentence, max_width );
+    }
+
+    //! Last cut of a row still wider than max_width: the longest start of the sentence, with an ellipsis, that fits
+    //! as measured (binary search, a few measures on a refresh only); else the icon alone; else the row hidden
+    protected void CutRow( int row, string sentence, float max_width )
+    {
+        int low = 0;                            // characters known to fit (0: none checked yet)
+        int high = sentence.LengthUtf8() - 1;   // most characters to try: the whole sentence did not fit
+        int mid;
+        while ( low < high )
+        {
+            mid = ( low + high + 1 ) / 2;
+            if ( LayoutRow( row, sentence.SubstringUtf8( 0, mid ) + ELLIPSIS, "" ) <= max_width )
+                low = mid;
+            else
+                high = mid - 1;
+        }
+
+        // The search ends on a failed measure as often as not: the text it found is written again
+        if ( low > 0 && LayoutRow( row, sentence.SubstringUtf8( 0, low ) + ELLIPSIS, "" ) <= max_width )
+            return;
+
+        // No text fits (or none could be measured): the icon alone, or nothing
+        Widget row_widget = m_Rows[row];
+        Widget back = m_Backs[row];
+        TextWidget text_widget = m_Texts[row];
+        TextWidget detail_widget = m_Details[row];
+        text_widget.SetText( "" );
+        detail_widget.Show( false );
+
+        if ( max_width < TEXT_X )
+        {
+            row_widget.Show( false );
+            return;
+        }
+
+        row_widget.SetSize( TEXT_X, ROW_HEIGHT );
+        back.SetSize( TEXT_X, ROW_HEIGHT );
     }
 
     //! Writes the sentence and the detail (empty for none) in the row, sizes the row to them and returns its width
