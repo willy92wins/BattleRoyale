@@ -9,7 +9,11 @@ class BattleRoyaleCompass
 	static const int MARK_COUNT = 12;                   //!< CompassMark0 .. CompassMark11 in br_hud.layout
 
 	// Geometry of the tape in br_hud.layout, in layout units
-	protected static const float TAPE_WIDTH = 420;
+	protected static const float TAPE_WIDTH = 420;     //!< widest tape, the one of the layout; it sets the scale too
+	protected static const float TAPE_MIN_WIDTH = 180; //!< narrowest tape on a narrow screen
+	protected static const float PANEL_HEIGHT = 66;
+	protected static const float TAPE_HEIGHT = 26;
+	protected static const float BASE_LINE_HEIGHT = 2;
 	protected static const float MARK_WIDTH = 60;
 	protected static const float TICK_WIDTH = 2;
 	protected static const float TICK_BOTTOM = 24;     //!< the ticks stand on the base line
@@ -17,9 +21,16 @@ class BattleRoyaleCompass
 	protected static const float MAJOR_TICK_HEIGHT = 9;
 	protected static const float FADE_WIDTH = 60;      //!< the marks fade out over this distance before the tape ends
 
+	// Notification stack on the top left (vanilla gui/layouts/new_ui/notifications/notifications.layout: NotificationRoot
+	// is 531 exact units wide; NotificationUI.BR_PlaceRoot puts its left edge at 5 % of the screen width). The tape stays
+	// NOTIFICATION_GAP right of it, so a narrow screen gets a narrower tape
+	protected static const float NOTIFICATION_LEFT = 0.05;
+	protected static const float NOTIFICATION_WIDTH = 531;
+	protected static const float NOTIFICATION_GAP = 16;
+
 	protected static const int STEP_DEG = 15;
 	protected static const int STEP_COUNT = 24;        //!< steps in a full turn
-	protected static const float FIELD_DEG = 160;      //!< degrees shown across the tape
+	protected static const float FIELD_DEG = 160;      //!< degrees shown across the widest tape; a narrower one shows fewer
 	protected static const float HEADING_THRESHOLD_DEG = 0.05;
 
 	protected static const int COLOR_LETTER = 0xFFFFFFFF;
@@ -34,6 +45,7 @@ class BattleRoyaleCompass
 
 	protected Widget m_Panel;
 	protected Widget m_Tape;
+	protected Widget m_BaseLine;
 	protected TextWidget m_HeadingText;
 	protected TextWidget m_CoordsText;
 
@@ -50,20 +62,28 @@ class BattleRoyaleCompass
 	protected int m_LastX;
 	protected int m_LastZ;
 
+	protected float m_TapeWidth;              //!< width of the tape now, in layout units
+	protected int m_FitScreenW;               //!< screen size the tape width was fitted to, -1 for none
+	protected int m_FitScreenH;
+
 	void BattleRoyaleCompass(Widget root)
 	{
 		m_LastHeadingText = -1;
+		m_TapeWidth = TAPE_WIDTH;
+		m_FitScreenW = -1;
+		m_FitScreenH = -1;
 
 		if (root)
 		{
 			m_Panel = root.FindAnyWidget("CompassPanel");
 			m_Tape = root.FindAnyWidget("CompassTape");
+			m_BaseLine = root.FindAnyWidget("CompassBaseLine");
 			m_HeadingText = TextWidget.Cast(root.FindAnyWidget("CompassHeading"));
 			m_CoordsText = TextWidget.Cast(root.FindAnyWidget("CompassCoords"));
 		}
 
 		m_Ready = true;
-		if (!m_Panel || !m_Tape || !m_HeadingText || !m_CoordsText)
+		if (!m_Panel || !m_Tape || !m_BaseLine || !m_HeadingText || !m_CoordsText)
 			m_Ready = false;
 
 		string mark_name;
@@ -90,6 +110,7 @@ class BattleRoyaleCompass
 
 		// Shown by the first update that finds a living player
 		SetShown(false);
+		FitWidth();
 	}
 
 	void ToggleVisible()
@@ -121,6 +142,8 @@ class BattleRoyaleCompass
 	{
 		if (!m_Ready)
 			return;
+
+		FitWidth();
 
 		PlayerBase player = PlayerBase.Cast(GetGame().GetPlayer());
 		bool show = s_UserVisible && IsHudShown(hud);
@@ -155,6 +178,37 @@ class BattleRoyaleCompass
 		return visibility.IsContextFlagActive(EHudContextFlags.INVENTORY_OPEN);
 	}
 
+	//! Width of the tape for the screen size, set when the HUD is built and when the screen changes size: as wide as
+	//! fits between the notification stack and its mirror on the right, from TAPE_MIN_WIDTH to TAPE_WIDTH. The scale
+	//! stays, so a narrower tape shows fewer degrees
+	protected void FitWidth()
+	{
+		int screen_w;
+		int screen_h;
+		GetScreenSize(screen_w, screen_h);
+		if (screen_h <= 0 || (screen_w == m_FitScreenW && screen_h == m_FitScreenH))
+			return;
+
+		m_FitScreenW = screen_w;
+		m_FitScreenH = screen_h;
+
+		// Exact layout units are 1/1080 of the screen height; the panel is centred on the screen
+		float screen_units = screen_w * 1080.0 / screen_h;
+		float notifications_right = screen_units * NOTIFICATION_LEFT + NOTIFICATION_WIDTH;
+		float width = Math.Floor((screen_units * 0.5 - notifications_right - NOTIFICATION_GAP) * 2);
+		width = Math.Clamp(width, TAPE_MIN_WIDTH, TAPE_WIDTH);
+		if (width == m_TapeWidth)
+			return;
+
+		m_TapeWidth = width;
+		m_Panel.SetSize(width, PANEL_HEIGHT);
+		m_Tape.SetSize(width, TAPE_HEIGHT);
+		m_BaseLine.SetSize(width, BASE_LINE_HEIGHT);
+
+		// The marks are placed again for the new width
+		m_HasHeading = false;
+	}
+
 	protected void SetShown(bool show)
 	{
 		m_Shown = show;
@@ -181,8 +235,8 @@ class BattleRoyaleCompass
 		m_LastHeading = heading;
 
 		float units_per_deg = TAPE_WIDTH / FIELD_DEG;
-		float half_field = FIELD_DEG * 0.5;
-		float half_tape = TAPE_WIDTH * 0.5;
+		float half_tape = m_TapeWidth * 0.5;
+		float half_field = half_tape / units_per_deg;
 
 		// The MARK_COUNT steps from the first one on the tape; a step always goes to the same mark (step modulo
 		// MARK_COUNT), so a mark keeps its label while it scrolls across

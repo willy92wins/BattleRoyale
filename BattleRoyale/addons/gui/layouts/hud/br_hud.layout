@@ -251,7 +251,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
     PanelWidgetClass PhasePanel {
      visible 0
      ignorepointer 1
-     position 0 0
+     position 0 70
      size 640 40
      halign center_ref
      hexactpos 1
@@ -283,7 +283,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
     PanelWidgetClass ZoneDamagePanel {
      visible 0
      ignorepointer 1
-     position 0 44
+     position 0 114
      size 640 32
      halign center_ref
      hexactpos 1
@@ -316,7 +316,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
     PanelWidgetClass CompassPanel {
      visible 0
      ignorepointer 1
-     position 0 80
+     position 0 0
      size 420 66
      halign center_ref
      hexactpos 1
