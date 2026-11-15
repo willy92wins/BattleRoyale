@@ -14,7 +14,8 @@
 - The Carim party code (only compiled with Carim) declares the party members with the right type.
 
 ### Notes
-- No network change: a 1.6.0 client can play on a 1.6.1 server; the microphone fix needs the 1.6.1 client.
+- Nothing the client and the server send each other changed: the microphone fix is in the client, the other
+  fixes are in the server. Server and clients should run 1.6.1.
 - Reviewed by a second model family (adversarial review) and tested in DayZDiag with one player. Not tested yet:
   a spectator going back to the lobby (needs several players) and push-to-talk.
 - `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
