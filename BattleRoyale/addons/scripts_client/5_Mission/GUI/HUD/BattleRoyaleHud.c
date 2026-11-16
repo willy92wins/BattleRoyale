@@ -24,7 +24,7 @@ class BattleRoyaleHud
     protected static const int DISTANCE_UNREACHABLE = 3;
 
     //! The zone arrow icon (dayz_gui icon_arrow) points down at rest; this turns it to point up at angle 0
-    protected static const float ZONE_ARROW_ICON_OFFSET = 180;
+    protected static const float ZONE_ARROW_ICON_OFFSET = 0;  //!< br_zone_arrow_ca.paa points up
 
     protected Widget m_Root;
 
@@ -34,6 +34,7 @@ class BattleRoyaleHud
     protected Widget m_KillCountPanel;
     protected Widget m_PhasePanel;
     protected Widget m_ZoneDamagePanel;
+    protected Widget m_SilentModePanel;
 
     protected TextWidget m_PlayerTextWidget;
     protected TextWidget m_GroupTextWidget;
@@ -71,6 +72,7 @@ class BattleRoyaleHud
         m_KillCountPanel = Widget.Cast( m_Root.FindAnyWidget( "KillCountPanel" ) );
         m_PhasePanel = Widget.Cast( m_Root.FindAnyWidget( "PhasePanel" ) );
         m_ZoneDamagePanel = Widget.Cast( m_Root.FindAnyWidget( "ZoneDamagePanel" ) );
+        m_SilentModePanel = m_Root.FindAnyWidget( "SilentModePanel" );
 
         m_PlayerTextWidget = TextWidget.Cast( m_PlayerCountPanel.FindAnyWidget( "PlayerText" ) );
         m_GroupTextWidget = TextWidget.Cast( m_GroupCountPanel.FindAnyWidget( "GroupText" ) );
@@ -87,6 +89,7 @@ class BattleRoyaleHud
         m_KillCountPanel.Show( false );
         SetVisible( m_PhasePanel, false );
         SetVisible( m_ZoneDamagePanel, false );
+        SetVisible( m_SilentModePanel, false );
 
         m_DistanceColorState = -1;
         m_LastDistanceMeters = -2;
@@ -100,9 +103,16 @@ class BattleRoyaleHud
         return is_shown;
     }
 
-    //! Left edge, in screen pixels, of what the match info column (top right) draws now: the counters and the zone
-    //! distance that show, each text where it is drawn. -1 when the column shows nothing. The kill feed ends left of it
+    //! Left edge, in screen pixels, of what the top right corner draws now: the counters and the zone distance of the
+    //! match info column, each text where it is drawn. -1 when nothing shows. The kill feed ends left of it; the silent
+    //! mode icon sits in the column of icons, right of the texts, and does not move it
     float GetMatchInfoLeft()
+    {
+        return GetMatchInfoColumnLeft();
+    }
+
+    //! Left edge, in screen pixels, of the counters and the zone distance that show; -1 when the column shows nothing
+    protected float GetMatchInfoColumnLeft()
     {
         float left = -1;
         left = LeftOfRightAlignedText( m_PlayerCountPanel, m_PlayerTextWidget, left );
@@ -110,6 +120,13 @@ class BattleRoyaleHud
         left = LeftOfRightAlignedText( m_KillCountPanel, m_KillTextWidget, left );
         left = LeftOfRightAlignedText( m_ZoneDistancePanel, m_DistanceTextWidget, left );
         return left;
+    }
+
+    //! Called every frame: shows the silent mode icon, in its own row under the zone distance, while the mode is on and
+    //! the vanilla HUD shows (BattleRoyaleCompass.IsHudShown)
+    void UpdateSilentMode( bool active )
+    {
+        SetVisible( m_SilentModePanel, active );
     }
 
     //! Right edge, in screen pixels, of the centred lines at the top (phase, zone damage) as drawn now; -1 when
@@ -120,6 +137,39 @@ class BattleRoyaleHud
         right = RightOfCentredText( m_PhasePanel, m_PhaseTextWidget, right );
         right = RightOfCentredText( m_ZoneDamagePanel, m_ZoneDamageTextWidget, right );
         return right;
+    }
+
+    //! Left edge, in screen pixels, of the centred lines at the top (phase, zone damage) as drawn now; -1 when
+    //! neither shows. The notifications at the top left wrap short of it
+    float GetCentreLinesLeft()
+    {
+        float left = -1;
+        left = LeftOfCentredText( m_PhasePanel, m_PhaseTextWidget, left );
+        left = LeftOfCentredText( m_ZoneDamagePanel, m_ZoneDamageTextWidget, left );
+        return left;
+    }
+
+    //! The smaller of left and the left edge of the text of panel while panel shows; the text is centred in its box
+    protected float LeftOfCentredText( Widget panel, TextWidget text, float left )
+    {
+        if ( !panel || !text || !panel.IsVisibleHierarchy() )
+            return left;
+
+        float x;
+        float y;
+        float w;
+        float h;
+        text.GetScreenPos( x, y );
+        text.GetScreenSize( w, h );
+
+        int text_w;
+        int text_h;
+        text.GetTextSize( text_w, text_h );
+
+        float text_left = x + ( w - text_w ) * 0.5;
+        if ( left < 0 || text_left < left )
+            return text_left;
+        return left;
     }
 
     //! The smaller of left and the left edge of the text of row while row shows; the text is right aligned in its box

@@ -76,8 +76,21 @@ modded class MapMenu
 	{
 		super.Update(timeslice);
 
+		BR_UpdateMapCompass();
 		BR_UpdateZoneCanvas(timeslice);
 		BR_UpdatePlayerCanvas();
+	}
+
+	//! Vanilla turns the map's compass with the body (GetYawPitchRoll, P:\scripts\5_mission\gui\mapmenu.c:249-258), which
+	//! lags the camera when turning on the spot: it is set again here with the heading of the HUD compass
+	protected void BR_UpdateMapCompass()
+	{
+		if (!m_HasCompass || !m_ToolsCompassArrow || !m_ToolsCompassAzimuth)
+			return;
+
+		int degrees = BattleRoyaleCompass.HeadingDegrees(BattleRoyaleCompass.CameraHeading());
+		m_ToolsCompassArrow.SetRotation(0, 0, degrees);
+		m_ToolsCompassAzimuth.SetText(string.Format("%1°", degrees));
 	}
 
 	//! The BR arrow replaces the vanilla GPS marker, so the vanilla circle and arrow stay hidden
@@ -119,16 +132,10 @@ modded class MapMenu
 			return;
 		}
 
-		// Heading of the body on the ground plane: sine along X (east), cosine along Z (north), 0 = north, clockwise
-		vector dir = player.GetDirection();
-		float sin_h = 0;
-		float cos_h = 1;
-		float len = Math.Sqrt(dir[0] * dir[0] + dir[2] * dir[2]);
-		if (len > 0.0001)
-		{
-			sin_h = dir[0] / len;
-			cos_h = dir[2] / len;
-		}
+		// Heading of the view, as the HUD compass shows it: sine along X (east), cosine along Z (north), 0 = north, clockwise
+		float heading_rad = BattleRoyaleCompass.CameraHeading() * Math.DEG2RAD;
+		float sin_h = Math.Sin(heading_rad);
+		float cos_h = Math.Cos(heading_rad);
 
 		if (b_BR_PlayerDrawn && Math.AbsFloat(cx - f_BR_PlayerDrawnX) < BR_PLAYER_MOVE_THRESHOLD_PX && Math.AbsFloat(cy - f_BR_PlayerDrawnY) < BR_PLAYER_MOVE_THRESHOLD_PX)
 		{

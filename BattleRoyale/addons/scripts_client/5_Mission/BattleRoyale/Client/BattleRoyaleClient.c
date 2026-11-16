@@ -212,6 +212,7 @@ class BattleRoyaleClient: BattleRoyaleBase
 		// Match phase and kill feed, also shown without a local player
 		UpdateMatchPhase( gameplay, br_rpc );
 		gameplay.UpdateKillFeed();
+		gameplay.UpdateNotificationRoom();
 
 		// Walls along the zone edges while the zones are in play: red on the zone in force, yellow on the announced
 		// zone until it locks. Both are gone once the final zone collapsed and when the match is over, because the

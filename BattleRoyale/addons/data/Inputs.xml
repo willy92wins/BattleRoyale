@@ -8,6 +8,7 @@
             <input name="UADayZBRToggleMiniMap" loc="BR Minimap Show/Hide" />
             <input name="UADayZBRMiniMapZoom" loc="BR Minimap Zoom" />
             <input name="UADayZBRToggleCompass" loc="BR Compass Show/Hide" />
+            <input name="UADayZBRToggleSilentMode" loc="STR_BR_INPUT_SILENT_MODE" />
         </actions>
 
         <sorting name="dayzbr" loc="BATTLE ROYALE">
@@ -17,6 +18,7 @@
             <input name="UADayZBRToggleMiniMap" />
             <input name="UADayZBRMiniMapZoom" />
             <input name="UADayZBRToggleCompass" />
+            <input name="UADayZBRToggleSilentMode" />
         </sorting>
     </inputs>
     <preset>
@@ -34,6 +36,9 @@
         </input>
         <input name="UADayZBRMiniMapZoom">
             <btn name="kAdd" />
+        </input>
+        <input name="UADayZBRToggleSilentMode">
+            <btn name="kN" />
         </input>
     </preset>
 </modded_inputs>
