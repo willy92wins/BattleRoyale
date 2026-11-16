@@ -400,6 +400,8 @@ class BattleRoyaleServer: BattleRoyaleBase
         BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetWaiting", new Param1<bool>( true ), true, player.GetIdentity() );
         GetCurrentState().SendPlayerCountTo(player.GetIdentity());
+        // The map of a waiting player still shows the zones of the match
+        SendZoneStateTo(player.GetIdentity());
     }
 
     //! A player of the waiting room joins the lobby state with its lobby character, after its client reset its match
@@ -648,7 +650,7 @@ class BattleRoyaleServer: BattleRoyaleBase
     }
 
     //! A reconnected client restarted its mission and lost every server-sent flag and state, whatever the player
-    //! was doing: resend the client flags to everyone, then the waiting resync or the plain phase and count
+    //! was doing: resend the client flags to everyone, then the waiting resync or the plain phase, count and zones
     void OnPlayerReconnected(PlayerBase player)
     {
         if (!player || !player.GetIdentity())
@@ -663,7 +665,28 @@ class BattleRoyaleServer: BattleRoyaleBase
         {
             BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
             GetCurrentState().SendPlayerCountTo(player.GetIdentity());
+            SendZoneStateTo(player.GetIdentity());
         }
+    }
+
+    //! Zones of the running match for one client that did not get them as they came (connect, reconnect, waiting room,
+    //! spectating): the zone in force, the announced one and the closing under way with the time already gone.
+    //! Nothing between matches, when no zone is in play
+    void SendZoneStateTo(PlayerIdentity identity)
+    {
+        if (!identity)
+            return;
+
+        BattleRoyaleState state = GetCurrentState();
+        BattleRoyaleRound round;
+        BattleRoyaleLastRound last_round;
+        BattleRoyaleStartMatch start_match;
+        if (Class.CastTo(round, state))
+            round.SendZoneStateTo(identity);
+        else if (Class.CastTo(last_round, state))
+            last_round.SendZoneStateTo(identity);
+        else if (Class.CastTo(start_match, state))
+            start_match.SendZoneStateTo(identity);
     }
 
     void OnPlayerConnected(PlayerBase player)
@@ -718,6 +741,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 				BattleRoyaleUtils.Info("Admin " + player.BR_GetPlayerName() + " has connected during non-debug state, allowing connection.");
 				BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
 				GetCurrentState().SendPlayerCountTo(player.GetIdentity());
+				SendZoneStateTo(player.GetIdentity());
 				return; //allow admins to connect during non-debug state
 			}
 

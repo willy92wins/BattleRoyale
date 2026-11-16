@@ -4,6 +4,15 @@ class BattleRoyaleClient: BattleRoyaleBase
     protected ref BattleRoyalePlayArea m_CurrentPlayArea;
     protected ref BattleRoyalePlayArea m_FuturePlayArea;
 
+    //! While the zone closes: m_ShrinkPlayArea follows the closing every frame and is the current area (HUD, red wall),
+    //! m_MapShrinkPlayArea copies it at most MAP_SHRINK_REFRESH_SECONDS apart for the map and the minimap
+    static const float MAP_SHRINK_REFRESH_SECONDS = 0.1;
+    protected ref BattleRoyalePlayArea m_ShrinkPlayArea;
+    protected ref BattleRoyalePlayArea m_MapShrinkPlayArea;
+    protected ref BattleRoyalePlayArea m_WallNextPlayArea;  //!< circle the red wall glides to until its next refresh
+    protected bool b_WasShrinking;
+    protected float f_MapShrinkElapsed;
+
     protected int i_Kills; //TODO: this needs to be done differently (most likely)
     protected bool b_MatchStarted;
     protected int i_SecondsRemaining;
@@ -48,6 +57,8 @@ class BattleRoyaleClient: BattleRoyaleBase
 
 		BattleRoyaleRPC br_rpc = BattleRoyaleRPC.GetInstance();
 		br_rpc.Reset();
+		// The serial outlives the client: only the countdowns received from now on are new
+		br_previous_countdown_serial = br_rpc.countdown_serial;
 
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
     }
@@ -63,6 +74,22 @@ class BattleRoyaleClient: BattleRoyaleBase
         return m_FuturePlayArea;
     }
 
+    //! Current area for the map and the minimap: while the zone closes, updated at most every MAP_SHRINK_REFRESH_SECONDS
+    BattleRoyalePlayArea GetMapPlayArea()
+    {
+        if ( b_WasShrinking && m_MapShrinkPlayArea )
+            return m_MapShrinkPlayArea;
+
+        return m_CurrentPlayArea;
+    }
+
+    //! While the zone closes the map and the minimap redraw their zones at most every MAP_SHRINK_REFRESH_SECONDS,
+    //! whatever moves them; a redraw held back waits for the next allowed one
+    bool IsMapZoneShrinking()
+    {
+        return b_WasShrinking;
+    }
+
 	// To track changes
     bool br_previous_fade_state = false;
     bool br_previous_input_state = false;
@@ -72,6 +99,7 @@ class BattleRoyaleClient: BattleRoyaleBase
     float br_previous_future_play_area_radius;
     bool br_previous_win_screen = false;
     int br_previous_countdown = 0;
+    int br_previous_countdown_serial = 0;
     int br_previous_nb_players = -1;
     int br_previous_nb_groups = -1;
     int br_previous_kills = -1;
@@ -108,22 +136,47 @@ class BattleRoyaleClient: BattleRoyaleBase
 			OnMatchStarted();
 		}
 
-		// Update countdown timer and zone distance
-		if ( br_previous_countdown != br_rpc.countdown_seconds )
+		// Update countdown timer and zone distance; every countdown received starts again, even with the seconds of the last one
+		if ( br_previous_countdown_serial != br_rpc.countdown_serial || br_previous_countdown != br_rpc.countdown_seconds )
 		{
 			i_SecondsRemaining = br_rpc.countdown_seconds;
 			gameplay.UpdateCountdownTimer( i_SecondsRemaining );
 			br_previous_countdown = br_rpc.countdown_seconds;
+			br_previous_countdown_serial = br_rpc.countdown_serial;
 		}
 
-		// Update current play area, only when the server sent a new one (a cleared area keeps the last one)
-		if ( br_previous_current_play_area_center != br_rpc.current_play_area_center || br_previous_current_play_area_radius != br_rpc.current_play_area_radius )
+		// While the zone closes the current area is the circle of this frame, the same objects updated in place
+		vector shrink_center;
+		float shrink_radius;
+		if ( br_rpc.GetZoneShrinkCircle( shrink_center, shrink_radius ) )
+		{
+			if ( !m_ShrinkPlayArea )
+				m_ShrinkPlayArea = new BattleRoyalePlayArea( shrink_center, shrink_radius );
+			m_ShrinkPlayArea.SetCenter( shrink_center );
+			m_ShrinkPlayArea.SetRadius( shrink_radius );
+			m_CurrentPlayArea = m_ShrinkPlayArea;
+
+			// The map and the minimap redraw on every change: they get the circle 10 times a second at most
+			f_MapShrinkElapsed += delta;
+			if ( !b_WasShrinking || !m_MapShrinkPlayArea || f_MapShrinkElapsed >= MAP_SHRINK_REFRESH_SECONDS )
+			{
+				if ( !m_MapShrinkPlayArea )
+					m_MapShrinkPlayArea = new BattleRoyalePlayArea( shrink_center, shrink_radius );
+				m_MapShrinkPlayArea.SetCenter( shrink_center );
+				m_MapShrinkPlayArea.SetRadius( shrink_radius );
+				f_MapShrinkElapsed = 0;
+			}
+			b_WasShrinking = true;
+		}
+		// Update current play area, only when the server sent a new one or a closing just ended (a cleared area keeps the last one)
+		else if ( b_WasShrinking || br_previous_current_play_area_center != br_rpc.current_play_area_center || br_previous_current_play_area_radius != br_rpc.current_play_area_radius )
 		{
 			if ( br_rpc.current_play_area_center != "0 0 0" && br_rpc.current_play_area_radius != 0.0 )
 				m_CurrentPlayArea = new BattleRoyalePlayArea( br_rpc.current_play_area_center, br_rpc.current_play_area_radius );
 
 			br_previous_current_play_area_center = br_rpc.current_play_area_center;
 			br_previous_current_play_area_radius = br_rpc.current_play_area_radius;
+			b_WasShrinking = false;
 		}
 
 		// Update future play area
@@ -165,19 +218,39 @@ class BattleRoyaleClient: BattleRoyaleBase
 		// zone until it locks. Both are gone once the final zone collapsed and when the match is over, because the
 		// client keeps the last areas after the server clears them
 		BattleRoyalePlayArea locked_area = null;
+		BattleRoyalePlayArea map_locked_area = null;
 		BattleRoyalePlayArea open_area = null;
 		if ( IsZonePlayPhase( br_rpc ) && !IsZoneCollapsed( br_rpc ) )
 		{
 			locked_area = m_CurrentPlayArea;
+			map_locked_area = GetMapPlayArea();
 			if ( !IsZoneLocked() )
 				open_area = m_FuturePlayArea;
 		}
+		// The red wall follows a closing zone with a faster refresh, its panels gliding each frame to the circle of the
+		// next refresh (sooner when the closing ends first); the yellow one stays on the announced zone
+		BattleRoyalePlayArea wall_next_area = null;
+		float wall_next_seconds = 0;
+		if ( b_WasShrinking && locked_area )
+		{
+			wall_next_seconds = Math.Min( BattleRoyaleZoneWall.MOVING_REFRESH_SECONDS, br_rpc.GetZoneShrinkRemaining() );
+			vector wall_next_center;
+			float wall_next_radius;
+			if ( wall_next_seconds > 0 && br_rpc.GetZoneShrinkCircle( wall_next_center, wall_next_radius, wall_next_seconds ) )
+			{
+				if ( !m_WallNextPlayArea )
+					m_WallNextPlayArea = new BattleRoyalePlayArea( wall_next_center, wall_next_radius );
+				m_WallNextPlayArea.SetCenter( wall_next_center );
+				m_WallNextPlayArea.SetRadius( wall_next_radius );
+				wall_next_area = m_WallNextPlayArea;
+			}
+		}
 		vector wall_camera_pos = GetGame().GetCurrentCameraPosition();
-		m_ZoneWall.Update( delta, wall_camera_pos, locked_area );
+		m_ZoneWall.Update( delta, wall_camera_pos, locked_area, b_WasShrinking, wall_next_area, wall_next_seconds );
 		m_OpenZoneWall.Update( delta, wall_camera_pos, open_area );
 
-		// The minimap outlines the same zones as the walls
-		gameplay.UpdateMiniMap( delta, locked_area, open_area );
+		// The minimap outlines the same zones as the walls; while the zone closes it redraws at most 10 times a second
+		gameplay.UpdateMiniMap( delta, map_locked_area, open_area, b_WasShrinking );
 
 		// The compass hides itself without a living local player
 		gameplay.UpdateCompass();
@@ -322,9 +395,14 @@ class BattleRoyaleClient: BattleRoyaleBase
 		}
     }
 
-    //! After the lock the server sends the same area as current and future zone
+    //! After the lock the server sends the same area as current and future zone. A closing zone is never locked, even
+    //! when its interpolated circle reaches the future one before the lock arrives; the comparison then uses the areas
+    //! the server sent, never the interpolated one
     protected bool IsZoneLocked()
     {
+		if ( b_WasShrinking || BattleRoyaleRPC.GetInstance().zone_shrinking )
+			return false;
+
 		if ( !m_CurrentPlayArea || !m_FuturePlayArea )
 			return false;
 
@@ -397,7 +475,8 @@ class BattleRoyaleClient: BattleRoyaleBase
 				break;
 
 			case EBRMatchPhase.ROUND:
-				// The countdown runs until the zone locks, then until the end of the round
+				// The countdown runs until the zone starts closing (until it locks without a closing), then while it
+				// closes until the lock, then until the end of the round
 				if ( IsZoneLocked() )
 				{
 					label = BattleRoyaleHud.PHASE_LABEL_ROUND_ENDS_IN;
@@ -407,7 +486,11 @@ class BattleRoyaleClient: BattleRoyaleBase
 					label = BattleRoyaleHud.PHASE_LABEL_ZONE_CLOSING;
 				}
 
-				if ( i_SecondsRemaining > 0 )
+				if ( br_rpc.zone_shrinking )
+				{
+					seconds = br_rpc.GetZoneShrinkSecondsLeft();
+				}
+				else if ( i_SecondsRemaining > 0 )
 				{
 					seconds = i_SecondsRemaining;
 				}
@@ -423,6 +506,12 @@ class BattleRoyaleClient: BattleRoyaleBase
 				if ( IsZoneCollapsed( br_rpc ) )
 				{
 					label = BattleRoyaleHud.PHASE_LABEL_NO_SAFE_ZONE;
+				}
+				else if ( br_rpc.zone_shrinking )
+				{
+					// The final zone closes: the countdown runs until it is gone
+					label = BattleRoyaleHud.PHASE_LABEL_ZONE_DISAPPEARS_IN;
+					seconds = br_rpc.GetZoneShrinkSecondsLeft();
 				}
 				else if ( i_SecondsRemaining > 0 )
 				{

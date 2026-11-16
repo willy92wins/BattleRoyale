@@ -8,6 +8,7 @@ class BattleRoyaleStartMatch: BattleRoyaleState
     protected bool b_ArtillerySound;
 
     protected ref array<PlayerBase> a_PlayerList;
+    protected ref BattleRoyalePlayArea m_FirstArea;  //!< first zone once ShowFirstZone sent it
 
     static const int BR_UNSTUCK_COOLDOWN_MS = 30000;  //!< per-player wait after an unstuck finishes, tuned by the owner
 
@@ -163,6 +164,17 @@ class BattleRoyaleStartMatch: BattleRoyaleState
         BattleRoyaleUtils.Trace(m_ThisArea.GetRadius());
 
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", new Param3<vector, float, bool>( m_ThisArea.GetCenter(), m_ThisArea.GetRadius(), false ), true);
+        m_FirstArea = m_ThisArea;
+    }
+
+    //! Zone state for a client that restarted its mission or joined late: the first zone once it is shown. A paused
+    //! state stays the current one after StartZoning deactivates it, so it answers inactive too, as the rounds do
+    void SendZoneStateTo(PlayerIdentity identity)
+    {
+        if (!identity || !m_FirstArea)
+            return;
+
+        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", new Param3<vector, float, bool>( m_FirstArea.GetCenter(), m_FirstArea.GetRadius(), false ), true, identity);
     }
 
     void HandleUnlock()
