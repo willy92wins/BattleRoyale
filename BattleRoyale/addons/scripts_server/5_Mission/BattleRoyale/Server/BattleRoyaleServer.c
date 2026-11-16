@@ -560,6 +560,53 @@ class BattleRoyaleServer: BattleRoyaleBase
 	const float CHECK_IS_COMPLETE = 0.1;  //seconds
 	float m_TimeSinceLastTick = CHECK_IS_COMPLETE + 1;
 
+    //--- The lobby is kept free of infected: they cannot hurt its protected players, but they chase and hit them
+
+    //! Seconds between two sweeps of the lobby for infected
+    static const float LOBBY_INFECTED_SWEEP_SECONDS = 5;
+    //! Metres past the lobby radius also swept, so an infected running in goes before it reaches the players
+    static const float LOBBY_INFECTED_MARGIN = 30;
+    protected float m_LobbyInfectedSweepTime;
+
+    //! Removes every infected, alive or dead, within the lobby radius and its margin. Only while the lobby can hold
+    //! players: between matches, and during a match when the waiting room is on
+    protected void SweepLobbyInfected()
+    {
+        if (IsMatchInProgress() && !IsWaitingRoomEnabled())
+            return;
+
+        BattleRoyaleDebug lobby = BattleRoyaleDebug.Cast( GetState(0) );
+        if (!lobby)
+            return;
+
+        vector center = lobby.GetCenterXZ();
+        float radius = lobby.GetRadius() + LOBBY_INFECTED_MARGIN;
+        float ground = GetGame().SurfaceY(center[0], center[2]);
+        vector boxMin = Vector(center[0] - radius, ground - 200, center[2] - radius);
+        vector boxMax = Vector(center[0] + radius, ground + 200, center[2] + radius);
+
+        array<EntityAI> entities = new array<EntityAI>;
+        DayZPlayerUtils.SceneGetEntitiesInBox(boxMin, boxMax, entities, QueryFlags.DYNAMIC);
+
+        int removed = 0;
+        foreach (EntityAI entity : entities)
+        {
+            ZombieBase infected = ZombieBase.Cast(entity);
+            if (!infected)
+                continue;
+
+            vector pos = infected.GetPosition();
+            if (vector.Distance(Vector(pos[0], 0, pos[2]), Vector(center[0], 0, center[2])) > radius)
+                continue;
+
+            GetGame().ObjectDelete(infected);
+            removed++;
+        }
+
+        if (removed > 0 && BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.DEBUG))
+            BattleRoyaleUtils.Debug("Lobby: removed " + removed + " infected");
+    }
+
     override void Update(float delta)
     {
         float timeslice = delta; //Legacy
@@ -587,6 +634,13 @@ class BattleRoyaleServer: BattleRoyaleBase
                 state.Update(timeslice);
             else
                 Error("BAD STATE IN m_States!");
+        }
+
+        m_LobbyInfectedSweepTime += delta;
+        if (m_LobbyInfectedSweepTime >= LOBBY_INFECTED_SWEEP_SECONDS)
+        {
+            m_LobbyInfectedSweepTime = 0;
+            SweepLobbyInfected();
         }
 
 		m_TimeSinceLastTick += delta;
