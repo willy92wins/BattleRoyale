@@ -648,6 +648,15 @@ class BattleRoyaleClient: BattleRoyaleBase
 
     }
 
+    //! The spectate key: a player of the waiting room asks to watch the running match; the server decides the rest
+    void WatchMatch()
+    {
+        if (!BattleRoyaleRPC.GetInstance().waiting || BattleRoyaleRPC.s_Spectating)
+            return;
+
+        GetRPCManager().SendRPC( RPC_DAYZBRSERVER_NAMESPACE, "WaitingToSpectator", NULL, true );
+    }
+
     void StartMatch(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
     {
         // A waiting player is not in this match: same filter as the match_started poll in Update
