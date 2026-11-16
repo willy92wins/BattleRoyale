@@ -532,10 +532,11 @@ class BattleRoyaleRound: BattleRoyaleState
     }
 
     //! Zone state of this round for a client that restarted its mission or joined late: the zone in force, the announced
-    //! one and the closing under way with the time already gone
+    //! one and the closing under way with the time already gone. A round already deactivated stays the current state
+    //! until the transition (paused, or waiting for the next check) and its damage still applies, so it still sends
     void SendZoneStateTo(PlayerIdentity identity)
     {
-        if (!identity || !IsActive())
+        if (!identity)
             return;
 
         BattleRoyaleZone previous_zone = GetPreviousZone();
@@ -548,6 +549,18 @@ class BattleRoyaleRound: BattleRoyaleState
         {
             // Same pair as LockNewZone
             GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( this_area.GetCenter(), this_area.GetRadius() ), true, identity);
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", new Param3<vector, float, bool>( this_area.GetCenter(), this_area.GetRadius(), false ), true, identity);
+            return;
+        }
+
+        if (b_ShrinkStopped)
+        {
+            // Same circle as Deactivate, the one the damage uses: the stop instant is fixed, so no StartZoneShrink, which
+            // would run the closing again on the client's clock
+            vector stop_center;
+            float stop_radius;
+            GetShrinkCircle(f_ShrinkStopTime, stop_center, stop_radius);
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( stop_center, stop_radius ), true, identity);
             GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", new Param3<vector, float, bool>( this_area.GetCenter(), this_area.GetRadius(), false ), true, identity);
             return;
         }

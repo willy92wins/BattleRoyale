@@ -339,10 +339,12 @@ class BattleRoyaleLastRound: BattleRoyaleState
     }
 
     //! Zone state of the last round for a client that restarted its mission or joined late: the final zone, or the
-    //! collapse once it happened, no announced zone, and the closing under way with the time already gone
+    //! collapse once it happened, no announced zone, and the closing under way with the time already gone. A last round
+    //! already deactivated stays the current state until the transition (paused, or waiting for the next check) and its
+    //! damage still applies, so it still sends
     void SendZoneStateTo(PlayerIdentity identity)
     {
-        if (!identity || !IsActive())
+        if (!identity)
             return;
 
         if (b_IsZoneLocked)
@@ -354,6 +356,15 @@ class BattleRoyaleLastRound: BattleRoyaleState
         }
 
         BattleRoyaleZone final_zone = GetPreviousZone();
+        if (b_ShrinkStopped && final_zone && final_zone.GetArea())
+        {
+            // Same radius as Deactivate, the one the damage uses: the stop instant is fixed, so no StartZoneShrink, which
+            // would run the closing again on the client's clock
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( final_zone.GetArea().GetCenter(), GetShrinkRadius(f_ShrinkStopTime) ), true, identity);
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", new Param3<vector, float, bool>( "0 0 0", 0.0, false ), true, identity);
+            return;
+        }
+
         if (final_zone && final_zone.GetArea())
             GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( final_zone.GetArea().GetCenter(), final_zone.GetArea().GetRadius() ), true, identity);
 
