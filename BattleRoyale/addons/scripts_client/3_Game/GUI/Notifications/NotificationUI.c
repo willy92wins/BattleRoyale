@@ -263,6 +263,22 @@ modded class NotificationUI
 		return screen_h / 1080.0;
 	}
 
+	//! Width of the vanilla root in screen pixels; skipped while a menu shows its own notification panel (m_OffsetEnabled)
+	protected void BR_SetRootWidth(float width_px)
+	{
+		if (!m_Root || m_OffsetEnabled)
+			return;
+
+		float root_w;
+		float root_h;
+		m_Root.GetScreenSize(root_w, root_h);
+		if (Math.AbsFloat(root_w - width_px) <= 0.5)
+			return;
+
+		m_Width = width_px;
+		m_Root.SetSize(width_px, root_h);
+	}
+
 	//! Lays every row out for the room there is now: from the left edge of the stack to BR_CENTRE_GAP short of what
 	//! is centred at the top, never narrower than BR_MIN_ROOM
 	protected void BR_LayoutRows()
@@ -280,6 +296,10 @@ modded class NotificationUI
 
 		float room_px = limit - BR_CENTRE_GAP * px_per_unit - root_x;
 		room_px = Math.Max(room_px, BR_MIN_ROOM * px_per_unit);
+
+		// The vanilla root is 531 px wide (notifications.layout:3) and clips the rows: it takes the width of the room.
+		// m_Width is the width vanilla Update keeps when it animates the height (notificationui.c:143,187,192)
+		BR_SetRootWidth(room_px);
 
 		m_BR_LayoutLimit = limit;
 		m_BR_LayoutScreenW = screen_w;
