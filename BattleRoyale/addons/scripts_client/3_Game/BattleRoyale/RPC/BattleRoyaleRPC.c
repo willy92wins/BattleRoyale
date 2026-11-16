@@ -374,35 +374,45 @@ class BattleRoyaleRPC
 		}
 	}
 
-	//! Lerp factor of the closing on this client's clock, within [0, 1]
-	protected float GetZoneShrinkProgress()
+	//! Lerp factor of the closing on this client's clock, seconds_ahead from now, within [0, 1]
+	protected float GetZoneShrinkProgress(float seconds_ahead = 0)
 	{
 		if ( zone_shrink_duration <= 0 )
 			return 1;
 
-		float seconds = ( GetGame().GetTime() - zone_shrink_start_time ) / 1000.0;
+		float seconds = ( GetGame().GetTime() - zone_shrink_start_time ) / 1000.0 + seconds_ahead;
 		return Math.Clamp( seconds / zone_shrink_duration, 0, 1 );
 	}
 
-	//! Circle of the closing at this frame; false when no closing runs
-	bool GetZoneShrinkCircle(out vector center, out float radius)
+	//! Circle of the closing at this frame, or seconds_ahead later (the final circle once it ends); false when no closing runs
+	bool GetZoneShrinkCircle(out vector center, out float radius, float seconds_ahead = 0)
 	{
 		if ( !zone_shrinking )
 			return false;
 
-		float s = GetZoneShrinkProgress();
+		float s = GetZoneShrinkProgress( seconds_ahead );
 		center = zone_shrink_from_center + ( zone_shrink_to_center - zone_shrink_from_center ) * s;
 		radius = zone_shrink_from_radius + ( zone_shrink_to_radius - zone_shrink_from_radius ) * s;
 		return true;
 	}
 
-	//! Whole seconds until the closing ends, 0 when it is over or none runs
-	int GetZoneShrinkSecondsLeft()
+	//! Seconds until the closing ends on this client's clock, 0 when it is over or none runs
+	float GetZoneShrinkRemaining()
 	{
 		if ( !zone_shrinking )
 			return 0;
 
 		float seconds_left = zone_shrink_duration * ( 1 - GetZoneShrinkProgress() );
+		if ( seconds_left <= 0 )
+			return 0;
+
+		return seconds_left;
+	}
+
+	//! Whole seconds until the closing ends, 0 when it is over or none runs
+	int GetZoneShrinkSecondsLeft()
+	{
+		float seconds_left = GetZoneShrinkRemaining();
 		if ( seconds_left <= 0 )
 			return 0;
 

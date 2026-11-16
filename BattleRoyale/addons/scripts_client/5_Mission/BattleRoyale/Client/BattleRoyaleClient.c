@@ -9,6 +9,7 @@ class BattleRoyaleClient: BattleRoyaleBase
     static const float MAP_SHRINK_REFRESH_SECONDS = 0.1;
     protected ref BattleRoyalePlayArea m_ShrinkPlayArea;
     protected ref BattleRoyalePlayArea m_MapShrinkPlayArea;
+    protected ref BattleRoyalePlayArea m_WallNextPlayArea;  //!< circle the red wall glides to until its next refresh
     protected bool b_WasShrinking;
     protected float f_MapShrinkElapsed;
 
@@ -225,9 +226,26 @@ class BattleRoyaleClient: BattleRoyaleBase
 			if ( !IsZoneLocked() )
 				open_area = m_FuturePlayArea;
 		}
-		// The red wall follows a closing zone with a faster refresh; the yellow one stays on the announced zone
+		// The red wall follows a closing zone with a faster refresh, its panels gliding each frame to the circle of the
+		// next refresh (sooner when the closing ends first); the yellow one stays on the announced zone
+		BattleRoyalePlayArea wall_next_area = null;
+		float wall_next_seconds = 0;
+		if ( b_WasShrinking && locked_area )
+		{
+			wall_next_seconds = Math.Min( BattleRoyaleZoneWall.MOVING_REFRESH_SECONDS, br_rpc.GetZoneShrinkRemaining() );
+			vector wall_next_center;
+			float wall_next_radius;
+			if ( wall_next_seconds > 0 && br_rpc.GetZoneShrinkCircle( wall_next_center, wall_next_radius, wall_next_seconds ) )
+			{
+				if ( !m_WallNextPlayArea )
+					m_WallNextPlayArea = new BattleRoyalePlayArea( wall_next_center, wall_next_radius );
+				m_WallNextPlayArea.SetCenter( wall_next_center );
+				m_WallNextPlayArea.SetRadius( wall_next_radius );
+				wall_next_area = m_WallNextPlayArea;
+			}
+		}
 		vector wall_camera_pos = GetGame().GetCurrentCameraPosition();
-		m_ZoneWall.Update( delta, wall_camera_pos, locked_area, b_WasShrinking );
+		m_ZoneWall.Update( delta, wall_camera_pos, locked_area, b_WasShrinking, wall_next_area, wall_next_seconds );
 		m_OpenZoneWall.Update( delta, wall_camera_pos, open_area );
 
 		// The minimap outlines the same zones as the walls; while the zone closes it redraws at most 10 times a second
