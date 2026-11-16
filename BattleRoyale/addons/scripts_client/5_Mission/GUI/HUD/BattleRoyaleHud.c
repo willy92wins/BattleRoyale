@@ -122,6 +122,39 @@ class BattleRoyaleHud
         return right;
     }
 
+    //! Left edge, in screen pixels, of the centred lines at the top (phase, zone damage) as drawn now; -1 when
+    //! neither shows. The notifications at the top left wrap short of it
+    float GetCentreLinesLeft()
+    {
+        float left = -1;
+        left = LeftOfCentredText( m_PhasePanel, m_PhaseTextWidget, left );
+        left = LeftOfCentredText( m_ZoneDamagePanel, m_ZoneDamageTextWidget, left );
+        return left;
+    }
+
+    //! The smaller of left and the left edge of the text of panel while panel shows; the text is centred in its box
+    protected float LeftOfCentredText( Widget panel, TextWidget text, float left )
+    {
+        if ( !panel || !text || !panel.IsVisibleHierarchy() )
+            return left;
+
+        float x;
+        float y;
+        float w;
+        float h;
+        text.GetScreenPos( x, y );
+        text.GetScreenSize( w, h );
+
+        int text_w;
+        int text_h;
+        text.GetTextSize( text_w, text_h );
+
+        float text_left = x + ( w - text_w ) * 0.5;
+        if ( left < 0 || text_left < left )
+            return text_left;
+        return left;
+    }
+
     //! The smaller of left and the left edge of the text of row while row shows; the text is right aligned in its box
     protected float LeftOfRightAlignedText( Widget row, TextWidget text, float left )
     {

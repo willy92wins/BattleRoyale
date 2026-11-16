@@ -120,6 +120,18 @@ class BattleRoyaleCompass
 		s_UserVisible = !s_UserVisible;
 	}
 
+	//! Left edge of the tape, in screen pixels, while the compass shows; -1 while hidden. Notifications wrap short of it
+	float GetScreenLeft()
+	{
+		if (!m_Ready || !m_Shown || !m_Tape.IsVisibleHierarchy())
+			return -1;
+
+		float x;
+		float y;
+		m_Tape.GetScreenPos(x, y);
+		return x;
+	}
+
 	//! Right edge of the tape, in screen pixels, while the compass shows; -1 while hidden. Kill feed rows stay right of it
 	float GetScreenRight()
 	{
