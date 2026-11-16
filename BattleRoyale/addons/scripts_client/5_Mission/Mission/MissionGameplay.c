@@ -315,8 +315,9 @@ modded class MissionGameplay
 			}
 		}
 
+		// The indicator hides with the vanilla HUD, by the same rule as the compass
 		if (m_BattleRoyaleHud)
-			m_BattleRoyaleHud.UpdateSilentMode( BattleRoyaleSilentMode.IsActive() );
+			m_BattleRoyaleHud.UpdateSilentMode( BattleRoyaleSilentMode.IsActive() && BattleRoyaleCompass.IsHudShown( m_Hud ) );
 	}
 
 	//! Short notification of the new state; switching on plays no sound, the mode is already on

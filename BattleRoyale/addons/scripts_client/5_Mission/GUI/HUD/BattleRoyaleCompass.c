@@ -162,8 +162,8 @@ class BattleRoyaleCompass
 	}
 
 	//! Same rule as the vanilla stats and notifiers (IngameHudVisibility.UpdateElement): hidden by the hide HUD key,
-	//! the HUD option, an open menu or unconsciousness, unless the inventory is open
-	protected bool IsHudShown(IngameHud hud)
+	//! the HUD option, an open menu or unconsciousness, unless the inventory is open. The silent mode indicator uses it too
+	static bool IsHudShown(IngameHud hud)
 	{
 		if (!hud)
 			return true;

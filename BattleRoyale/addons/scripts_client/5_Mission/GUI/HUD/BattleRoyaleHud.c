@@ -134,7 +134,8 @@ class BattleRoyaleHud
         return left;
     }
 
-    //! Called every frame: shows the silent mode indicator while the mode is on, beside the match info column
+    //! Called every frame: shows the silent mode indicator beside the match info column while active, that is while the
+    //! mode is on and the vanilla HUD shows (BattleRoyaleCompass.IsHudShown)
     void UpdateSilentMode( bool active )
     {
         if ( !m_SilentModePanel || !m_SilentModeTextWidget )
