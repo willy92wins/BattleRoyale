@@ -215,7 +215,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
     PanelWidgetClass SilentModePanel {
      visible 0
      ignorepointer 1
-     position 210 4
+     position 220 4
      size 200 24
      halign right_ref
      hexactpos 1

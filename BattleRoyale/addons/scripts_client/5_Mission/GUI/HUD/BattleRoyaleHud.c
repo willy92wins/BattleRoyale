@@ -27,8 +27,8 @@ class BattleRoyaleHud
     protected static const float ZONE_ARROW_ICON_OFFSET = 0;  //!< br_zone_arrow_ca.paa points up
 
     //! Place of SilentModePanel in br_hud.layout, in layout units: right aligned in HudPanel, its x is the distance
-    //! between both right edges. It stays SILENT_MODE_GAP left of the match info column
-    protected static const float SILENT_MODE_RIGHT = 210;
+    //! between both right edges. It stays SILENT_MODE_GAP left of the match info column (MatchInfoIconsPanel, 212 wide)
+    protected static const float SILENT_MODE_RIGHT = 220;
     protected static const float SILENT_MODE_TOP = 4;
     protected static const float SILENT_MODE_GAP = 8;
 
@@ -62,7 +62,8 @@ class BattleRoyaleHud
     protected float m_LastArrowAngle;
     protected int m_LastPhaseLabel;
     protected int m_LastPhaseSeconds;
-    protected float m_SilentModeX;  //!< x of SilentModePanel last set, -1 while it has the one of the layout
+    protected float m_SilentModeX;  //!< x of SilentModePanel last set (layout units), -1 while it has the one of the layout
+    protected float m_SilentModePxPerUnit;  //!< screen pixels per unit m_SilentModeX was set with
 
     void BattleRoyaleHud( Widget root )
     {
@@ -153,10 +154,13 @@ class BattleRoyaleHud
         int screen_w;
         int screen_h;
         GetScreenSize( screen_w, screen_h );
-        if ( column_left >= 0 && parent && screen_h > 0 )
+        if ( screen_h <= 0 )
+            return;
+
+        // Exact layout units are 1/1080 of the screen height; SetPos from a script takes screen pixels
+        float px_per_unit = screen_h / 1080.0;
+        if ( column_left >= 0 && parent )
         {
-            // Exact layout units are 1/1080 of the screen height
-            float px_per_unit = screen_h / 1080.0;
             float parent_x;
             float parent_y;
             float parent_w;
@@ -169,11 +173,12 @@ class BattleRoyaleHud
                 x = needed;
         }
 
-        if ( m_SilentModeX >= 0 && Math.AbsFloat( x - m_SilentModeX ) < 0.5 )
+        if ( m_SilentModeX >= 0 && Math.AbsFloat( x - m_SilentModeX ) < 0.5 && px_per_unit == m_SilentModePxPerUnit )
             return;
 
         m_SilentModeX = x;
-        m_SilentModePanel.SetPos( x, SILENT_MODE_TOP );
+        m_SilentModePxPerUnit = px_per_unit;
+        m_SilentModePanel.SetPos( x * px_per_unit, SILENT_MODE_TOP * px_per_unit );
     }
 
     //! Right edge, in screen pixels, of the centred lines at the top (phase, zone damage) as drawn now; -1 when
