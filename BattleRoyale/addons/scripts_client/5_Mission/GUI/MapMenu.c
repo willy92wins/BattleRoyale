@@ -60,11 +60,7 @@ modded class MapMenu
 		if (!m_BR_PlayerCanvas)
 			Error("[MapMenu] player canvas not created");
 
-		// The canvas draws in screen pixels, the arrow size is given in 1/1080 of the screen height
-		int screen_w, screen_h;
-		GetScreenSize(screen_w, screen_h);
-		if (screen_h > 0)
-			f_BR_PlayerArrowScale = screen_h / 1080.0;
+		BR_UpdatePlayerArrowScale();
 
 		b_BR_ZonesDirty = true;
 		f_BR_ShrinkRedrawWait = BattleRoyaleClient.MAP_SHRINK_REFRESH_SECONDS;
@@ -108,6 +104,10 @@ modded class MapMenu
 	{
 		if (!m_BR_PlayerCanvas || !m_MapWidgetInstance)
 			return;
+
+		// After a screen size change with the map open, the arrow drawn at the old size goes and is drawn again below
+		if (BR_UpdatePlayerArrowScale())
+			BR_ClearPlayerCanvas();
 
 		PlayerBase player = PlayerBase.Cast(g_Game.GetPlayer());
 		if (!player)
@@ -160,6 +160,23 @@ modded class MapMenu
 
 		b_BR_PlayerDrawn = false;
 		m_BR_PlayerCanvas.Clear();
+	}
+
+	//! The canvas draws in screen pixels and the arrow size is given in 1/1080 of the screen height, so the scale follows
+	//! the screen height. Read on every update while the map is open; true when it changed
+	protected bool BR_UpdatePlayerArrowScale()
+	{
+		int screen_w, screen_h;
+		GetScreenSize(screen_w, screen_h);
+		if (screen_h <= 0)
+			return false;
+
+		float scale = screen_h / 1080.0;
+		if (scale == f_BR_PlayerArrowScale)
+			return false;
+
+		f_BR_PlayerArrowScale = scale;
+		return true;
 	}
 
 	/**
