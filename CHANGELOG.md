@@ -11,8 +11,8 @@
   out), and the map and the minimap show satellite imagery at every zoom.
 - Silent mode on N («BR Silent Mode» in Controls): it mutes the voice chat of the other players and the notification
   beep; notifications still show and the own microphone is not touched. A crossed-out speaker icon shows under the match
-  info icons while it is on. Switching it off, or leaving the match, gives back the VOIP volume of the player's options;
-  it lasts the whole session. N is also bound by COT (server info) and VPP (spectate next) for admins, who can rebind it.
+  info icons while it is on. Switching it off, or leaving the server, gives back the VOIP volume of the player's
+  options; it stays on across matches for the whole session. N is also bound by COT (server info) and VPP (spectate next) for admins, who can rebind it.
 - A new notification sound: a short rising two-note chime, the same for every player wherever the camera is.
 
 ### Changed
@@ -48,7 +48,7 @@
 - The message the server sends the clients for the kill feed keeps its format; a run-over now carries the driver's
   name, which the client already shows. Server and clients should run 1.7.0.
 - Same code as the third closed beta. Each change was reviewed by a second model family (adversarial review of each
-  change, and of the first three together) and tested in DayZDiag with one player at 1920x1080, and the HUD also at
+  change, and of the first three together). Tested in DayZDiag with one player at 1920x1080, and the HUD also at
   2560x1600: the mod starts without Dabs, the match preparation reads the same 77 places of the map as before, the
   compass reads the right heading, compass, kill feed and icons were measured on screen, the map arrow and the
   satellite map show at every zoom and on the unfolded tourist map, the map compass reads the same heading as the HUD
