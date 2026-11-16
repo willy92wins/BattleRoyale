@@ -99,6 +99,7 @@ modded class NotificationUI
 	protected static float s_BR_CentreLeft = -1;
 
 	protected ref map<NotificationRuntimeData, ref BR_NotificationRow> m_BR_Rows;    //!< rows on screen, not fading
+	protected ref array<ref BR_NotificationRow> m_BR_FadingRows;    //!< removed rows vanilla still fades (m_WidgetTimers)
 	protected float m_BR_LayoutLimit;       //!< right limit (screen pixels) the rows were laid out for
 	protected int m_BR_LayoutScreenW;       //!< screen size the rows were laid out for
 	protected int m_BR_LayoutScreenH;
@@ -110,6 +111,7 @@ modded class NotificationUI
 	void NotificationUI()
 	{
 		m_BR_Rows = new map<NotificationRuntimeData, ref BR_NotificationRow>;
+		m_BR_FadingRows = new array<ref BR_NotificationRow>;
 		m_BR_LayoutLimit = -1;
 		m_BR_LayoutScreenW = -1;
 		m_BR_LayoutScreenH = -1;
@@ -189,12 +191,32 @@ modded class NotificationUI
 			BR_PlayNotificationSound();
 	}
 
-	//! A removed row fades out with vanilla (Update) and is no longer laid out
+	//! A removed row fades out with vanilla (Update, notificationui.c:196-227), which deletes its widget at the end; until
+	//! then it is still laid out with the others, so a new screen size does not leave it clipped
 	override void RemoveNotification(NotificationRuntimeData data)
 	{
 		super.RemoveNotification(data);
-		if (m_BR_Rows)
-			m_BR_Rows.Remove(data);
+		if (!m_BR_Rows)
+			return;
+
+		BR_NotificationRow row;
+		if (m_BR_Rows.Find(data, row) && row && m_BR_FadingRows)
+			m_BR_FadingRows.Insert(row);
+		m_BR_Rows.Remove(data);
+	}
+
+	//! Forgets the fading rows whose widget vanilla deleted (a Widget reference is nulled when it is deleted)
+	protected void BR_PruneFadingRows()
+	{
+		if (!m_BR_FadingRows)
+			return;
+
+		for (int i = m_BR_FadingRows.Count() - 1; i >= 0; i--)
+		{
+			BR_NotificationRow row = m_BR_FadingRows.Get(i);
+			if (!row || !row.m_Root)
+				m_BR_FadingRows.Remove(i);
+		}
 	}
 
 	//! The row of data in NotificationContent, its icon, colours and text set; null when the layout cannot be used.
@@ -262,7 +284,8 @@ modded class NotificationUI
 	//! A row that could not measure its text tries again every frame
 	protected void BR_UpdateRows()
 	{
-		if (!m_BR_Rows || m_BR_Rows.Count() == 0)
+		BR_PruneFadingRows();
+		if (!m_BR_Rows || (m_BR_Rows.Count() == 0 && (!m_BR_FadingRows || m_BR_FadingRows.Count() == 0)))
 			return;
 
 		if (!m_BR_Unmeasured && BR_LayoutIsCurrent())
@@ -396,6 +419,17 @@ modded class NotificationUI
 			row = m_BR_Rows.GetElement(i);
 			if (row && !BR_LayoutRow(row, room_px, px_per_unit))
 				m_BR_Unmeasured = true;
+		}
+
+		// Rows still fading take the same room: they stay on screen up to NotificationSystem.NOTIFICATION_FADE_TIME
+		if (m_BR_FadingRows)
+		{
+			for (int j = 0; j < m_BR_FadingRows.Count(); j++)
+			{
+				row = m_BR_FadingRows.Get(j);
+				if (row && row.m_Root && !BR_LayoutRow(row, room_px, px_per_unit))
+					m_BR_Unmeasured = true;
+			}
 		}
 	}
 
