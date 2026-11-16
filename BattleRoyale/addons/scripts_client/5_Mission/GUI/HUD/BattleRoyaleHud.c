@@ -26,12 +26,6 @@ class BattleRoyaleHud
     //! The zone arrow icon (dayz_gui icon_arrow) points down at rest; this turns it to point up at angle 0
     protected static const float ZONE_ARROW_ICON_OFFSET = 0;  //!< br_zone_arrow_ca.paa points up
 
-    //! Place of SilentModePanel in br_hud.layout, in layout units: right aligned in HudPanel, its x is the distance
-    //! between both right edges. It stays SILENT_MODE_GAP left of the match info column (MatchInfoIconsPanel, 212 wide)
-    protected static const float SILENT_MODE_RIGHT = 220;
-    protected static const float SILENT_MODE_TOP = 4;
-    protected static const float SILENT_MODE_GAP = 8;
-
     protected Widget m_Root;
 
     protected Widget m_PlayerCountPanel;
@@ -48,7 +42,6 @@ class BattleRoyaleHud
     protected TextWidget m_KillTextWidget;
     protected TextWidget m_PhaseTextWidget;
     protected TextWidget m_ZoneDamageTextWidget;
-    protected TextWidget m_SilentModeTextWidget;
 
     protected ImageWidget m_DistanceZoneArrow;
 
@@ -62,8 +55,6 @@ class BattleRoyaleHud
     protected float m_LastArrowAngle;
     protected int m_LastPhaseLabel;
     protected int m_LastPhaseSeconds;
-    protected float m_SilentModeX;  //!< x of SilentModePanel last set (layout units), -1 while it has the one of the layout
-    protected float m_SilentModePxPerUnit;  //!< screen pixels per unit m_SilentModeX was set with
 
     void BattleRoyaleHud( Widget root )
     {
@@ -89,7 +80,6 @@ class BattleRoyaleHud
         m_KillTextWidget = TextWidget.Cast( m_KillCountPanel.FindAnyWidget( "KillCountText" ) );
         m_PhaseTextWidget = TextWidget.Cast( m_Root.FindAnyWidget( "PhaseText" ) );
         m_ZoneDamageTextWidget = TextWidget.Cast( m_Root.FindAnyWidget( "ZoneDamageText" ) );
-        m_SilentModeTextWidget = TextWidget.Cast( m_Root.FindAnyWidget( "SilentModeText" ) );
 
         m_DistanceZoneArrow = ImageWidget.Cast( m_Root.FindAnyWidget( "ZoneIcon" ) );
 
@@ -101,7 +91,6 @@ class BattleRoyaleHud
         SetVisible( m_ZoneDamagePanel, false );
         SetVisible( m_SilentModePanel, false );
 
-        m_SilentModeX = -1;
         m_DistanceColorState = -1;
         m_LastDistanceMeters = -2;
         m_LastArrowAngle = -1000;
@@ -115,13 +104,11 @@ class BattleRoyaleHud
     }
 
     //! Left edge, in screen pixels, of what the top right corner draws now: the counters and the zone distance of the
-    //! match info column and the silent mode indicator beside it, each text where it is drawn. -1 when nothing shows.
-    //! The kill feed ends left of it
+    //! match info column, each text where it is drawn. -1 when nothing shows. The kill feed ends left of it; the silent
+    //! mode icon sits in the column of icons, right of the texts, and does not move it
     float GetMatchInfoLeft()
     {
-        float left = GetMatchInfoColumnLeft();
-        left = LeftOfRightAlignedText( m_SilentModePanel, m_SilentModeTextWidget, left );
-        return left;
+        return GetMatchInfoColumnLeft();
     }
 
     //! Left edge, in screen pixels, of the counters and the zone distance that show; -1 when the column shows nothing
@@ -135,50 +122,11 @@ class BattleRoyaleHud
         return left;
     }
 
-    //! Called every frame: shows the silent mode indicator beside the match info column while active, that is while the
-    //! mode is on and the vanilla HUD shows (BattleRoyaleCompass.IsHudShown)
+    //! Called every frame: shows the silent mode icon, in its own row under the zone distance, while the mode is on and
+    //! the vanilla HUD shows (BattleRoyaleCompass.IsHudShown)
     void UpdateSilentMode( bool active )
     {
-        if ( !m_SilentModePanel || !m_SilentModeTextWidget )
-            return;
-
         SetVisible( m_SilentModePanel, active );
-        if ( !active )
-            return;
-
-        // The layout puts the indicator left of the whole column; it moves further left only if a text of the
-        // column is drawn wider than the column
-        float x = SILENT_MODE_RIGHT;
-        float column_left = GetMatchInfoColumnLeft();
-        Widget parent = m_SilentModePanel.GetParent();
-        int screen_w;
-        int screen_h;
-        GetScreenSize( screen_w, screen_h );
-        if ( screen_h <= 0 )
-            return;
-
-        // Exact layout units are 1/1080 of the screen height; SetPos from a script takes screen pixels
-        float px_per_unit = screen_h / 1080.0;
-        if ( column_left >= 0 && parent )
-        {
-            float parent_x;
-            float parent_y;
-            float parent_w;
-            float parent_h;
-            parent.GetScreenPos( parent_x, parent_y );
-            parent.GetScreenSize( parent_w, parent_h );
-
-            float needed = ( parent_x + parent_w - column_left ) / px_per_unit + SILENT_MODE_GAP;
-            if ( needed > x )
-                x = needed;
-        }
-
-        if ( m_SilentModeX >= 0 && Math.AbsFloat( x - m_SilentModeX ) < 0.5 && px_per_unit == m_SilentModePxPerUnit )
-            return;
-
-        m_SilentModeX = x;
-        m_SilentModePxPerUnit = px_per_unit;
-        m_SilentModePanel.SetPos( x * px_per_unit, SILENT_MODE_TOP * px_per_unit );
     }
 
     //! Right edge, in screen pixels, of the centred lines at the top (phase, zone damage) as drawn now; -1 when
