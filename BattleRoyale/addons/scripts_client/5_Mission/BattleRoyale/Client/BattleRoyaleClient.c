@@ -56,6 +56,8 @@ class BattleRoyaleClient: BattleRoyaleBase
 
 		BattleRoyaleRPC br_rpc = BattleRoyaleRPC.GetInstance();
 		br_rpc.Reset();
+		// The serial outlives the client: only the countdowns received from now on are new
+		br_previous_countdown_serial = br_rpc.countdown_serial;
 
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
     }
@@ -80,6 +82,13 @@ class BattleRoyaleClient: BattleRoyaleBase
         return m_CurrentPlayArea;
     }
 
+    //! While the zone closes the map and the minimap redraw their zones at most every MAP_SHRINK_REFRESH_SECONDS,
+    //! whatever moves them; a redraw held back waits for the next allowed one
+    bool IsMapZoneShrinking()
+    {
+        return b_WasShrinking;
+    }
+
 	// To track changes
     bool br_previous_fade_state = false;
     bool br_previous_input_state = false;
@@ -89,6 +98,7 @@ class BattleRoyaleClient: BattleRoyaleBase
     float br_previous_future_play_area_radius;
     bool br_previous_win_screen = false;
     int br_previous_countdown = 0;
+    int br_previous_countdown_serial = 0;
     int br_previous_nb_players = -1;
     int br_previous_nb_groups = -1;
     int br_previous_kills = -1;
@@ -125,12 +135,13 @@ class BattleRoyaleClient: BattleRoyaleBase
 			OnMatchStarted();
 		}
 
-		// Update countdown timer and zone distance
-		if ( br_previous_countdown != br_rpc.countdown_seconds )
+		// Update countdown timer and zone distance; every countdown received starts again, even with the seconds of the last one
+		if ( br_previous_countdown_serial != br_rpc.countdown_serial || br_previous_countdown != br_rpc.countdown_seconds )
 		{
 			i_SecondsRemaining = br_rpc.countdown_seconds;
 			gameplay.UpdateCountdownTimer( i_SecondsRemaining );
 			br_previous_countdown = br_rpc.countdown_seconds;
+			br_previous_countdown_serial = br_rpc.countdown_serial;
 		}
 
 		// While the zone closes the current area is the circle of this frame, the same objects updated in place
@@ -219,8 +230,8 @@ class BattleRoyaleClient: BattleRoyaleBase
 		m_ZoneWall.Update( delta, wall_camera_pos, locked_area, b_WasShrinking );
 		m_OpenZoneWall.Update( delta, wall_camera_pos, open_area );
 
-		// The minimap outlines the same zones as the walls, the closing one at most 10 times a second
-		gameplay.UpdateMiniMap( delta, map_locked_area, open_area );
+		// The minimap outlines the same zones as the walls; while the zone closes it redraws at most 10 times a second
+		gameplay.UpdateMiniMap( delta, map_locked_area, open_area, b_WasShrinking );
 
 		// The compass hides itself without a living local player
 		gameplay.UpdateCompass();

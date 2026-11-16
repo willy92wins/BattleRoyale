@@ -17,8 +17,12 @@ class BattleRoyaleRound: BattleRoyaleState
     //! Closing from the previous zone to this one (zone_settings.json zone_shrink_speed); it ends at the lock
     protected float f_ShrinkSpeed;
     protected float f_ShrinkDuration;  //!< seconds, 0 when this round has no closing
-    protected float f_ShrinkStartTime;  //!< GetGame().GetTickTime() when the closing started
+    //! GetGame().GetTickTime() at which the closing is due to start, set at the activation like the lock timer: a late
+    //! start timer does not move it, so the circle still reaches the new zone when the zone locks
+    protected float f_ShrinkStartTime;
     protected bool b_Shrinking;  //!< from the start of the closing until the lock
+    protected bool b_ShrinkStopped;  //!< the round ended during its closing: the circle stays at f_ShrinkStopTime
+    protected float f_ShrinkStopTime;
 
 #ifdef Carim
     int i_MaxPartySize;
@@ -69,8 +73,10 @@ class BattleRoyaleRound: BattleRoyaleState
         BattleRoyaleUtils.Trace(GetName() + " Init!");
         b_ZoneLocked = false;
         b_Shrinking = false;
+        b_ShrinkStopped = false;
         f_ShrinkDuration = 0;
         f_ShrinkStartTime = 0;
+        f_ShrinkStopTime = 0;
         m_Zone = new BattleRoyaleZone;
 
         if(GetPreviousZone())
@@ -136,6 +142,7 @@ class BattleRoyaleRound: BattleRoyaleState
                 time_till_end = time_till_lock + time_between_lock_and_end;
             }
             f_ShrinkDuration = (time_till_lock - time_till_shrink) / 1000.0;
+            f_ShrinkStartTime = GetGame().GetTickTime() + time_till_shrink / 1000.0;
         }
 
         BattleRoyaleUtils.Trace(GetName() + " Activate with a duration of " + time_till_end / 1000 + " seconds with a lock at " + time_till_lock / 1000 + " seconds (so " + time_between_lock_and_end / 1000 + " seconds after lock before end), closing from " + time_till_shrink / 1000 + " seconds for " + f_ShrinkDuration + " seconds !");
@@ -220,19 +227,23 @@ class BattleRoyaleRound: BattleRoyaleState
                 if(val > 0)
                     m_MessageTimers.Insert( AddTimer(val / 1000.0, this, "NotifyTimeTillNoZoneSeconds", new Param1<int>( sec ), false) );
             }
-
-			//send play area to clients
-			ref BattleRoyalePlayArea m_PreviousArea = NULL;
-            BattleRoyaleZone previous_zone = GetPreviousZone();
-            if (previous_zone)
-                m_PreviousArea = previous_zone.GetArea();
-
-			//tell client the current play has not changed (note that if this is the first round, then the current area will be NULL )
-            if (m_PreviousArea)
-			    GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( m_PreviousArea.GetCenter(), m_PreviousArea.GetRadius() ), true);
-            else
-                Error("Round has no previous zone; current play area was not sent");
         }
+
+        //tell the clients the zone in force: the previous zone, the circle the damage uses until the lock. A round skipped
+        //before its lock (admin Next) left the clients on its old zone or in the middle of its closing; this ends that
+        //closing on the circle the damage uses, before this round announces its zone or starts its own closing.
+        //The first round played has no zone in force on the clients and sends none, except the last normal round, which
+        //always sent it
+        bool is_last_zone = m_Zone.GetZoneNumber() >= i_NumZones;
+        BattleRoyalePlayArea previous_area = NULL;
+        BattleRoyaleZone previous_zone = GetPreviousZone();
+        if (previous_zone)
+            previous_area = previous_zone.GetArea();
+
+        if (previous_area && (is_last_zone || GetDynamicStartingZone(i_NumStartingPlayers) < zone_num))
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( previous_area.GetCenter(), previous_area.GetRadius() ), true);
+        else if (is_last_zone)
+            Error("Round has no previous zone; current play area was not sent");
 
         ref BattleRoyalePlayArea m_ThisArea = NULL;
         if(GetZone())
@@ -289,7 +300,19 @@ class BattleRoyaleRound: BattleRoyaleState
             if ( m_MessageTimers[i] && m_MessageTimers[i].IsRunning() )
                 m_MessageTimers[i].Stop();
         }
-        
+
+        // A closing cut short before the lock (admin Next, or the match ends) stops at the circle of this instant, on the
+        // clients and for the damage until the next state takes over; a next round then sends the zone in force
+        if (b_Shrinking && !b_ZoneLocked && !b_ShrinkStopped)
+        {
+            b_ShrinkStopped = true;
+            f_ShrinkStopTime = GetGame().GetTickTime();
+            vector stop_center;
+            float stop_radius;
+            GetShrinkCircle(f_ShrinkStopTime, stop_center, stop_radius);
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( stop_center, stop_radius ), true);
+        }
+
         //we just deactivated this round (players not yet transfered from previous state)
         super.Deactivate();
     }
@@ -363,7 +386,7 @@ class BattleRoyaleRound: BattleRoyaleState
 
             // While the zone closes the circle of this instant applies: a player the edge passed over is outside from now on
             if (b_Shrinking && !b_ZoneLocked)
-                GetShrinkCircle(GetGame().GetTickTime(), center, radius);
+                GetShrinkCircle(GetShrinkClock(), center, radius);
 
             vector playerPos = player.GetPosition();
 
@@ -466,13 +489,23 @@ class BattleRoyaleRound: BattleRoyaleState
         if (b_ZoneLocked || f_ShrinkDuration <= 0 || !previous_zone || !previous_zone.GetArea() || !GetZone() || !GetZone().GetArea())
             return;
 
+        // f_ShrinkStartTime stays the planned start: a late timer gives the clients the seconds really gone
         b_Shrinking = true;
-        f_ShrinkStartTime = GetGame().GetTickTime();
-        BattleRoyaleUtils.Trace(GetName() + " closing starts, " + f_ShrinkDuration + " seconds");
+        float late_seconds = GetGame().GetTickTime() - f_ShrinkStartTime;
+        BattleRoyaleUtils.Trace(GetName() + " closing starts, " + f_ShrinkDuration + " seconds, " + late_seconds + " seconds after its planned start");
         SendShrinkTo(null);
     }
 
-    //! Circle of the closing at tick time now; the lerp factor stays within [0, 1]
+    //! Tick time of the closing circle in force: now, or the instant the round ended during its closing
+    protected float GetShrinkClock()
+    {
+        if (b_ShrinkStopped)
+            return f_ShrinkStopTime;
+
+        return GetGame().GetTickTime();
+    }
+
+    //! Circle of the closing at tick time now, from its planned start; the lerp factor stays within [0, 1]
     protected void GetShrinkCircle(float now, out vector center, out float radius)
     {
         BattleRoyalePlayArea from_area = GetPreviousZone().GetArea();
@@ -488,7 +521,8 @@ class BattleRoyaleRound: BattleRoyaleState
         radius = from_area.GetRadius() + (to_area.GetRadius() - from_area.GetRadius()) * s;
     }
 
-    //! StartZoneShrink: start circle, end circle, total duration and seconds already gone; null identity sends to everyone
+    //! StartZoneShrink: start circle, end circle, total duration and seconds already gone since the planned start (more
+    //! than 0 when the start timer came late); null identity sends to everyone
     protected void SendShrinkTo(PlayerIdentity identity)
     {
         BattleRoyalePlayArea from_area = GetPreviousZone().GetArea();

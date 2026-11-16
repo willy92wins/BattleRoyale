@@ -1,7 +1,7 @@
 #ifndef SERVER
 //! Minimap panel of the HUD: north up, centred on the player, with the zone outlines drawn on a canvas over the map.
 //! The map only moves when its centre moved by half a pixel or more, and the canvas is only redrawn when the map
-//! view, the panel or the zones change.
+//! view, the panel or the zones change; while the zone closes, 10 times a second at most.
 class BattleRoyaleMiniMap
 {
 	static const int ZOOM_LEVEL_COUNT = 4;
@@ -26,6 +26,9 @@ class BattleRoyaleMiniMap
 
 	protected bool m_ViewDirty;  //!< scale or panel changed, the map is set up again
 	protected bool m_CanvasDirty;
+	//! Seconds since the last canvas redraw, up to BattleRoyaleClient.MAP_SHRINK_REFRESH_SECONDS; while the zone closes
+	//! the canvas waits for it, the redraw stays pending
+	protected float m_ShrinkRedrawWait;
 	protected bool m_HasMapCenter;
 	protected vector m_MapCenter;  //!< last centre given to the map
 	protected float m_MetersPerPixel;
@@ -95,6 +98,7 @@ class BattleRoyaleMiniMap
 		m_CanvasDirty = true;
 		m_HasMapCenter = false;
 		m_HasHeading = false;
+		m_ShrinkRedrawWait = BattleRoyaleClient.MAP_SHRINK_REFRESH_SECONDS;
 	}
 
 	void ToggleVisible()
@@ -142,11 +146,15 @@ class BattleRoyaleMiniMap
 	 * @param timeslice    Frame time in seconds
 	 * @param locked_area  Zone in force, drawn red; null when there is none
 	 * @param open_area    Announced zone until it locks, drawn yellow; null when there is none
+	 * @param shrinking    The zone closes: the canvas redraws at most every BattleRoyaleClient.MAP_SHRINK_REFRESH_SECONDS
 	 */
-	void Update(float timeslice, BattleRoyalePlayArea locked_area, BattleRoyalePlayArea open_area)
+	void Update(float timeslice, BattleRoyalePlayArea locked_area, BattleRoyalePlayArea open_area, bool shrinking)
 	{
 		if (!m_Visible || !m_Map || !m_Canvas)
 			return;
+
+		if (m_ShrinkRedrawWait < BattleRoyaleClient.MAP_SHRINK_REFRESH_SECONDS)
+			m_ShrinkRedrawWait += timeslice;
 
 		bool trace = BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.TRACE);
 		if (trace)
@@ -219,9 +227,12 @@ class BattleRoyaleMiniMap
 			m_CanvasDirty = true;
 		}
 
-		if (m_CanvasDirty)
+		// While the zone closes the circle and the map both move: the canvas follows them 10 times a second at most,
+		// and a redraw held back stays pending. The map itself keeps following the player every frame
+		if (m_CanvasDirty && (!shrinking || m_ShrinkRedrawWait >= BattleRoyaleClient.MAP_SHRINK_REFRESH_SECONDS))
 		{
 			m_CanvasDirty = false;
+			m_ShrinkRedrawWait = 0;
 			int segments = RedrawCanvas();
 			if (trace)
 			{

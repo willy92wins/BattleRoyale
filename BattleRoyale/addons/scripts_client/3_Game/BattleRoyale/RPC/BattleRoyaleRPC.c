@@ -295,6 +295,8 @@ class BattleRoyaleRPC
 	// Set the countdown seconds
 
 	int countdown_seconds = 0;
+	//! SetCountdownSeconds received so far, never reset: a countdown that repeats the last seconds is still a new one
+	int countdown_serial = 0;
 
 	void SetCountdownSeconds(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
@@ -309,6 +311,7 @@ class BattleRoyaleRPC
 			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
 				BattleRoyaleUtils.Trace(string.Format("SetCountdownSeconds: %1", data.param1));
 			countdown_seconds = data.param1;
+			countdown_serial++;
 		}
 	}
 

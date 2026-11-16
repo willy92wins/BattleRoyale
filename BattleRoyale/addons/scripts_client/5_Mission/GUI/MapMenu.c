@@ -40,6 +40,9 @@ modded class MapMenu
 	protected float f_BR_DrawnScreenY;
 	protected float f_BR_DrawnScreenW;
 	protected float f_BR_DrawnScreenH;
+	//! Seconds since the last canvas redraw, up to BattleRoyaleClient.MAP_SHRINK_REFRESH_SECONDS; while the zone closes
+	//! the canvas waits for it, and what changed meanwhile is drawn then
+	protected float f_BR_ShrinkRedrawWait;
 
 	override Widget Init()
 	{
@@ -64,6 +67,7 @@ modded class MapMenu
 			f_BR_PlayerArrowScale = screen_h / 1080.0;
 
 		b_BR_ZonesDirty = true;
+		f_BR_ShrinkRedrawWait = BattleRoyaleClient.MAP_SHRINK_REFRESH_SECONDS;
 		b_BR_PlayerDrawn = false;
 		return root;
 	}
@@ -72,7 +76,7 @@ modded class MapMenu
 	{
 		super.Update(timeslice);
 
-		BR_UpdateZoneCanvas();
+		BR_UpdateZoneCanvas(timeslice);
 		BR_UpdatePlayerCanvas();
 	}
 
@@ -201,10 +205,13 @@ modded class MapMenu
 		m_BR_PlayerCanvas.DrawLine(right_tail_x, right_tail_y, tip_x, tip_y, border_width, BR_PLAYER_ARROW_BORDER);
 	}
 
-	protected void BR_UpdateZoneCanvas()
+	protected void BR_UpdateZoneCanvas(float timeslice)
 	{
 		if (!m_BR_ZoneCanvas || !m_MapWidgetInstance)
 			return;
+
+		if (f_BR_ShrinkRedrawWait < BattleRoyaleClient.MAP_SHRINK_REFRESH_SECONDS)
+			f_BR_ShrinkRedrawWait += timeslice;
 
 		BattleRoyaleClient br_client = BattleRoyaleClient.Cast(GetBR());
 		if (!br_client)
@@ -212,7 +219,7 @@ modded class MapMenu
 
 		vector current_center = vector.Zero;
 		float current_radius = 0;
-		// While the zone closes this area changes at most 10 times a second, so the canvas redraws no more often
+		// While the zone closes this area changes at most 10 times a second
 		BattleRoyalePlayArea current_area = br_client.GetMapPlayArea();
 		if (current_area)
 		{
@@ -241,6 +248,12 @@ modded class MapMenu
 				return;
 		}
 
+		// While the zone closes the circle changes and the player pans and zooms: the canvas follows 10 times a second at
+		// most. A redraw held back keeps the drawn values, so the next allowed frame still sees the change
+		if (br_client.IsMapZoneShrinking() && f_BR_ShrinkRedrawWait < BattleRoyaleClient.MAP_SHRINK_REFRESH_SECONDS)
+			return;
+
+		f_BR_ShrinkRedrawWait = 0;
 		b_BR_ZonesDirty = false;
 		v_BR_DrawnCurrentCenter = current_center;
 		f_BR_DrawnCurrentRadius = current_radius;

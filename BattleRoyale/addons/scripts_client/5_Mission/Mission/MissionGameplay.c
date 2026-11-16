@@ -242,13 +242,14 @@ modded class MissionGameplay
 		m_BattleRoyaleCompass.Update( m_Hud );
 	}
 
-	//! Called once per frame by the client with the zones to outline: locked_area red, open_area yellow
-	void UpdateMiniMap(float timeslice, BattleRoyalePlayArea locked_area, BattleRoyalePlayArea open_area)
+	//! Called once per frame by the client with the zones to outline: locked_area red, open_area yellow; shrinking while
+	//! the zone closes, which limits the redraws
+	void UpdateMiniMap(float timeslice, BattleRoyalePlayArea locked_area, BattleRoyalePlayArea open_area, bool shrinking)
 	{
 		if (!m_BattleRoyaleMiniMap)
 			return;
 
-		m_BattleRoyaleMiniMap.Update( timeslice, locked_area, open_area );
+		m_BattleRoyaleMiniMap.Update( timeslice, locked_area, open_area, shrinking );
 	}
 
 	//! Created once; unlinked by the destructor when the mission ends

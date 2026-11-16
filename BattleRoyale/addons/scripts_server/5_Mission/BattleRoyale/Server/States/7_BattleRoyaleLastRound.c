@@ -16,8 +16,12 @@ class BattleRoyaleLastRound: BattleRoyaleState
     //! The final zone shrinks to nothing on its center (zone_settings.json zone_shrink_speed), ending when it collapses today
     protected float f_ShrinkSpeed;
     protected float f_ShrinkDuration;  //!< seconds, 0 when the final zone does not close
-    protected float f_ShrinkStartTime;  //!< GetGame().GetTickTime() when the closing started
+    //! GetGame().GetTickTime() at which the closing is due to start, set at the activation like the collapse timer: a late
+    //! start timer does not move it, so the radius still reaches 0 when the final zone collapses
+    protected float f_ShrinkStartTime;
     protected bool b_Shrinking;  //!< from the start of the closing until the collapse
+    protected bool b_ShrinkStopped;  //!< the round ended during its closing: the radius stays at f_ShrinkStopTime
+    protected float f_ShrinkStopTime;
 
     protected ref Timer m_FinalZoneLockTimer;
     protected ref Timer m_ShrinkTimer;
@@ -38,8 +42,10 @@ class BattleRoyaleLastRound: BattleRoyaleState
         b_DoZoneDamage = m_GameSettings.enable_zone_damage;
         b_IsZoneLocked = false;
         b_Shrinking = false;
+        b_ShrinkStopped = false;
         f_ShrinkDuration = 0;
         f_ShrinkStartTime = 0;
+        f_ShrinkStopTime = 0;
 
         m_MessageTimers = new array<ref Timer>;
 
@@ -72,6 +78,7 @@ class BattleRoyaleLastRound: BattleRoyaleState
                 time_till_lock = shrink_ms;
             }
             f_ShrinkDuration = (time_till_lock - time_till_shrink) / 1000.0;
+            f_ShrinkStartTime = GetGame().GetTickTime() + time_till_shrink / 1000.0;
         }
 
         // With a closing the danger starts when the final zone starts closing: the notices count down to that moment
@@ -159,6 +166,16 @@ class BattleRoyaleLastRound: BattleRoyaleState
             }
         }
 
+        // A closing cut short before the collapse (admin Next, or the match ends) stops at the radius of this instant, on
+        // the clients and for the damage until the next state takes over
+        BattleRoyaleZone stop_zone = GetPreviousZone();
+        if (b_Shrinking && !b_IsZoneLocked && !b_ShrinkStopped && stop_zone && stop_zone.GetArea())
+        {
+            b_ShrinkStopped = true;
+            f_ShrinkStopTime = GetGame().GetTickTime();
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( stop_zone.GetArea().GetCenter(), GetShrinkRadius(f_ShrinkStopTime) ), true);
+        }
+
         //we just deactivated this round (players not yet transfered from previous state)
         super.Deactivate();
     }
@@ -217,7 +234,7 @@ class BattleRoyaleLastRound: BattleRoyaleState
 
                 // While the final zone closes its radius of this instant applies, on the same center
                 if (b_Shrinking)
-                    radius = GetShrinkRadius(GetGame().GetTickTime());
+                    radius = GetShrinkRadius(GetShrinkClock());
 
                 vector playerPos = player.GetPosition();
 
@@ -285,13 +302,23 @@ class BattleRoyaleLastRound: BattleRoyaleState
         if (b_IsZoneLocked || f_ShrinkDuration <= 0 || !final_zone || !final_zone.GetArea())
             return;
 
+        // f_ShrinkStartTime stays the planned start: a late timer gives the clients the seconds really gone
         b_Shrinking = true;
-        f_ShrinkStartTime = GetGame().GetTickTime();
-        BattleRoyaleUtils.Trace(GetName() + " closing starts, " + f_ShrinkDuration + " seconds");
+        float late_seconds = GetGame().GetTickTime() - f_ShrinkStartTime;
+        BattleRoyaleUtils.Trace(GetName() + " closing starts, " + f_ShrinkDuration + " seconds, " + late_seconds + " seconds after its planned start");
         SendShrinkTo(null);
     }
 
-    //! Radius of the closing final zone at tick time now
+    //! Tick time of the closing radius in force: now, or the instant the round ended during its closing
+    protected float GetShrinkClock()
+    {
+        if (b_ShrinkStopped)
+            return f_ShrinkStopTime;
+
+        return GetGame().GetTickTime();
+    }
+
+    //! Radius of the closing final zone at tick time now, from its planned start
     protected float GetShrinkRadius(float now)
     {
         float radius = GetPreviousZone().GetArea().GetRadius();
@@ -302,7 +329,8 @@ class BattleRoyaleLastRound: BattleRoyaleState
         return radius * (1 - s);
     }
 
-    //! StartZoneShrink: the final zone to radius 0 on its center, total duration and seconds already gone; null identity sends to everyone
+    //! StartZoneShrink: the final zone to radius 0 on its center, total duration and seconds already gone since the planned
+    //! start (more than 0 when the start timer came late); null identity sends to everyone
     protected void SendShrinkTo(PlayerIdentity identity)
     {
         BattleRoyalePlayArea final_area = GetPreviousZone().GetArea();
