@@ -34,6 +34,7 @@ class BattleRoyaleHud
     protected Widget m_KillCountPanel;
     protected Widget m_PhasePanel;
     protected Widget m_ZoneDamagePanel;
+    protected Widget m_SilentModePanel;
 
     protected TextWidget m_PlayerTextWidget;
     protected TextWidget m_GroupTextWidget;
@@ -71,6 +72,7 @@ class BattleRoyaleHud
         m_KillCountPanel = Widget.Cast( m_Root.FindAnyWidget( "KillCountPanel" ) );
         m_PhasePanel = Widget.Cast( m_Root.FindAnyWidget( "PhasePanel" ) );
         m_ZoneDamagePanel = Widget.Cast( m_Root.FindAnyWidget( "ZoneDamagePanel" ) );
+        m_SilentModePanel = m_Root.FindAnyWidget( "SilentModePanel" );
 
         m_PlayerTextWidget = TextWidget.Cast( m_PlayerCountPanel.FindAnyWidget( "PlayerText" ) );
         m_GroupTextWidget = TextWidget.Cast( m_GroupCountPanel.FindAnyWidget( "GroupText" ) );
@@ -87,6 +89,7 @@ class BattleRoyaleHud
         m_KillCountPanel.Show( false );
         SetVisible( m_PhasePanel, false );
         SetVisible( m_ZoneDamagePanel, false );
+        SetVisible( m_SilentModePanel, false );
 
         m_DistanceColorState = -1;
         m_LastDistanceMeters = -2;
@@ -100,9 +103,16 @@ class BattleRoyaleHud
         return is_shown;
     }
 
-    //! Left edge, in screen pixels, of what the match info column (top right) draws now: the counters and the zone
-    //! distance that show, each text where it is drawn. -1 when the column shows nothing. The kill feed ends left of it
+    //! Left edge, in screen pixels, of what the top right corner draws now: the counters and the zone distance of the
+    //! match info column, each text where it is drawn. -1 when nothing shows. The kill feed ends left of it; the silent
+    //! mode icon sits in the column of icons, right of the texts, and does not move it
     float GetMatchInfoLeft()
+    {
+        return GetMatchInfoColumnLeft();
+    }
+
+    //! Left edge, in screen pixels, of the counters and the zone distance that show; -1 when the column shows nothing
+    protected float GetMatchInfoColumnLeft()
     {
         float left = -1;
         left = LeftOfRightAlignedText( m_PlayerCountPanel, m_PlayerTextWidget, left );
@@ -110,6 +120,13 @@ class BattleRoyaleHud
         left = LeftOfRightAlignedText( m_KillCountPanel, m_KillTextWidget, left );
         left = LeftOfRightAlignedText( m_ZoneDistancePanel, m_DistanceTextWidget, left );
         return left;
+    }
+
+    //! Called every frame: shows the silent mode icon, in its own row under the zone distance, while the mode is on and
+    //! the vanilla HUD shows (BattleRoyaleCompass.IsHudShown)
+    void UpdateSilentMode( bool active )
+    {
+        SetVisible( m_SilentModePanel, active );
     }
 
     //! Right edge, in screen pixels, of the centred lines at the top (phase, zone damage) as drawn now; -1 when

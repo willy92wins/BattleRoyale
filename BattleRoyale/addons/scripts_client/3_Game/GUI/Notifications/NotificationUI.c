@@ -612,10 +612,11 @@ modded class NotificationUI
 	protected static float s_BR_LastSoundTime = -1000;
 	protected static const float BR_MSG_SOUND_GAP = 1.0;
 
-	//! Plays the notification sound in gameplay only (a player exists), at most once per BR_MSG_SOUND_GAP seconds
+	//! Plays the notification sound in gameplay only (a player exists), at most once per BR_MSG_SOUND_GAP seconds,
+	//! and never in silent mode
 	protected void BR_PlayNotificationSound()
 	{
-		if (!GetGame().GetPlayer())
+		if (!GetGame().GetPlayer() || BattleRoyaleSilentMode.IsActive())
 			return;
 
 		float now = GetGame().GetTickTime();

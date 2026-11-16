@@ -23,7 +23,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
      ignorepointer 1
      clipchildren 0
      position 0 0
-     size 212 120
+     size 212 152
      halign right_ref
      hexactpos 1
      vexactpos 1
@@ -207,6 +207,35 @@ FrameWidgetClass BattleRoyaleHudFrame {
          "exact text" 0
          "text halign" right
          "text valign" center
+        }
+       }
+      }
+      PanelWidgetClass SilentModePanel {
+       visible 0
+       ignorepointer 1
+       clipchildren 0
+       position 0 120
+       size 212 32
+       halign right_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       {
+        ImageWidgetClass SilentModeIcon {
+         ignorepointer 1
+         position 7 0
+         size 32 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "Vigrid-BattleRoyale/GUI/textures/hud/br_silent_mode_ca.paa"
+         mode blend
+         "src alpha" 1
+         "no wrap" 1
+         stretch 1
         }
        }
       }
@@ -857,7 +886,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
     PanelWidgetClass MiniMapPanel {
      ignorepointer 1
      clipchildren 1
-     position 0 140
+     position 0 160
      size 200 200
      halign right_ref
      hexactpos 1
