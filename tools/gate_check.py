@@ -17,7 +17,7 @@ PARAM = "ES-OVERRIDE-PARAM-NAME-MISMATCH"  # RemovePlayer overrides BattleRoyale
 
 ALLOWED = {
     "scripts_client": {
-        (LAYOUT, "3_game/gui/notifications/notificationui.c"): 1,
+        (LAYOUT, "3_game/gui/notifications/notificationui.c"): 2,
         (LAYOUT, "5_mission/cot/gui/brmastercontrolsmodule.c"): 1,
         (LAYOUT, "5_mission/gui/hud/battleroyalekillfeed.c"): 1,
         (LAYOUT, "5_mission/gui/mapmenu.c"): 2,

@@ -1,19 +1,20 @@
 //! Widgets of one notification drawn as a kill feed row (gui/layouts/hud/notification.layout), and its text
 class BR_NotificationRow
 {
-	static const int LINE_COUNT = 6;    //!< text lines in notification.layout
+	static const int LAYOUT_LINES = 6;  //!< text lines in notification.layout; the next ones come from notification_line.layout
 
 	Widget m_Root;
 	Widget m_Back;
 	Widget m_Accent;
 	ImageWidget m_Icon;
-	TextWidget m_Lines[LINE_COUNT];
+	ref array<TextWidget> m_Lines;      //!< the lines of the layout, then the ones EnsureLines added; kept for every layout
 	string m_Text;      //!< the whole text, translated; wrapped into the lines by NotificationUI.BR_LayoutRow
 
 	//! Finds the widgets of the row under root; false when the layout lacks one
 	bool Init(Widget root)
 	{
 		m_Root = root;
+		m_Lines = new array<TextWidget>;
 		m_Back = root.FindAnyWidget("BRNotificationBack");
 		m_Accent = root.FindAnyWidget("BRNotificationAccent");
 		m_Icon = ImageWidget.Cast(root.FindAnyWidget("BRNotificationIcon"));
@@ -21,14 +22,38 @@ class BR_NotificationRow
 			return false;
 
 		string line_name;
-		for (int i = 0; i < LINE_COUNT; i++)
+		TextWidget line;
+		for (int i = 0; i < LAYOUT_LINES; i++)
 		{
 			line_name = "BRNotificationLine" + i.ToString();
-			m_Lines[i] = TextWidget.Cast(root.FindAnyWidget(line_name));
-			if (!m_Lines[i])
+			line = TextWidget.Cast(root.FindAnyWidget(line_name));
+			if (!line)
 				return false;
+			m_Lines.Insert(line);
 		}
 
+		return true;
+	}
+
+	//! At least count lines: the missing ones are created from line_layout under the row, once, and kept to be used
+	//! again (hidden while a layout does not need them). Called when the row is laid out, never every frame.
+	//! False when a line could not be created: the row then has fewer lines than count
+	bool EnsureLines(int count, string line_layout)
+	{
+		Widget created;
+		TextWidget line;
+		while (m_Lines.Count() < count)
+		{
+			created = g_Game.GetWorkspace().CreateWidgets(line_layout, m_Root);
+			line = TextWidget.Cast(created);
+			if (!line)
+			{
+				if (created)
+					created.Unlink();
+				return false;
+			}
+			m_Lines.Insert(line);
+		}
 		return true;
 	}
 }
@@ -48,11 +73,14 @@ modded class NotificationUI
 	protected static const float BR_NOTIFICATION_TOP = 0.05;
 
 	protected static const string BR_ROW_LAYOUT = "Vigrid-BattleRoyale/GUI/layouts/hud/notification.layout";
+	//! One more text line, as BRNotificationLine1-5, for a text longer than the lines of BR_ROW_LAYOUT
+	protected static const string BR_LINE_LAYOUT = "Vigrid-BattleRoyale/GUI/layouts/hud/notification_line.layout";
 
 	// Geometry of notification.layout, in layout units: the one of a kill feed row (BattleRoyaleKillFeed)
 	protected static const float BR_ROW_HEIGHT = 30;        //!< band of one line
 	protected static const float BR_ROW_PITCH = 40;         //!< from one band to the next, as the kill feed rows
 	protected static const float BR_LINE_PITCH = 26;        //!< from one text line to the next (BRNotificationLine*)
+	protected static const float BR_LINE_Y = 1;             //!< top of the first text line (BRNotificationLine0)
 	protected static const float BR_TEXT_X = 42;
 	protected static const float BR_ROW_PADDING = 10;       //!< after the widest line
 	protected static const float BR_ACCENT_WIDTH = 3;
@@ -74,6 +102,9 @@ modded class NotificationUI
 	protected float m_BR_LayoutLimit;       //!< right limit (screen pixels) the rows were laid out for
 	protected int m_BR_LayoutScreenW;       //!< screen size the rows were laid out for
 	protected int m_BR_LayoutScreenH;
+	protected bool m_BR_LayoutOffset;       //!< m_OffsetEnabled the rows were laid out with
+	protected float m_BR_LayoutRootX;       //!< left edge of the root (screen pixels) the rows were laid out for
+	protected float m_BR_LayoutRootW;       //!< width of the root (screen pixels) the rows were laid out for
 	protected bool m_BR_Unmeasured;         //!< a row could not measure its text: laid out again next frame
 
 	void NotificationUI()
@@ -82,6 +113,8 @@ modded class NotificationUI
 		m_BR_LayoutLimit = -1;
 		m_BR_LayoutScreenW = -1;
 		m_BR_LayoutScreenH = -1;
+		m_BR_LayoutRootX = -1;
+		m_BR_LayoutRootW = -1;
 		s_BR_CentreLeft = -1;
 		BR_PlaceRoot();
 	}
@@ -224,22 +257,53 @@ modded class NotificationUI
 		return text;
 	}
 
-	//! Lays the rows out again when their room changed: a new screen size, or the centred block grew toward them.
+	//! Lays the rows out again when their room changed: a new screen size, the centred block grew toward them, a menu
+	//! panel started or stopped moving the root (m_OffsetEnabled), or the root moved or was resized under the rows.
 	//! A row that could not measure its text tries again every frame
 	protected void BR_UpdateRows()
 	{
 		if (!m_BR_Rows || m_BR_Rows.Count() == 0)
 			return;
 
-		int screen_w;
-		int screen_h;
-		GetScreenSize(screen_w, screen_h);
-
-		if (!m_BR_Unmeasured && screen_w == m_BR_LayoutScreenW && screen_h == m_BR_LayoutScreenH && BR_CentreLimit(screen_w) >= m_BR_LayoutLimit - BR_RELAYOUT_PX)
+		if (!m_BR_Unmeasured && BR_LayoutIsCurrent())
 			return;
 
 		BR_LayoutRows();
 		UpdateTargetHeight();
+	}
+
+	//! True when the rows were laid out for the room there is now (see BR_UpdateRows)
+	protected bool BR_LayoutIsCurrent()
+	{
+		int screen_w;
+		int screen_h;
+		GetScreenSize(screen_w, screen_h);
+		if (screen_w != m_BR_LayoutScreenW || screen_h != m_BR_LayoutScreenH)
+			return false;
+		if (BR_CentreLimit(screen_w) < m_BR_LayoutLimit - BR_RELAYOUT_PX)
+			return false;
+		if (m_OffsetEnabled != m_BR_LayoutOffset)
+			return false;
+		if (!m_Root)
+			return true;
+
+		float root_x;
+		float root_y;
+		m_Root.GetScreenPos(root_x, root_y);
+		if (Math.AbsFloat(root_x - m_BR_LayoutRootX) > 0.5)
+			return false;
+
+		// The root keeps the width BR_SetRootWidth gave it, except while vanilla moves it: then the rows follow its width
+		if (m_OffsetEnabled)
+		{
+			float root_w;
+			float root_h;
+			m_Root.GetScreenSize(root_w, root_h);
+			if (Math.AbsFloat(root_w - m_BR_LayoutRootW) > 0.5)
+				return false;
+		}
+
+		return true;
 	}
 
 	//! Right limit of the rows, in screen pixels, before the gap: the left edge of what is centred at the top, or the
@@ -280,7 +344,8 @@ modded class NotificationUI
 	}
 
 	//! Lays every row out for the room there is now: from the left edge of the stack to BR_CENTRE_GAP short of what
-	//! is centred at the top, never narrower than BR_MIN_ROOM
+	//! is centred at the top, never narrower than BR_MIN_ROOM. While a menu panel moves the root (m_OffsetEnabled),
+	//! never wider than the root as it is on screen, which is not resized then
 	protected void BR_LayoutRows()
 	{
 		int screen_w;
@@ -291,19 +356,38 @@ modded class NotificationUI
 
 		float root_x = screen_w * BR_NOTIFICATION_LEFT;
 		float root_y;
+		float root_w = -1;
+		float root_h;
 		if (m_Root)
+		{
 			m_Root.GetScreenPos(root_x, root_y);
+			m_Root.GetScreenSize(root_w, root_h);
+		}
 
 		float room_px = limit - BR_CENTRE_GAP * px_per_unit - root_x;
 		room_px = Math.Max(room_px, BR_MIN_ROOM * px_per_unit);
 
-		// The vanilla root is 531 px wide (notifications.layout:3) and clips the rows: it takes the width of the room.
-		// m_Width is the width vanilla Update keeps when it animates the height (notificationui.c:143,187,192)
-		BR_SetRootWidth(room_px);
+		if (m_OffsetEnabled)
+		{
+			// Vanilla moves the root under the panel of the menu (UpdateOffset, notificationui.c:148-174) and gives it
+			// its place back when the panel closes: the root is left alone, the rows fit in its width as it is
+			if (root_w > 0)
+				room_px = Math.Min(room_px, root_w);
+		}
+		else
+		{
+			// The vanilla root is 531 px wide (notifications.layout:3) and clips the rows: it takes the width of the
+			// room. m_Width is the width vanilla Update keeps when it animates the height (notificationui.c:143,187,192)
+			BR_SetRootWidth(room_px);
+			root_w = room_px;
+		}
 
 		m_BR_LayoutLimit = limit;
 		m_BR_LayoutScreenW = screen_w;
 		m_BR_LayoutScreenH = screen_h;
+		m_BR_LayoutOffset = m_OffsetEnabled;
+		m_BR_LayoutRootX = root_x;
+		m_BR_LayoutRootW = root_w;
 		m_BR_Unmeasured = false;
 
 		BR_NotificationRow row;
@@ -316,9 +400,10 @@ modded class NotificationUI
 	}
 
 	//! Writes the text of row in as many lines as it needs to be at most room_px wide (screen pixels, the whole band)
-	//! and sizes the band, the accent and the element to them. Nothing is cut: a word wider than a line is split, and
-	//! lines past BR_NotificationRow.LINE_COUNT go on the last one. False when the text could not be measured: it is
-	//! then one line on a band as wide as the room
+	//! and sizes the band, the accent and the element to them: the row grows down, one BR_LINE_PITCH per line.
+	//! Nothing is cut: a word wider than a line is split, and a row with more lines than notification.layout gets
+	//! more line widgets (BR_NotificationRow.EnsureLines). False when the text could not be measured: it is then
+	//! written at its own line breaks on a band as wide as the room, and laid out again next frame
 	protected bool BR_LayoutRow(BR_NotificationRow row, float room_px, float px_per_unit)
 	{
 		float text_room = room_px - (BR_TEXT_X + BR_ROW_PADDING) * px_per_unit;
@@ -326,12 +411,17 @@ modded class NotificationUI
 		array<string> lines = new array<string>;
 		bool measured = BR_WrapText(row, row.m_Text, text_room, lines);
 
-		// Lines past the last widget join it: the band overflows its room rather than losing text
-		int last = BR_NotificationRow.LINE_COUNT - 1;
-		while (lines.Count() > BR_NotificationRow.LINE_COUNT)
+		if (!row.EnsureLines(lines.Count(), BR_LINE_LAYOUT))
 		{
-			lines.Set(last, lines.Get(last) + " " + lines.Get(last + 1));
-			lines.RemoveOrdered(last + 1);
+			// Only when notification_line.layout cannot be loaded: the lines past the last widget join it, the
+			// band overflows its room rather than losing text
+			Error("[NotificationUI] " + BR_LINE_LAYOUT + " could not be loaded");
+			int last = row.m_Lines.Count() - 1;
+			while (lines.Count() > row.m_Lines.Count())
+			{
+				lines.Set(last, lines.Get(last) + " " + lines.Get(last + 1));
+				lines.RemoveOrdered(last + 1);
+			}
 		}
 
 		int line_count = lines.Count();
@@ -339,14 +429,18 @@ modded class NotificationUI
 		int line_w;
 		int line_h;
 		TextWidget line_widget;
-		for (int i = 0; i < BR_NotificationRow.LINE_COUNT; i++)
+		for (int i = 0; i < row.m_Lines.Count(); i++)
 		{
-			line_widget = row.m_Lines[i];
+			line_widget = row.m_Lines.Get(i);
 			if (i >= line_count)
 			{
 				line_widget.Show(false);
 				continue;
 			}
+
+			// The lines of notification.layout have their place in it; the added ones are placed here, in screen pixels
+			if (i >= BR_NotificationRow.LAYOUT_LINES)
+				line_widget.SetPos(BR_TEXT_X * px_per_unit, (BR_LINE_Y + i * BR_LINE_PITCH) * px_per_unit);
 
 			line_widget.Show(true);
 			line_widget.SetText(lines.Get(i));
@@ -370,7 +464,8 @@ modded class NotificationUI
 	}
 
 	//! Splits text into lines at most room_px wide as measured: at its line breaks, between words, and inside a word
-	//! wider than a line. False when the text could not be measured: lines then holds the whole text as one line
+	//! wider than a line. Empty lines of the text are left out. False when the text could not be measured: lines
+	//! then holds the text cut at its line breaks only
 	protected bool BR_WrapText(BR_NotificationRow row, string text, float room_px, array<string> lines)
 	{
 		array<string> paragraphs = new array<string>;
@@ -404,8 +499,9 @@ modded class NotificationUI
 				width = BR_MeasureText(row, candidate);
 				if (width < 0)
 				{
+					// array.InsertAll (enscript.c:449)
 					lines.Clear();
-					lines.Insert(text);
+					lines.InsertAll(paragraphs);
 					return false;
 				}
 
@@ -467,7 +563,7 @@ modded class NotificationUI
 	//! All lines have the same font and size, so the first one measures for all
 	protected int BR_MeasureText(BR_NotificationRow row, string text)
 	{
-		TextWidget line_widget = row.m_Lines[0];
+		TextWidget line_widget = row.m_Lines.Get(0);
 		line_widget.SetText(text);
 
 		int text_w;
