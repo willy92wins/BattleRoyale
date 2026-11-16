@@ -167,10 +167,11 @@ class BattleRoyaleStartMatch: BattleRoyaleState
         m_FirstArea = m_ThisArea;
     }
 
-    //! Zone state for a client that restarted its mission or joined late: the first zone once it is shown
+    //! Zone state for a client that restarted its mission or joined late: the first zone once it is shown. A paused
+    //! state stays the current one after StartZoning deactivates it, so it answers inactive too, as the rounds do
     void SendZoneStateTo(PlayerIdentity identity)
     {
-        if (!identity || !IsActive() || !m_FirstArea)
+        if (!identity || !m_FirstArea)
             return;
 
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", new Param3<vector, float, bool>( m_FirstArea.GetCenter(), m_FirstArea.GetRadius(), false ), true, identity);
