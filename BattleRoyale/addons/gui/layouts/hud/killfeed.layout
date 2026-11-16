@@ -11,8 +11,8 @@ FrameWidgetClass KillFeedRoot {
  {
   FrameWidgetClass KillFeedPanel {
    ignorepointer 1
-   position 96 4
-   size 960 200
+   position 96 1
+   size 960 230
    halign right_ref
    hexactpos 1
    vexactpos 1
