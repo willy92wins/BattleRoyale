@@ -249,6 +249,23 @@ modded class MissionGameplay
 		m_BattleRoyaleKillFeed.Update( m_BattleRoyaleHud, m_BattleRoyaleMiniMap, m_BattleRoyaleCompass );
 	}
 
+	//! Called once per frame by the client: the notifications at the top left (NotificationUI, 3_Game) wrap short of
+	//! what is centred at the top, the phase lines and the compass under them
+	void UpdateNotificationRoom()
+	{
+		float centre_left = -1;
+		if (m_BattleRoyaleHud)
+			centre_left = m_BattleRoyaleHud.GetCentreLinesLeft();
+		if (m_BattleRoyaleCompass)
+		{
+			float compass_left = m_BattleRoyaleCompass.GetScreenLeft();
+			if (compass_left >= 0 && (centre_left < 0 || compass_left < centre_left))
+				centre_left = compass_left;
+		}
+
+		NotificationUI.BR_SetCentreLeft(centre_left);
+	}
+
 	//! Called once per frame by the client; the compass follows the visibility of the vanilla HUD
 	void UpdateCompass()
 	{

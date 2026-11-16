@@ -24,7 +24,7 @@ class BattleRoyaleHud
     protected static const int DISTANCE_UNREACHABLE = 3;
 
     //! The zone arrow icon (dayz_gui icon_arrow) points down at rest; this turns it to point up at angle 0
-    protected static const float ZONE_ARROW_ICON_OFFSET = 180;
+    protected static const float ZONE_ARROW_ICON_OFFSET = 0;  //!< br_zone_arrow_ca.paa points up
 
     //! Place of SilentModePanel in br_hud.layout, in layout units: right aligned in HudPanel, its x is the distance
     //! between both right edges. It stays SILENT_MODE_GAP left of the match info column
@@ -184,6 +184,39 @@ class BattleRoyaleHud
         right = RightOfCentredText( m_PhasePanel, m_PhaseTextWidget, right );
         right = RightOfCentredText( m_ZoneDamagePanel, m_ZoneDamageTextWidget, right );
         return right;
+    }
+
+    //! Left edge, in screen pixels, of the centred lines at the top (phase, zone damage) as drawn now; -1 when
+    //! neither shows. The notifications at the top left wrap short of it
+    float GetCentreLinesLeft()
+    {
+        float left = -1;
+        left = LeftOfCentredText( m_PhasePanel, m_PhaseTextWidget, left );
+        left = LeftOfCentredText( m_ZoneDamagePanel, m_ZoneDamageTextWidget, left );
+        return left;
+    }
+
+    //! The smaller of left and the left edge of the text of panel while panel shows; the text is centred in its box
+    protected float LeftOfCentredText( Widget panel, TextWidget text, float left )
+    {
+        if ( !panel || !text || !panel.IsVisibleHierarchy() )
+            return left;
+
+        float x;
+        float y;
+        float w;
+        float h;
+        text.GetScreenPos( x, y );
+        text.GetScreenSize( w, h );
+
+        int text_w;
+        int text_h;
+        text.GetTextSize( text_w, text_h );
+
+        float text_left = x + ( w - text_w ) * 0.5;
+        if ( left < 0 || text_left < left )
+            return text_left;
+        return left;
     }
 
     //! The smaller of left and the left edge of the text of row while row shows; the text is right aligned in its box
