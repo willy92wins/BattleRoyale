@@ -7,7 +7,8 @@ class CfgPatches
 		requiredVersion=0.1;
 		requiredAddons[]=
 		{
-			"DZ_Data"
+			"DZ_Data",
+			"DZ_Gear_Navigation"
 		};
 	};
 };
@@ -22,4 +23,21 @@ class RscMapControl: MapDefaults
 	maxUserMapAlpha=0;
 	// Forests drawn without the green tint over the photo (vanilla alpha 0.5); roads, names and grid stay
 	colorForest[]={0.36000001,0.77999997,0.079999998,0};
+};
+// The tourist map item opens the 2D map with its own properties (DZ/gear/navigation/config.cpp:232-236), which
+// inherit MapDefaults and not RscMapControl: without the same keys, a map unfolded from the hands is the paper map
+class CfgVehicles
+{
+	class ItemMap;
+	class ChernarusMap: ItemMap
+	{
+		class MapProperties: MapDefaults
+		{
+			maxSatelliteAlpha=1;
+			alphaFadeStartScale=4;
+			alphaFadeEndScale=4;
+			maxUserMapAlpha=0;
+			colorForest[]={0.36000001,0.77999997,0.079999998,0};
+		};
+	};
 };
