@@ -886,7 +886,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
     PanelWidgetClass MiniMapPanel {
      ignorepointer 1
      clipchildren 1
-     position 0 140
+     position 0 160
      size 200 200
      halign right_ref
      hexactpos 1
