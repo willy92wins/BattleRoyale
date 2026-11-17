@@ -79,6 +79,11 @@ class BattleRoyaleServer: BattleRoyaleBase
         m_Spectators = new BattleRoyaleSpectators;
         m_CharacterTypes = new map<string, string>;
 
+        // The actions that hurt or hold another player are blocked in the lobby (BRProtectedPlayerActions.c)
+        BattleRoyaleSpawnsData spawnsData = config_data.GetSpawnsData();
+        if (spawnsData)
+            ActionBase.BR_SetLobbyArea(spawnsData.spawn_point, spawnsData.radius);
+
         BRMatchDebris.s_Enabled = m_ServerData.UsesSerialMatches();
         if (BRMatchDebris.s_Enabled)
             BattleRoyaleUtils.Info("[Serial] Serial matches on: the server stays up between matches (full restart every " + m_ServerData.serial_restart_every_matches + " matches, 0 = never)");
@@ -568,9 +573,10 @@ class BattleRoyaleServer: BattleRoyaleBase
     static const float LOBBY_INFECTED_MARGIN = 30;
     protected float m_LobbyInfectedSweepTime;
 
-    //! Removes the living infected within the lobby radius and its margin. Between matches always; during a match only
-    //! while a player of the waiting room is there, so a lobby that lies inside the play area keeps the infected of the
-    //! match the rest of the time
+    //! Removes the living infected within the lobby radius and its margin. While the lobby holds players: between
+    //! matches, during the spawn selection and the preparation that moves them to the match, and later while a player
+    //! of the waiting room is there, so a lobby that lies inside the play area keeps the infected of the match the rest
+    //! of the time
     protected void SweepLobbyInfected()
     {
         BattleRoyaleDebug lobby = BattleRoyaleDebug.Cast( GetState(0) );
@@ -587,6 +593,10 @@ class BattleRoyaleServer: BattleRoyaleBase
         DayZPlayerUtils.SceneGetEntitiesInBox(boxMin, boxMax, entities, QueryFlags.DYNAMIC);
 
         bool lobbyInUse = !IsMatchInProgress();
+        BattleRoyaleState current = GetCurrentState();
+        if (BattleRoyaleSpawnSelection.Cast(current) || BattleRoyalePrepare.Cast(current))
+            lobbyInUse = true;
+
         array<ZombieBase> infected = new array<ZombieBase>;
         foreach (EntityAI entity : entities)
         {
