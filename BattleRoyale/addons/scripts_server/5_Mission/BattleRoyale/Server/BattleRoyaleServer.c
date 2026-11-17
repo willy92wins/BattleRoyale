@@ -333,8 +333,10 @@ class BattleRoyaleServer: BattleRoyaleBase
         if (!mission || !identity)
             return null;
 
+        // A spectator's identity still answers its anchor as its player (measured in game): the anchor's type is not
+        // the player's, the type cached at its death or when it left the waiting room is
         string character_type = "SurvivorM_Mirek";
-        if (previous)
+        if (previous && !(m_Spectators && m_Spectators.IsAnchor(previous)))
             character_type = previous.GetType();
         else if (m_CharacterTypes.Contains(identity.GetId()))
             character_type = m_CharacterTypes.Get(identity.GetId());
