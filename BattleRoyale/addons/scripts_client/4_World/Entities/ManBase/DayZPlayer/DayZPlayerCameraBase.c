@@ -4,8 +4,8 @@
 //! character's aim back after freelook or tracking. The character's aim is limited by its body and animations, the view
 //! only by the look limits, so after a while they point at different heights: the player shoots where the view points,
 //! while every other client, spectators included, shows the weapon aiming higher or lower. While a firearm is raised, a
-//! gap above BR_AIM_SYNC_START degrees is closed smoothly; freelook, tracking, a lifted weapon and lowered or empty hands
-//! are left as they are
+//! gap above BR_AIM_SYNC_START degrees is closed smoothly; freelook, tracking and lowered or empty hands are left as they
+//! are, and vertical mouse input or a weapon lifted against an obstacle pause a correction
 modded class DayZPlayerCameraBase
 {
 	//! Degrees between the view and the character's aim that start a correction, and that end it
@@ -44,8 +44,10 @@ modded class DayZPlayerCameraBase
 		}
 
 		// Only in a frame where the mouse does not move the aim up or down: the view takes that move at once and the
-		// character in its own update, so a gap measured meanwhile would hold the view back
-		if (m_pInput.GetAimDelta(pDt)[1] != 0)
+		// character in its own update, so a gap measured meanwhile would hold the view back. A weapon lifted against an
+		// obstacle is left to vanilla too. Both only pause a correction under way
+		DayZPlayerImplement player = DayZPlayerImplement.Cast(m_pPlayer);
+		if (m_pInput.GetAimDelta(pDt)[1] != 0 || player.IsLiftWeapon())
 		{
 			m_BR_AimSyncVelocity[0] = 0;
 			return angle;
@@ -76,8 +78,7 @@ modded class DayZPlayerCameraBase
 		return pAngle + pAngleAdd;
 	}
 
-	//! A raised firearm that is not lifted against an obstacle, no freelook, no tracking and no freelook angle still
-	//! returning (vanilla takes the aim back then)
+	//! A raised firearm, no freelook, no tracking and no freelook angle still returning (vanilla takes the aim back then)
 	protected bool BR_IsAimSyncAllowed(float pAngleAdd)
 	{
 		if (!m_CommandWeapons || !m_pInput || Math.AbsFloat(pAngleAdd) > 0.001)
@@ -87,7 +88,7 @@ modded class DayZPlayerCameraBase
 			return false;
 
 		DayZPlayerImplement player = DayZPlayerImplement.Cast(m_pPlayer);
-		if (!player || !player.IsAlive() || !player.IsRaised() || player.IsLiftWeapon())
+		if (!player || !player.IsAlive() || !player.IsRaised())
 			return false;
 
 		return Weapon_Base.Cast(player.GetHumanInventory().GetEntityInHands()) != null;
