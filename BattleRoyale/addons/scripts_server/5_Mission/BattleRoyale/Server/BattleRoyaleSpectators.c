@@ -341,6 +341,9 @@ class BattleRoyaleSpectators
 
 		anchor.SetAllowDamage(false);
 		dBodyEnableGravity(anchor, false);
+		// CreatePlayer stands the new body on the ground, inside the watched player, whatever height it was given: it
+		// goes under the ground in this same frame instead of waiting for the next UpdateAnchors, up to 1 s later
+		anchor.SetPosition(AnchorPosition(target));
 		SetAnchor(identityId, anchor);
 		GetGame().SelectPlayer(identity, anchor);
 		if (previous && previous != anchor)
