@@ -68,34 +68,53 @@ modded class MissionServer
 			BattleRoyaleUtils.Trace("LogoutCancelEventTypeID");
 			break;
 		}
-		super.OnEvent(eventTypeId, params);
-
-		// After the whole chain, which ignores the disconnect of a client without a body
+		// Scheduled before the chain: a handler of another mod down the chain may stop on the null body of this event
 		if (eventTypeId == ClientDisconnectedEventTypeID)
-			BR_DisconnectSpectator(params);
+			BR_ScheduleSpectatorDisconnect(params);
+
+		super.OnEvent(eventTypeId, params);
 	}
 
 	//! Vanilla ignores the disconnect of a client that controls no body (OnEvent, "Player is empty"), and a spectator
 	//! controls none (BattleRoyaleSpectators selects no player for it): nothing disconnected a spectator who left, so the
-	//! server kept that player in the game. The anchor body of the spectator stands in for it and is disconnected at
-	//! once, as the body of a dead player is
-	protected void BR_DisconnectSpectator(Param params)
+	//! server kept that player in the game. The anchor body of the spectator stands in for it on the next frame, after
+	//! the whole event chain
+	protected void BR_ScheduleSpectatorDisconnect(Param params)
 	{
 		ClientDisconnectedEventParams disco;
 		if (!Class.CastTo(disco, params) || !disco.param1 || disco.param2)
 			return;
 
 		BattleRoyaleServer br = BattleRoyaleServer.Cast( m_BattleRoyale );
+		if (!br || !br.GetSpectatorAnchor(disco.param1))
+			return;
+
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(BR_DisconnectSpectator, 0, false, disco.param1.GetId());
+	}
+
+	//! The anchor body goes through PlayerDisconnected as the body of a dead player does: the spectator entries are
+	//! cleared, the anchor is deleted and the identity is disconnected. Nothing to do once the identity or the anchor is gone
+	protected void BR_DisconnectSpectator(string identityId)
+	{
+		BattleRoyaleServer br = BattleRoyaleServer.Cast( m_BattleRoyale );
 		if (!br)
 			return;
 
-		PlayerIdentity identity = disco.param1;
-		PlayerBase anchor = br.GetSpectatorAnchor(identity);
-		if (!anchor)
-			return;
+		array<PlayerIdentity> identities = new array<PlayerIdentity>;
+		GetGame().GetPlayerIndentities(identities);
+		foreach (PlayerIdentity identity : identities)
+		{
+			if (!identity || identity.GetId() != identityId)
+				continue;
 
-		BattleRoyaleUtils.Info("Spectator " + identity.GetName() + " left the server: disconnected at once");
-		PlayerDisconnected(anchor, identity, identity.GetId());
+			PlayerBase anchor = br.GetSpectatorAnchor(identity);
+			if (!anchor)
+				return;
+
+			BattleRoyaleUtils.Info("Spectator " + identity.GetName() + " left the server: disconnected");
+			PlayerDisconnected(anchor, identity, identityId);
+			return;
+		}
 	}
 
 	override void OnClientPrepareEvent(PlayerIdentity identity, out bool useDB, out vector pos, out float yaw, out int preloadTimeout)
