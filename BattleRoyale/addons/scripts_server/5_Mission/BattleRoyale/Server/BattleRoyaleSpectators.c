@@ -220,6 +220,15 @@ class BattleRoyaleSpectators
 		return m_Anchors.Contains(id) || m_Targets.Contains(id);
 	}
 
+	//! The anchor body of this spectator, null when it has none
+	PlayerBase GetAnchor(PlayerIdentity identity)
+	{
+		if (!identity)
+			return null;
+
+		return m_Anchors.Get(identity.GetId());
+	}
+
 	//! Serial matches: the identity now controls its new lobby character; its anchor body goes away
 	void Release(PlayerIdentity identity)
 	{
