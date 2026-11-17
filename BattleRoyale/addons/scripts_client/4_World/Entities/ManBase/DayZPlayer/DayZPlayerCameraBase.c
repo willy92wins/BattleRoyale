@@ -1,0 +1,71 @@
+#ifndef SERVER
+//! Keeps the player's view lined up with where its character aims while a firearm is raised.
+//! Vanilla moves the view's up/down angle with the mouse on its own (UpdateUDAngleUnlocked) and only takes the
+//! character's aim back after freelook or tracking. The character's aim is limited by its body and animations, the view
+//! only by the look limits, so after a while they point at different heights: the player shoots where the view points,
+//! while every other client, spectators included, shows the weapon aiming higher or lower. While a firearm is raised, a
+//! gap above BR_AIM_SYNC_START degrees is closed smoothly; freelook, tracking and lowered or empty hands are left as they are
+modded class DayZPlayerCameraBase
+{
+	//! Degrees between the view and the character's aim that start a correction, and that end it
+	protected static const float BR_AIM_SYNC_START = 1.0;
+	protected static const float BR_AIM_SYNC_STOP = 0.05;
+	//! Smoothing time of the correction, in seconds
+	protected static const float BR_AIM_SYNC_TIME = 0.1;
+
+	protected bool m_BR_AimSyncing;
+	protected float m_BR_AimSyncVelocity[1];
+
+	override float UpdateUDAngleUnlocked(out float pAngle, out float pAngleAdd, float pMin, float pMax, float pDt)
+	{
+		float angle = super.UpdateUDAngleUnlocked(pAngle, pAngleAdd, pMin, pMax, pDt);
+		if (!BR_IsAimSyncAllowed(pAngleAdd))
+		{
+			m_BR_AimSyncing = false;
+			m_BR_AimSyncVelocity[0] = 0;
+			return angle;
+		}
+
+		float target = m_CommandWeapons.GetBaseAimingAngleUD();
+		if (!m_BR_AimSyncing)
+		{
+			if (Math.AbsFloat(pAngle - target) <= BR_AIM_SYNC_START)
+				return angle;
+
+			m_BR_AimSyncing = true;
+			m_BR_AimSyncVelocity[0] = 0;
+		}
+
+		// The view moves toward the aim; the mouse keeps moving both by the same amount meanwhile
+		pAngle = Math.SmoothCD(pAngle, target, m_BR_AimSyncVelocity, BR_AIM_SYNC_TIME, 1000, pDt);
+		if (Math.AbsFloat(pAngle - target) < BR_AIM_SYNC_STOP)
+		{
+			pAngle = target;
+			m_BR_AimSyncing = false;
+			m_BR_AimSyncVelocity[0] = 0;
+		}
+
+		// Within the look limits, as vanilla keeps the view
+		float lookDown, lookUp, lookLeft, lookRight;
+		m_pPlayer.GetLookLimits(lookDown, lookUp, lookLeft, lookRight);
+		pAngle = Limit(pAngle, lookDown, lookUp);
+		return pAngle + pAngleAdd;
+	}
+
+	//! A raised firearm, no freelook, no tracking and no freelook angle still returning (vanilla takes the aim back then)
+	protected bool BR_IsAimSyncAllowed(float pAngleAdd)
+	{
+		if (!m_CommandWeapons || !m_pInput || Math.AbsFloat(pAngleAdd) > 0.001)
+			return false;
+
+		if (m_pInput.CameraIsFreeLook() || m_pInput.CameraIsTracking())
+			return false;
+
+		DayZPlayerImplement player = DayZPlayerImplement.Cast(m_pPlayer);
+		if (!player || !player.IsAlive() || !player.IsRaised())
+			return false;
+
+		return Weapon_Base.Cast(player.GetHumanInventory().GetEntityInHands()) != null;
+	}
+}
+#endif
