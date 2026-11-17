@@ -330,6 +330,9 @@ modded class MissionGameplay
 				if (GetUApi().GetInputByID(UADayZBRToggleSilentMode).LocalPress()) {
 					BR_NotifySilentMode( BattleRoyaleSilentMode.Toggle() );
 				}
+				if (GetUApi().GetInputByID(UADayZBRSpectate).LocalPress()) {
+					BattleRoyaleClient.Cast( m_BattleRoyale ).WatchMatch();
+				}
 			}
 		}
 

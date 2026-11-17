@@ -21,6 +21,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "PlayerUnstuck", this);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "SpectateCycle", this);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "SpectatorToLobby", this);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "WaitingToSpectator", this);
 #ifdef VPPADMINTOOLS
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "NextState", this, SingleplayerExecutionType.Server);
 #endif
@@ -337,8 +338,10 @@ class BattleRoyaleServer: BattleRoyaleBase
         if (!mission || !identity)
             return null;
 
+        // A spectator's identity still answers its anchor as its player (measured in game): the anchor's type is not
+        // the player's, the type cached at its death or when it left the waiting room is
         string character_type = "SurvivorM_Mirek";
-        if (previous)
+        if (previous && !(m_Spectators && m_Spectators.IsAnchor(previous)))
             character_type = previous.GetType();
         else if (m_CharacterTypes.Contains(identity.GetId()))
             character_type = m_CharacterTypes.Get(identity.GetId());
@@ -361,7 +364,7 @@ class BattleRoyaleServer: BattleRoyaleBase
     //--- Waiting room (general_settings.json enable_waiting_room): during a match, players who joined late, died with
     //--- nobody to watch or left spectating wait in the lobby, outside the match states, for the next match
 
-    //! identity id -> tick time of the last accepted SpectatorToLobby request
+    //! identity id -> tick time of the last accepted SpectatorToLobby or WaitingToSpectator request
     protected ref map<string, float> m_LastLobbyRequest;
     //! True while MoveToWaitingRoom creates the lobby character: OnPlayerConnected then puts an admin in the waiting room too
     protected bool m_ForceWaitingRoom;
@@ -393,6 +396,9 @@ class BattleRoyaleServer: BattleRoyaleBase
         // Enforce cannot call ToString on a call result: the minutes go through a local first
         int minutesLeft = GetMatchMinutesLeft();
         GetCurrentState().MessagePlayerUntranslated(player, notice, minutesLeft.ToString());
+        // With spectating on, the player may watch the match instead; the client names its spectate key
+        if (m_Spectators && m_Spectators.IsEnabled())
+            GetCurrentState().MessagePlayerUntranslated(player, "STR_BR_WAITING_ROOM_SPECTATE");
     }
 
     //! Resends phase, waiting flag and player count to a waiting client whose mission restarted (reconnect):
@@ -452,10 +458,12 @@ class BattleRoyaleServer: BattleRoyaleBase
     }
 
     //! Moves a connected player out of the running match into the waiting room, with a new lobby character.
-    //! Does nothing between matches (the lobby takes the player) or with the setting off
+    //! Does nothing between matches (the lobby takes the player), while a serial match turnover is still giving
+    //! players their lobby characters, or with the setting off. The cleanup that follows the returns may outlast the
+    //! next lobby: the match after it already has its waiting room
     bool MoveToWaitingRoom(PlayerIdentity identity)
     {
-        if (!identity || !IsWaitingRoomEnabled() || !IsMatchInProgress() || m_Turnover)
+        if (!identity || !IsWaitingRoomEnabled() || !IsMatchInProgress() || IsReturningPlayers())
             return false;
 
         PlayerBase previous = PlayerBase.Cast( identity.GetPlayer() );
@@ -499,6 +507,46 @@ class BattleRoyaleServer: BattleRoyaleBase
         m_LastLobbyRequest.Set(id, now);
 
         MoveToWaitingRoom(sender);
+    }
+
+    //! Asked by a waiting player's client (the spectate key): leave the waiting room and watch the running match as its
+    //! dead players do, in the same states. The lobby character goes away; the ready key brings the player back
+    void WaitingToSpectator(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server || !sender || !m_Spectators || !m_Spectators.IsEnabled() || m_Spectators.IsSpectator(sender))
+            return;
+
+        PlayerBase waiting = PlayerBase.Cast( sender.GetPlayer() );
+        if (!waiting || !waiting.IsAlive() || !waiting.br_waiting)
+            return;
+
+        // One request every 2 s per identity, shared with SpectatorToLobby; the rest are dropped
+        string id = sender.GetId();
+        float now = GetGame().GetTickTime();
+        if (!m_LastLobbyRequest)
+            m_LastLobbyRequest = new map<string, float>;
+        if (m_LastLobbyRequest.Contains(id) && now - m_LastLobbyRequest.Get(id) < 2.0)
+            return;
+        m_LastLobbyRequest.Set(id, now);
+
+        // Read before the lobby character goes away: the spectator comes back to the lobby with the same look
+        string characterType = waiting.GetType();
+        if (!IsSpectatingPhase() || !m_Spectators.StartFromWaitingRoom(sender, waiting))
+        {
+            GetCurrentState().MessagePlayerUntranslated(waiting, "STR_BR_SPECTATE_NOTHING");
+            return;
+        }
+
+        if (m_CharacterTypes)
+            m_CharacterTypes.Set(id, characterType);
+        BattleRoyaleUtils.Info("Waiting room: " + sender.GetName() + " leaves the waiting room to watch the match");
+    }
+
+    //! True in the states where a dead player of the match starts spectating (OnPlayerKilled): past the first three
+    //! states and before the win and restart states
+    bool IsSpectatingPhase()
+    {
+        return m_States && i_CurrentStateIndex > 2 && i_CurrentStateIndex < m_States.Count() - 2;
     }
 
     //! True while connected players are still being given their lobby characters: the lobby must not start a match yet
@@ -1138,7 +1186,7 @@ class BattleRoyaleServer: BattleRoyaleBase
             GetCurrentState().RemovePlayer(killed);
 
             // Dead players of a running match watch the ones still alive; with spectating off they wait in the lobby
-            if (m_Spectators && i_CurrentStateIndex > 2 && i_CurrentStateIndex < m_States.Count() - 2)
+            if (m_Spectators && IsSpectatingPhase())
             {
                 if (m_Spectators.IsEnabled())
                     m_Spectators.OnPlayerDied(killed);

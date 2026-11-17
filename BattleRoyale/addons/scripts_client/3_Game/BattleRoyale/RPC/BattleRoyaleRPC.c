@@ -501,6 +501,10 @@ class BattleRoyaleRPC
 			{
 				translated_message.Replace("UNSTUCK_KEY", InputUtils.GetButtonNameFromInput("UADayZBRUnstuck", EInputDeviceType.MOUSE_AND_KEYBOARD));
 			}
+			if (translated_message.Contains("SPECTATE_KEY"))
+			{
+				translated_message.Replace("SPECTATE_KEY", InputUtils.GetButtonNameFromInput("UADayZBRSpectate", EInputDeviceType.MOUSE_AND_KEYBOARD));
+			}
 
 			// Created locally; the text is already translated
 			StringLocaliser title = new StringLocaliser("");

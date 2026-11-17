@@ -306,20 +306,45 @@ class BattleRoyaleSpectators
 			return;
 		}
 
-		// The identity owns a new anchor body near the target, then spectates from a camera
 		// Without an anchor the camera never receives the target: the client leaves after its death as before
+		if (!Begin(identity, target, null))
+			BattleRoyaleServer.GetInstance().MoveToWaitingRoom(identity);
+	}
+
+	//! A player of the waiting room asked to watch the running match (the spectate key): it spectates as a dead player
+	//! of the match does, and its lobby character goes away. False when nobody is left to watch or no anchor could be
+	//! made: the player then stays in the waiting room with its lobby character
+	bool StartFromWaitingRoom(PlayerIdentity identity, PlayerBase lobbyCharacter)
+	{
+		if (!IsEnabled() || !identity || !lobbyCharacter)
+			return false;
+
+		PlayerBase target = NextAlive(null, 1);
+		if (!target)
+			return false;
+
+		return Begin(identity, target, lobbyCharacter);
+	}
+
+	//! The identity owns a new anchor body near the target, then spectates the target from a camera. A living body the
+	//! identity controlled until then (a lobby character) is deleted once the anchor took it over. False when no anchor
+	//! could be made: nothing changed then
+	protected bool Begin(PlayerIdentity identity, PlayerBase target, PlayerBase previous)
+	{
+		string identityId = identity.GetId();
 		PlayerBase anchor = PlayerBase.Cast(GetGame().CreatePlayer(identity, "SurvivorM_Mirek", AnchorPosition(target), 0, "NONE"));
 		if (!anchor)
 		{
 			BattleRoyaleUtils.Warn("Spectator anchor could not be created for " + identity.GetName());
-			BattleRoyaleServer.GetInstance().MoveToWaitingRoom(identity);
-			return;
+			return false;
 		}
 
 		anchor.SetAllowDamage(false);
 		dBodyEnableGravity(anchor, false);
 		SetAnchor(identityId, anchor);
 		GetGame().SelectPlayer(identity, anchor);
+		if (previous && previous != anchor)
+			GetGame().ObjectDelete(previous);
 
 		GetGame().SelectPlayer(identity, null);
 		GetGame().SelectSpectator(identity, "BattleRoyaleSpectatorCamera", HeadPosition(target));
@@ -331,6 +356,7 @@ class BattleRoyaleSpectators
 		BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
 		if (server)
 			server.SendZoneStateTo(identity);
+		return true;
 	}
 
 	protected void Watch(PlayerIdentity identity, PlayerBase target)

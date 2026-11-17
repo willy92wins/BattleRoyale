@@ -186,8 +186,9 @@ class BattleRoyaleClient: BattleRoyaleBase
 			{
 				m_FuturePlayArea = new BattleRoyalePlayArea( br_rpc.future_play_area_center, br_rpc.future_play_area_radius );
 
-				// A waiting player is not in this match: no artillery sound for a zone that is not its concern
-				if ( br_rpc.b_ArtillerySound && !br_rpc.waiting )
+				// A waiting player is not in this match: no artillery sound for a zone that is not its concern, unless it
+				// watches the match (the spectate key)
+				if ( br_rpc.b_ArtillerySound && ( !br_rpc.waiting || BattleRoyaleRPC.s_Spectating ) )
 				{
 					ref EffectSound m_ArtySound = SEffectManager.PlaySound("Artillery_Distant_SoundSet", m_FuturePlayArea.GetCenter(), 0.1, 0.1);
 					m_ArtySound.SetAutodestroy(true);
@@ -646,6 +647,15 @@ class BattleRoyaleClient: BattleRoyaleBase
         PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
         GetRPCManager().SendRPC( RPC_DAYZBRSERVER_NAMESPACE, "PlayerUnstuck", NULL, true , NULL, player);
 
+    }
+
+    //! The spectate key: a player of the waiting room asks to watch the running match; the server decides the rest
+    void WatchMatch()
+    {
+        if (!BattleRoyaleRPC.GetInstance().waiting || BattleRoyaleRPC.s_Spectating)
+            return;
+
+        GetRPCManager().SendRPC( RPC_DAYZBRSERVER_NAMESPACE, "WaitingToSpectator", NULL, true );
     }
 
     void StartMatch(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
