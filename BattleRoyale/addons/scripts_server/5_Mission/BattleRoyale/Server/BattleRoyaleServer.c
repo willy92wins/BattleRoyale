@@ -568,13 +568,11 @@ class BattleRoyaleServer: BattleRoyaleBase
     static const float LOBBY_INFECTED_MARGIN = 30;
     protected float m_LobbyInfectedSweepTime;
 
-    //! Removes every infected, alive or dead, within the lobby radius and its margin. Only while the lobby can hold
-    //! players: between matches, and during a match when the waiting room is on
+    //! Removes the living infected within the lobby radius and its margin. Between matches always; during a match only
+    //! while a player of the waiting room is there, so a lobby that lies inside the play area keeps the infected of the
+    //! match the rest of the time
     protected void SweepLobbyInfected()
     {
-        if (IsMatchInProgress() && !IsWaitingRoomEnabled())
-            return;
-
         BattleRoyaleDebug lobby = BattleRoyaleDebug.Cast( GetState(0) );
         if (!lobby)
             return;
@@ -588,23 +586,35 @@ class BattleRoyaleServer: BattleRoyaleBase
         array<EntityAI> entities = new array<EntityAI>;
         DayZPlayerUtils.SceneGetEntitiesInBox(boxMin, boxMax, entities, QueryFlags.DYNAMIC);
 
-        int removed = 0;
+        bool lobbyInUse = !IsMatchInProgress();
+        array<ZombieBase> infected = new array<ZombieBase>;
         foreach (EntityAI entity : entities)
         {
-            ZombieBase infected = ZombieBase.Cast(entity);
-            if (!infected)
+            PlayerBase waiting = PlayerBase.Cast(entity);
+            if (waiting)
+            {
+                if (waiting.br_waiting && waiting.IsAlive())
+                    lobbyInUse = true;
+                continue;
+            }
+
+            ZombieBase zombie = ZombieBase.Cast(entity);
+            if (!zombie || !zombie.IsAlive())
                 continue;
 
-            vector pos = infected.GetPosition();
-            if (vector.Distance(Vector(pos[0], 0, pos[2]), Vector(center[0], 0, center[2])) > radius)
-                continue;
-
-            GetGame().ObjectDelete(infected);
-            removed++;
+            vector pos = zombie.GetPosition();
+            if (vector.Distance(Vector(pos[0], 0, pos[2]), Vector(center[0], 0, center[2])) <= radius)
+                infected.Insert(zombie);
         }
 
-        if (removed > 0 && BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.DEBUG))
-            BattleRoyaleUtils.Debug("Lobby: removed " + removed + " infected");
+        if (!lobbyInUse || infected.Count() == 0)
+            return;
+
+        foreach (ZombieBase removed : infected)
+            GetGame().ObjectDelete(removed);
+
+        if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.DEBUG))
+            BattleRoyaleUtils.Debug("Lobby: removed " + infected.Count() + " infected");
     }
 
     override void Update(float delta)
