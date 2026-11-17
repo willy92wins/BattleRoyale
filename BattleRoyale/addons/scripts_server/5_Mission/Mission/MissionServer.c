@@ -77,8 +77,8 @@ modded class MissionServer
 
 	//! Vanilla ignores the disconnect of a client that controls no body (OnEvent, "Player is empty"), and a spectator
 	//! controls none (BattleRoyaleSpectators selects no player for it): nothing disconnected a spectator who left, so the
-	//! server kept that player in the game. The anchor body of the spectator stands in for it on the next frame, after
-	//! the whole event chain
+	//! server kept that player in the game. A spectator, known by its anchor, is disconnected on the next frame, after the
+	//! whole event chain
 	protected void BR_ScheduleSpectatorDisconnect(Param params)
 	{
 		ClientDisconnectedEventParams disco;
@@ -92,14 +92,13 @@ modded class MissionServer
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(BR_DisconnectSpectator, 0, false, disco.param1.GetId());
 	}
 
-	//! The anchor body goes through PlayerDisconnected as the body of a dead player does: the spectator entries are
-	//! cleared, the anchor is deleted and the identity is disconnected. Nothing to do once the identity or the anchor is gone
+	//! Runs one frame after the client of this identity left while it was spectating. The same id cannot log in again
+	//! while this identity is still in the game (that is the duplicate UID refusal), so the identity found here is the
+	//! one that left. What stands for it goes through PlayerDisconnected as the body of a dead player does: its anchor,
+	//! or the lobby character that the turnover of serial matches, which runs before this call queue, may have given it
+	//! in between. Nothing to do once the identity is gone
 	protected void BR_DisconnectSpectator(string identityId)
 	{
-		BattleRoyaleServer br = BattleRoyaleServer.Cast( m_BattleRoyale );
-		if (!br)
-			return;
-
 		array<PlayerIdentity> identities = new array<PlayerIdentity>;
 		GetGame().GetPlayerIndentities(identities);
 		foreach (PlayerIdentity identity : identities)
@@ -107,12 +106,21 @@ modded class MissionServer
 			if (!identity || identity.GetId() != identityId)
 				continue;
 
-			PlayerBase anchor = br.GetSpectatorAnchor(identity);
-			if (!anchor)
+			PlayerBase body = null;
+			BattleRoyaleServer br = BattleRoyaleServer.Cast( m_BattleRoyale );
+			if (br)
+				body = br.GetSpectatorAnchor(identity);
+			if (!body)
+				body = PlayerBase.Cast( identity.GetPlayer() );
+
+			if (!body)
+			{
+				BattleRoyaleUtils.Warn("Spectator " + identity.GetName() + " left the server with neither an anchor nor a body: not disconnected");
 				return;
+			}
 
 			BattleRoyaleUtils.Info("Spectator " + identity.GetName() + " left the server: disconnected");
-			PlayerDisconnected(anchor, identity, identityId);
+			PlayerDisconnected(body, identity, identityId);
 			return;
 		}
 	}
