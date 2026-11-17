@@ -87,6 +87,60 @@ modded class DayZPlayerImplement
 
 		GetGame().GetMission().AbortMission();
 	}
+
+	//! Sights last reported to the server (EBRSpectateSights)
+	protected int m_BR_ReportedSights = EBRSpectateSights.NONE;
+	//! Seconds before the next report may leave
+	protected float m_BR_SightsReportCooldown = 0;
+
+	override void CommandHandler(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
+	{
+		super.CommandHandler(pDt, pCurrentCommandID, pCurrentCommandFinished);
+
+		BR_ReportSights(pDt);
+	}
+
+	//! The local player reports the sights it looks through to the server whenever they change, so that the players
+	//! spectating it look through them too. One report every 0.1 s at most: sights changed quickly send the last ones,
+	//! because the change is still there on the next tick
+	protected void BR_ReportSights(float pDt)
+	{
+		if (GetGame().GetPlayer() != this)
+			return;
+
+		if (m_BR_SightsReportCooldown > 0)
+			m_BR_SightsReportCooldown -= pDt;
+
+		int sights = EBRSpectateSights.NONE;
+		if (IsInOptics())
+		{
+			// A magnifying optic is drawn as its owner sees it only on the owner's client: on another one its lens is
+			// opaque from inside and its reticle missing, so its spectators stay at the eyes (reported as no sights)
+			EntityAI inHands = GetEntityInHands();
+			ItemOptics optic = ItemOptics.Cast(inHands);
+			Weapon_Base weapon = Weapon_Base.Cast(inHands);
+			if (weapon)
+				optic = weapon.GetAttachedOptics();
+			if (optic && optic.AllowsDOF())
+				sights = EBRSpectateSights.OPTICS;
+		}
+		else if (IsInIronsights())
+		{
+			sights = EBRSpectateSights.IRONSIGHTS;
+		}
+
+		// The server asks again when it dropped a report (SightsResend): the current sights leave even unchanged
+		if (sights == m_BR_ReportedSights && !BattleRoyaleRPC.s_SightsResend)
+			return;
+
+		if (m_BR_SightsReportCooldown > 0)
+			return;
+
+		m_BR_ReportedSights = sights;
+		m_BR_SightsReportCooldown = 0.1;
+		BattleRoyaleRPC.s_SightsResend = false;
+		GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "SightsState", new Param1<int>(sights), true);
+	}
 }
 #endif
 #endif

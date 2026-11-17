@@ -23,6 +23,8 @@ class BattleRoyaleRPC
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "KillFeedEvent", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "MatchInProgress", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SpectateTarget", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SpectateSights", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SightsResend", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetStayConnected", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetWaitingRoom", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetWaiting", this );
@@ -41,6 +43,8 @@ class BattleRoyaleRPC
 	static int s_SpectateTargetHigh = 0;
 	static vector s_SpectateTargetHint = "0 0 0";
 	static string s_SpectateTargetName = "";
+	// Sights the watched player looks through (EBRSpectateSights)
+	static int s_SpectateSights = EBRSpectateSights.NONE;
 
 	// Overlay that tells a spectator apart from a living player in first person
 	static ref Widget s_SpectatorOverlay;
@@ -50,6 +54,7 @@ class BattleRoyaleRPC
 		s_Spectating = false;
 		s_SpectateTargetLow = 0;
 		s_SpectateTargetHigh = 0;
+		s_SpectateSights = EBRSpectateSights.NONE;
 
 		if ( s_SpectatorOverlay )
 		{
@@ -655,6 +660,9 @@ class BattleRoyaleRPC
 			return;
 
 		bool first = !s_Spectating;
+		// Another player: the sights of the previous one no longer apply, the server sends the new one's next
+		if ( data.param1 != s_SpectateTargetLow || data.param2 != s_SpectateTargetHigh )
+			s_SpectateSights = EBRSpectateSights.NONE;
 		s_Spectating = true;
 		s_SpectateTargetLow = data.param1;
 		s_SpectateTargetHigh = data.param2;
@@ -665,6 +673,40 @@ class BattleRoyaleRPC
 			RestoreAfterDeath();
 
 		UpdateSpectatorOverlay( data.param4, data.param5 );
+	}
+
+	// The watched player started or stopped looking through sights
+	void SpectateSights(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param3<int, int, int> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ SPECTATESIGHTS RPC");
+			return;
+		}
+		if ( type != CallType.Client )
+			return;
+
+		// Sights of another player than the one watched now (sent before the last SpectateTarget) do not apply
+		if ( data.param2 != s_SpectateTargetLow || data.param3 != s_SpectateTargetHigh )
+			return;
+
+		// A mode this client does not know (newer server) is shown from the eyes
+		int sights = data.param1;
+		if ( sights < EBRSpectateSights.NONE || sights >= EBRSpectateSights.COUNT )
+			sights = EBRSpectateSights.NONE;
+
+		s_SpectateSights = sights;
+	}
+
+	//! The server dropped one of this client's sights reports (too many at once) and asks for the current sights again:
+	//! the local player reports them on its next tick (DayZPlayerImplement.BR_ReportSights), changed or not
+	static bool s_SightsResend = false;
+
+	void SightsResend(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		if ( type == CallType.Client )
+			s_SightsResend = true;
 	}
 
 	//! Undoes what the vanilla death simulation did on this client (DayZPlayerImplement.SimulateDeath):
