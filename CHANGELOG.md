@@ -1,5 +1,115 @@
 # Changelog
 
+## 1.8.0 (2026-11-17)
+
+### Added
+- Watch the match from the waiting room with V («BR Watch the match» in Controls): a player who waits in the lobby
+  while a match runs, because they joined late or came back from spectating with F1, watches it the way its dead
+  players do, and F1 brings them back to the lobby. The waiting room notice adds «Press V to watch the match.» with
+  the key the player has bound, and a player watching this way hears the artillery of a new zone like a dead
+  spectator. When the server refuses, for example once the match is won, the player gets
+  «Nothing to watch right now: try again in a moment.». It needs the waiting room and spectating on
+  (`enable_waiting_room` and `enable_spectator` in `general_settings.json`). Where V also switches first and third
+  person, as in the profile used for the tests, pressing it in the waiting room flips the lobby character's camera
+  for a moment before spectating starts; while spectating, V still switches first and third person.
+- Spectators in first person look through the watched player's sights: iron sights and optics that do not magnify,
+  with their field of view. Behind a reflex sight, what that player carries on the back, shoulder and belt is hidden,
+  as vanilla does for a player's own optics. With a magnifying optic the view stays at the eyes, because on another
+  player's screen its lens is opaque and has no reticle.
+- Lobby: nobody can force-feed or force-drink another player (food, drinks, tablets, single bites), tie or handcuff
+  them, put the head sack or the gag on them, take or give them blood, or use the defibrillator on them, in any phase:
+  before a match, during the spawn selection, and in the waiting room while a match runs. The client does not offer
+  these actions there, and the server refuses them when the player or the target stands within the lobby circle of
+  `spawns_settings.json` plus 5 m. Untying, removing the sack or the gag, and the harmless actions (bandage, pulse,
+  splint, saline, injections) are still allowed. Outside the lobby nothing changes, also for a player in godmode.
+- Lobby: every 5 s the server removes the living infected within the lobby radius plus 30 m, between matches, during
+  the spawn selection and the preparation, and, during a match, only while somebody waits in the lobby. A lobby that
+  lies inside the play area keeps the match's infected the rest of the time.
+
+### Changed
+- The zone closes gradually instead of jumping to the next one when it locks. From the second zone on, the zone in
+  force shrinks to the announced one, centre and radius moving together, and reaches it exactly at the lock, so a
+  match lasts as long as before; the final zone shrinks to nothing on its centre. The red wall moves continuously, the
+  map and the minimap follow the closing zone, zone damage and the distance on the HUD follow the moving edge, and the
+  zone notices count down to the start of the closing («The zone starts closing in …»). A player who reconnects or
+  joins late gets the closing in progress. Servers set its speed with `zone_shrink_speed` (see the notes).
+- Spectator first person: the camera sits at the watched player's eyes and looks where that player aims, as the
+  vanilla first person camera does, and the watched player's head, headgear, mask and eyewear are hidden on the
+  spectator's screen. It looked along any weapon in the hands, also a lowered one: with the rifle at the hip or across
+  the body while running, the view turned to the ground or sideways, as if it came from the weapon, and it bobbed
+  while the watched player ran.
+
+### Fixed
+- Spectators who left the server could not join again until it restarted: «Player with same UID is already in game»
+  (`0x00040033`). A spectator who leaves is now disconnected at once.
+- The view and the character's aim could drift apart (a vanilla bug), for example at the character's aiming limit when
+  prone in the sights. In third person the shot left from the view, while the other players, spectators included,
+  saw the weapon point higher or lower. With a firearm raised, the view now comes back to the character's aim by
+  itself; vertical mouse input, or the weapon lifted against an obstacle, only pause it. It runs on the client only.
+- A player coming back from spectating, with F1 or at the end of a serial match, came back to the lobby as
+  `SurvivorM_Mirek`, the character of the spectator's anchor; they now come back with their own character.
+- Spectators: for up to a second after spectating started, a naked survivor showed next to the watched player. It was
+  the spectator's anchor, a `SurvivorM_Mirek` with no equipment that keeps the world streamed around the watched
+  player. It is now created at the map corner farthest from the watched player and the lobby, and moved under the
+  watched player in the same frame.
+- Spectators: the anchor no longer drowns under a river or a low shore, and no longer starts a fall about once a second
+  on dry ground. Testers reported drowning sounds from a spectator whose watched player was in a river, and a watched
+  player who heard someone falling next to them.
+- Spectators: the engine makes a new spectator camera every time a player starts spectating and never deletes the old
+  ones, so after spectating a second time, for example F1 then V, two cameras took the view from each other every
+  frame. Only the newest one follows now.
+- Serial matches: during the cleanup after a match, which can outlast the next lobby, the ready key (F1) did nothing
+  for a spectator, and a death with spectating off or with nobody to watch did not reach the waiting room.
+- Map: the player arrow follows a screen size change while the map is open; it kept the old size until the map was
+  reopened.
+
+### Notes
+- New messages between the server and the clients: `StartZoneShrink` (the zone closing), `WaitingToSpectator` (the
+  spectate key), and `SightsState`, `SightsResend` and `SpectateSights` (the watched player's sights, contract in
+  `BattleRoyale_dev/contracts/rpc-1.0.md`). Each client tells the server when its sights change, at most every 0.1 s,
+  and the server passes them on only to the players who watch it. Server and clients should run 1.8.0.
+- `zone_shrink_speed` in `zone_settings.json` sets the speed of the zone closing, in metres per second of the edge
+  point that moves the most. It is 9 by default, faster than a running player and slower than a vehicle, and 0 brings
+  back the jump at the lock. If a closing does not fit before the lock, the round grows by that much.
+  `BattleRoyale_server/README.md` explains the setting and has a table of closing times with the default zones.
+- Each change was reviewed by a second model family (adversarial review of each change). Each was tested in DayZDiag
+  with one player, on its own branch and, where needed, with test hooks that are not part of the release (a
+  solo-match patch, survivor dummies, traces):
+  - zone: the closings of rounds 2 and 3 start on time, the edge moves at 9.09 m/s against 9 by design, zone damage
+    applies outside the zone, and the owner watched the wall and confirmed that it moves continuously;
+  - map: the owner resized the window with the map open, and the arrow followed;
+  - spectate key, with test keys standing in for V and F1: a death starts spectating, F1 goes to the waiting room with
+    its notices, V spectates again, F1 24 s later goes back, V once the match is won gets «Nothing to watch…», and the
+    player comes back with their own character after a death and after V;
+  - leaving while spectating: the spectator who left joined again 25 s later, with no `0x00040033`;
+  - lobby: an infected 14 m from the lobby centre is removed before the match and one 100 m away stays; the server
+    refuses the head sack and force-feeding inside the lobby circle, and both work 100 m outside it;
+  - spectator's anchor: it is created 16.5 km away and moved under the watched player in the same frame, and 0 of 30
+    samples on the spectator's client show it above the ground;
+  - anchor in water and on dry ground: with 1.6 to 2.0 m of water over its head the drowning modifier never turned on
+    and no drowning sound was requested; on dry ground it started 99 falls in 105 s without the fix and none with it;
+  - aim: with an M4A1 raised in third person and the drift provoked by an aiming limit like the one vanilla sets prone
+    in the sights, a 14° gap between the view and the character's aim closed in 11 frames (about 0.35 s), and no
+    correction happened during full-auto bursts;
+  - spectator first person: with the weapon lowered, the old camera looked at the ground and the new one looks
+    forward; with an AI dummy sprinting (it has no aiming angles, so the camera follows its head), the turn of the
+    view from frame to frame fell from 14.5° to 1.5° (RMS); an M68 is looked through with the backpack hidden, an ACOG
+    stays at the eyes, one camera is left after F1 and V, and the client stayed alive after F1.
+- Not tested yet in game:
+  - with two players: that the spectator's first person view does not sway with a real player (the test dummy is an
+    AI without aiming angles), that the watched player no longer hears the anchor's falls, that the aim lines up
+    between players with the aim fix, and the sights a real watched player reports (the tests forced them on the
+    spectator's client);
+  - the zone: the later zones and the final collapse, the map and the minimap while the zone closes, several players
+    and `zone_shrink_speed` = 0;
+  - the spectate key: the real V key (its binding was read, not pressed), serial matches (the way back at the end of
+    a match and the cleanup after it), several real players and the artillery heard by a player watching with V;
+  - the lobby: the client hiding the actions, a pair that walks into the lobby during an action, and the blocked
+    actions other than the head sack and force-feeding;
+  - the aim fix: the aim on the server (the test's aim did not reach it), real prone, a real obstacle, gamepads and
+    the third person vehicle cameras.
+- `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
+
 ## 1.7.0 (2026-11-16)
 
 ### Added
