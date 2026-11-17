@@ -1094,6 +1094,15 @@ class BattleRoyaleServer: BattleRoyaleBase
             m_Spectators.Cycle(sender, data.param1);
     }
 
+    //! The anchor body of a spectator, null when the identity has none
+    PlayerBase GetSpectatorAnchor(PlayerIdentity identity)
+    {
+        if (!m_Spectators)
+            return null;
+
+        return m_Spectators.GetAnchor(identity);
+    }
+
     ref array<PlayerBase> temp_disconnecting;
     override void OnPlayerTick(PlayerBase player, float timeslice)
     {
