@@ -36,14 +36,19 @@ modded class ActionBase
 		return BR_IsLobbyPair(player, victim) && BR_HarmsTargetPlayer();
 	}
 
-	//! The actions that hurt or hold another player, with every vanilla variant inheriting from them
+	//! The actions that hurt or hold another player, with every vanilla variant inheriting from them. One statement per
+	//! line: the compiler ends a statement at a line break, so an expression cannot go on with '||' on the next line
 	protected bool BR_HarmsTargetPlayer()
 	{
-		return IsInherited(ActionForceConsume) || IsInherited(ActionForceConsumeSingle)
-			|| IsInherited(ActionRestrainTarget) || IsInherited(ActionHandcuffTarget)
-			|| IsInherited(ActionCoverHeadTarget) || IsInherited(ActionGagTarget)
-			|| IsInherited(ActionCollectBloodTarget) || IsInherited(ActionCollectSampleTarget)
-			|| IsInherited(ActionGiveBloodTarget) || IsInherited(ActionDefibrilateTarget);
+		if (IsInherited(ActionForceConsume) || IsInherited(ActionForceConsumeSingle))
+			return true;
+		if (IsInherited(ActionRestrainTarget) || IsInherited(ActionHandcuffTarget))
+			return true;
+		if (IsInherited(ActionCoverHeadTarget) || IsInherited(ActionGagTarget))
+			return true;
+		if (IsInherited(ActionCollectBloodTarget) || IsInherited(ActionCollectSampleTarget))
+			return true;
+		return IsInherited(ActionGiveBloodTarget) || IsInherited(ActionDefibrilateTarget);
 	}
 
 #ifdef SERVER
