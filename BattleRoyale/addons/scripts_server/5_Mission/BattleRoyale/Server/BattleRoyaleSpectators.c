@@ -64,6 +64,44 @@ class BattleRoyaleSpectators
 		return pos;
 	}
 
+	//! Where a new anchor is created. CreatePlayer stands the body on the ground at that point whatever height is asked,
+	//! and the clients in range get it there, standing, before it moves under the target. The map corner farthest from the
+	//! target and from the lobby, where the waiting room stands, is out of every client's range
+	protected vector AnchorSpawnPosition(PlayerBase target)
+	{
+		float size = GetGame().GetWorld().GetWorldSize();
+		float inset = 100;
+		vector watched = target.GetPosition();
+		vector lobby = watched;
+		BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+		BattleRoyaleDebug lobbyState;
+		if (server && Class.CastTo(lobbyState, server.GetState(0)))
+			lobby = lobbyState.GetCenterXZ();
+
+		vector best = Vector(inset, 0, inset);
+		float bestDistance = -1;
+		for (int corner = 0; corner < 4; corner++)
+		{
+			vector pos = Vector(inset, 0, inset);
+			if (corner & 1)
+				pos[0] = size - inset;
+			if (corner & 2)
+				pos[2] = size - inset;
+
+			float toWatched = vector.Distance(Vector(pos[0], 0, pos[2]), Vector(watched[0], 0, watched[2]));
+			float toLobby = vector.Distance(Vector(pos[0], 0, pos[2]), Vector(lobby[0], 0, lobby[2]));
+			float distance = Math.Min(toWatched, toLobby);
+			if (distance > bestDistance)
+			{
+				bestDistance = distance;
+				best = pos;
+			}
+		}
+
+		best[1] = GetGame().SurfaceY(best[0], best[2]);
+		return best;
+	}
+
 	protected void UpdateAnchors()
 	{
 		foreach (string id, PlayerBase anchor : m_Anchors)
@@ -332,7 +370,7 @@ class BattleRoyaleSpectators
 	protected bool Begin(PlayerIdentity identity, PlayerBase target, PlayerBase previous)
 	{
 		string identityId = identity.GetId();
-		PlayerBase anchor = PlayerBase.Cast(GetGame().CreatePlayer(identity, "SurvivorM_Mirek", AnchorPosition(target), 0, "NONE"));
+		PlayerBase anchor = PlayerBase.Cast(GetGame().CreatePlayer(identity, "SurvivorM_Mirek", AnchorSpawnPosition(target), 0, "NONE"));
 		if (!anchor)
 		{
 			BattleRoyaleUtils.Warn("Spectator anchor could not be created for " + identity.GetName());
@@ -341,8 +379,8 @@ class BattleRoyaleSpectators
 
 		anchor.SetAllowDamage(false);
 		dBodyEnableGravity(anchor, false);
-		// CreatePlayer stands the new body on the ground, inside the watched player, whatever height it was given: it
-		// goes under the ground in this same frame instead of waiting for the next UpdateAnchors, up to 1 s later
+		// Created far away, standing on the ground (AnchorSpawnPosition): it moves under the target in this same frame
+		// instead of waiting for the next UpdateAnchors, up to 1 s later
 		anchor.SetPosition(AnchorPosition(target));
 		SetAnchor(identityId, anchor);
 		GetGame().SelectPlayer(identity, anchor);
