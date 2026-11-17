@@ -42,10 +42,14 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected Human m_HiddenHeadTarget;
 	protected ref array<EntityAI> m_HiddenHeadItems = new array<EntityAI>;
 	protected float m_HiddenHeadAge;
+	//! The newest spectator camera on this client. The engine makes one for every spectate (SelectSpectator) and never
+	//! deletes the ones before, which would otherwise take the view back every frame
+	protected static BattleRoyaleSpectatorCamera s_Newest;
 
 	void BattleRoyaleSpectatorCamera()
 	{
 		SetEventMask(EntityEvent.FRAME | EntityEvent.POSTFRAME);
+		s_Newest = this;
 	}
 
 	void ~BattleRoyaleSpectatorCamera()
@@ -66,6 +70,14 @@ class BattleRoyaleSpectatorCamera: Camera
 	{
 #ifndef SERVER
 		float timeSlice = m_FrameTimeSlice;
+		// A camera from an earlier spectate gives back what it changed on this client and leaves the view to the newest
+		if (s_Newest != this)
+		{
+			LeaveOptics();
+			ShowHead();
+			return;
+		}
+
 		// Back in the lobby: what this camera changed on this client goes back, also when another camera is the current
 		// one already
 		if (!BattleRoyaleRPC.s_Spectating)
