@@ -451,10 +451,12 @@ class BattleRoyaleServer: BattleRoyaleBase
     }
 
     //! Moves a connected player out of the running match into the waiting room, with a new lobby character.
-    //! Does nothing between matches (the lobby takes the player) or with the setting off
+    //! Does nothing between matches (the lobby takes the player), while a serial match turnover is still giving
+    //! players their lobby characters, or with the setting off. The cleanup that follows the returns may outlast the
+    //! next lobby: the match after it already has its waiting room
     bool MoveToWaitingRoom(PlayerIdentity identity)
     {
-        if (!identity || !IsWaitingRoomEnabled() || !IsMatchInProgress() || m_Turnover)
+        if (!identity || !IsWaitingRoomEnabled() || !IsMatchInProgress() || IsReturningPlayers())
             return false;
 
         PlayerBase previous = PlayerBase.Cast( identity.GetPlayer() );
