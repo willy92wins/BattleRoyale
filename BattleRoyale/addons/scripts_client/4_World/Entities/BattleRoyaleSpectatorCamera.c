@@ -330,7 +330,8 @@ class BattleRoyaleSpectatorCamera: Camera
 	}
 
 	//! An optic's night vision type upgraded for the watched player's surroundings, underground or in a sandstorm, as
-	//! DayZPlayerCameraBase.ResolveNVType does for the optic's owner
+	//! DayZPlayerCameraBase.ResolveNVType does for the optic's owner. Being underground comes from the owner's report
+	//! (SpectateSights): the underground presence of a remote player stays on its own client
 	protected static int ResolveOpticNightVisionType(int rawType, PlayerBase player)
 	{
 		bool night = rawType == NVTypes.NV_OPTICS_ON || rawType == NVTypes.NV_OPTICS_KAZUAR_NIGHT || rawType == NVTypes.NV_OPTICS_STARLIGHT_NIGHT;
@@ -338,7 +339,7 @@ class BattleRoyaleSpectatorCamera: Camera
 		if ((!night && !day) || !player)
 			return rawType;
 
-		bool underground = player.GetUndergroundPresence() != EUndergroundPresence.NONE;
+		bool underground = BattleRoyaleRPC.s_SpectateSightsUnderground;
 		bool sandstorm = false;
 		Weather weather = GetGame().GetWeather();
 		if (weather && weather.GetSandstorm() && weather.GetSandstorm().IsActive())

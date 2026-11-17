@@ -13,6 +13,8 @@ class BattleRoyaleSpectators
 	protected int m_SweepTicks;  //!< UpdateAnchors passes since the last sweep for disconnected spectators
 	protected ref map<string, int> m_Sights;  //!< player identity id -> sights it last reported (EBRSpectateSights), NONE not kept
 	protected ref map<string, float> m_SightsFov;  //!< player identity id -> optic field of view reported with them, radians
+	protected ref map<string, bool> m_SightsUnderground;  //!< player identity id -> underground when it reported an optic (its night vision changes there)
+	protected ref map<string, bool> m_SentSightsUnderground;  //!< spectator identity id -> underground flag last sent to it
 	protected ref map<string, int> m_SentSights;  //!< spectator identity id -> sights last sent to it
 	protected ref map<string, float> m_SentSightsFov;  //!< spectator identity id -> field of view last sent with them
 	protected ref map<string, float> m_SightsWindowStart;  //!< player identity id -> tick time its current report window opened
@@ -32,6 +34,8 @@ class BattleRoyaleSpectators
 		m_Identities = new map<string, PlayerIdentity>;
 		m_Sights = new map<string, int>;
 		m_SightsFov = new map<string, float>;
+		m_SightsUnderground = new map<string, bool>;
+		m_SentSightsUnderground = new map<string, bool>;
 		m_SentSights = new map<string, int>;
 		m_SentSightsFov = new map<string, float>;
 		m_SightsWindowStart = new map<string, float>;
@@ -292,6 +296,7 @@ class BattleRoyaleSpectators
 		// The sights reported in the finished match do not carry over: the next one starts from the eyes
 		m_Sights.Clear();
 		m_SightsFov.Clear();
+		m_SightsUnderground.Clear();
 	}
 
 	//! Asked by the client: next (1) or previous (-1) alive player, or 0 to resend the current one
@@ -447,17 +452,22 @@ class BattleRoyaleSpectators
 		}
 		m_SightsWindowCount.Set(id, count + 1);
 
-		Param2<int, float> data;
+		Param3<int, float, bool> data;
 		if (!ctx.Read(data))
 			return;
 
-		// A field of view only comes with an optic, and within what the optics configs use (0 < fov < 1 rad)
+		// A field of view only comes with an optic, and within what the optics configs use (0 < fov < 1 rad). Being
+		// underground only matters to an optic's night vision, which the spectator's client cannot learn for a remote
+		// player (its underground presence stays on its own client)
 		int sights = data.param1;
 		float fov = data.param2;
+		bool underground = data.param3;
 		if (sights < EBRSpectateSights.NONE || sights >= EBRSpectateSights.COUNT)
 			return;
 		if (sights != EBRSpectateSights.OPTICS || !(fov > 0 && fov < 1.0))
 			fov = 0;
+		if (sights != EBRSpectateSights.OPTICS)
+			underground = false;
 
 		if (sights == EBRSpectateSights.NONE)
 		{
@@ -467,13 +477,16 @@ class BattleRoyaleSpectators
 
 		m_Sights.Set(id, sights);
 		m_SightsFov.Set(id, fov);
+		m_SightsUnderground.Set(id, underground);
 	}
 
 	//! Ten times a second: each watcher whose watched player looks through other sights than the ones last sent to it
-	//! gets them. The cost follows the number of watchers, not the number of reports
+	//! gets them, and a player whose report was dropped is asked for its sights again. The cost follows the number of
+	//! watchers and of dropped reports waiting, not the number of reports
 	protected void RelaySights()
 	{
-		// A player whose report was dropped by its window reports again once the window reopens (SightsResend)
+		// A player whose report was dropped by its window reports again once the window reopens (SightsResend), if it
+		// is still alive: a death forgets its sights anyway
 		if (m_SightsThrottled.Count() > 0)
 		{
 			float now = GetGame().GetTickTime();
@@ -487,7 +500,11 @@ class BattleRoyaleSpectators
 			{
 				PlayerIdentity reporter = m_SightsThrottled.Get(reopenedId);
 				m_SightsThrottled.Remove(reopenedId);
-				if (reporter)
+				if (!reporter)
+					continue;
+
+				PlayerBase reporterPlayer = PlayerBase.Cast(reporter.GetPlayer());
+				if (reporterPlayer && reporterPlayer.IsAlive())
 					GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SightsResend", NULL, true, reporter);
 			}
 		}
@@ -499,8 +516,9 @@ class BattleRoyaleSpectators
 
 			int sights;
 			float fov;
-			GetSights(watched, sights, fov);
-			if (m_SentSights.Contains(watcherId) && m_SentSights.Get(watcherId) == sights && m_SentSightsFov.Get(watcherId) == fov)
+			bool underground;
+			GetSights(watched, sights, fov, underground);
+			if (m_SentSights.Contains(watcherId) && m_SentSights.Get(watcherId) == sights && m_SentSightsFov.Get(watcherId) == fov && m_SentSightsUnderground.Get(watcherId) == underground)
 				continue;
 
 			SendSights(m_Identities.Get(watcherId), watched);
@@ -516,7 +534,8 @@ class BattleRoyaleSpectators
 
 		int sights;
 		float fov;
-		GetSights(watched, sights, fov);
+		bool underground;
+		GetSights(watched, sights, fov, underground);
 
 		int low, high;
 		watched.GetNetworkID(low, high);
@@ -524,13 +543,15 @@ class BattleRoyaleSpectators
 		string watcherId = watcher.GetId();
 		m_SentSights.Set(watcherId, sights);
 		m_SentSightsFov.Set(watcherId, fov);
-		GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SpectateSights", new Param4<int, float, int, int>(sights, fov, low, high), true, watcher);
+		m_SentSightsUnderground.Set(watcherId, underground);
+		GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SpectateSights", new Param5<int, float, bool, int, int>(sights, fov, underground, low, high), true, watcher);
 	}
 
-	protected void GetSights(PlayerBase player, out int sights, out float fov)
+	protected void GetSights(PlayerBase player, out int sights, out float fov, out bool underground)
 	{
 		sights = EBRSpectateSights.NONE;
 		fov = 0;
+		underground = false;
 		if (!player || !player.GetIdentity())
 			return;
 
@@ -540,12 +561,16 @@ class BattleRoyaleSpectators
 
 		sights = m_Sights.Get(id);
 		fov = m_SightsFov.Get(id);
+		underground = m_SightsUnderground.Get(id);
 	}
 
+	//! The player's sights end (it left them, died or disconnected): a report waiting to be asked again ends with them
 	protected void ForgetSights(string identityId)
 	{
 		m_Sights.Remove(identityId);
 		m_SightsFov.Remove(identityId);
+		m_SightsUnderground.Remove(identityId);
+		m_SightsThrottled.Remove(identityId);
 	}
 
 	//! Everything kept for a player that reported its sights: the sights and its report window
@@ -562,6 +587,7 @@ class BattleRoyaleSpectators
 	{
 		m_SentSights.Remove(identityId);
 		m_SentSightsFov.Remove(identityId);
+		m_SentSightsUnderground.Remove(identityId);
 	}
 
 	//! Alive player after (direction 1) or before (-1) the given one in the match list; any alive player when from is null or gone

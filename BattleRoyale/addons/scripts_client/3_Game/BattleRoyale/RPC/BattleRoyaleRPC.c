@@ -43,9 +43,11 @@ class BattleRoyaleRPC
 	static int s_SpectateTargetHigh = 0;
 	static vector s_SpectateTargetHint = "0 0 0";
 	static string s_SpectateTargetName = "";
-	// Sights the watched player looks through (EBRSpectateSights) and, for an optic, its field of view in radians
+	// Sights the watched player looks through (EBRSpectateSights) and, for an optic, its field of view in radians and
+	// whether the player is underground (its night vision changes there; only the player's own client knows it)
 	static int s_SpectateSights = EBRSpectateSights.NONE;
 	static float s_SpectateSightsFov = 0;
+	static bool s_SpectateSightsUnderground = false;
 
 	// Overlay that tells a spectator apart from a living player in first person
 	static ref Widget s_SpectatorOverlay;
@@ -57,6 +59,7 @@ class BattleRoyaleRPC
 		s_SpectateTargetHigh = 0;
 		s_SpectateSights = EBRSpectateSights.NONE;
 		s_SpectateSightsFov = 0;
+		s_SpectateSightsUnderground = false;
 
 		if ( s_SpectatorOverlay )
 		{
@@ -663,6 +666,7 @@ class BattleRoyaleRPC
 		{
 			s_SpectateSights = EBRSpectateSights.NONE;
 			s_SpectateSightsFov = 0;
+			s_SpectateSightsUnderground = false;
 		}
 		s_Spectating = true;
 		s_SpectateTargetLow = data.param1;
@@ -679,7 +683,7 @@ class BattleRoyaleRPC
 	// The watched player started or stopped looking through sights, or changed the magnification of its optic
 	void SpectateSights(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
-		Param4<int, float, int, int> data;
+		Param5<int, float, bool, int, int> data;
 		if( !ctx.Read( data ) )
 		{
 			Error("FAILED TO READ SPECTATESIGHTS RPC");
@@ -689,7 +693,7 @@ class BattleRoyaleRPC
 			return;
 
 		// Sights of another player than the one watched now (sent before the last SpectateTarget) do not apply
-		if ( data.param3 != s_SpectateTargetLow || data.param4 != s_SpectateTargetHigh )
+		if ( data.param4 != s_SpectateTargetLow || data.param5 != s_SpectateTargetHigh )
 			return;
 
 		// A mode this client does not know (newer server) is shown from the eyes
@@ -699,6 +703,7 @@ class BattleRoyaleRPC
 
 		s_SpectateSights = sights;
 		s_SpectateSightsFov = data.param2;
+		s_SpectateSightsUnderground = data.param3;
 	}
 
 	//! The server dropped one of this client's sights reports (too many at once) and asks for the current sights again:
