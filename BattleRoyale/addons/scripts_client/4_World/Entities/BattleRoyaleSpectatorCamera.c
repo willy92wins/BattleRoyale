@@ -14,6 +14,9 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected static const float NEAR_PLANE_EYES = 0.04;
 	protected static const float NEAR_PLANE_OPTICS = 0.06;
 	protected static const float NEAR_PLANE_ORBIT = 0.07;
+	//! Sandstorm intensity above which an optic's night vision takes its sandstorm variant
+	//! (DayZPlayerCameraBase.SANDSTORM_NVG_THRESHOLD)
+	protected static const float SANDSTORM_NIGHT_VISION_THRESHOLD = 0.15;
 	//! Seconds between two refreshes of the hidden head, so that a helmet put on meanwhile is hidden too
 	protected static const float HEAD_REFRESH_SECONDS = 1.0;
 
@@ -265,7 +268,7 @@ class BattleRoyaleSpectatorCamera: Camera
 
 		if (sight == optic && sights == EBRSpectateSights.OPTICS)
 		{
-			ShowOptic(optic, weapon);
+			ShowOptic(target, optic, weapon);
 
 			// The magnification its owner chose; the optic's own on this client when the report has none
 			float fov = BattleRoyaleRPC.s_SpectateSightsFov;
@@ -286,7 +289,7 @@ class BattleRoyaleSpectatorCamera: Camera
 	//! Shows the optic as its owner sees it, as the vanilla optics camera does (DayZPlayerCameraOptics.SetCameraPP): its own
 	//! hidden parts, its night vision and, for a magnifying optic, the barrel that would cover the view and the lens and
 	//! mask effects. Undone by LeaveOptics
-	protected void ShowOptic(ItemOptics optic, Weapon_Base weapon)
+	protected void ShowOptic(Human target, ItemOptics optic, Weapon_Base weapon)
 	{
 		if (m_ShownOptic != optic)
 		{
@@ -318,11 +321,48 @@ class BattleRoyaleSpectatorCamera: Camera
 			}
 		}
 
-		// Night vision follows the optic's mode and power for as long as it is looked through
+		// Night vision follows the optic's mode and power, and the watched player's surroundings, for as long as it is
+		// looked through
 		int nightVision = -1;
 		if (optic.IsNVOptic())
-			nightVision = OpticNightVisionMode(optic.GetCurrentNVType());
+			nightVision = OpticNightVisionMode(ResolveOpticNightVisionType(optic.GetCurrentNVType(), PlayerBase.Cast(target)));
 		SetOpticNightVision(nightVision);
+	}
+
+	//! An optic's night vision type upgraded for the watched player's surroundings, underground or in a sandstorm, as
+	//! DayZPlayerCameraBase.ResolveNVType does for the optic's owner
+	protected static int ResolveOpticNightVisionType(int rawType, PlayerBase player)
+	{
+		bool night = rawType == NVTypes.NV_OPTICS_ON || rawType == NVTypes.NV_OPTICS_KAZUAR_NIGHT || rawType == NVTypes.NV_OPTICS_STARLIGHT_NIGHT;
+		bool day = rawType == NVTypes.NV_OPTICS_KAZUAR_DAY || rawType == NVTypes.NV_OPTICS_STARLIGHT_DAY;
+		if ((!night && !day) || !player)
+			return rawType;
+
+		bool underground = player.GetUndergroundPresence() != EUndergroundPresence.NONE;
+		bool sandstorm = false;
+		Weather weather = GetGame().GetWeather();
+		if (weather && weather.GetSandstorm() && weather.GetSandstorm().IsActive())
+			sandstorm = weather.GetSandstorm().GetIntensity(player.GetPosition()) > SANDSTORM_NIGHT_VISION_THRESHOLD;
+
+		if (underground && sandstorm)
+		{
+			if (night)
+				return NVTypes.NV_OPTICS_UNDERGROUND_SANDSTORM;
+			return NVTypes.NV_OPTICS_UNDERGROUND_SANDSTORM_DAY;
+		}
+		if (underground)
+		{
+			if (night)
+				return NVTypes.NV_OPTICS_UNDERGROUND;
+			return NVTypes.NV_OPTICS_UNDERGROUND_DAY;
+		}
+		if (sandstorm)
+		{
+			if (night)
+				return NVTypes.NV_OPTICS_SANDSTORM_NIGHT;
+			return NVTypes.NV_OPTICS_SANDSTORM_DAY;
+		}
+		return rawType;
 	}
 
 	//! The camera night vision mode (PPERequester_CameraNV) of an optic's night vision type, as
@@ -341,6 +381,14 @@ class BattleRoyaleSpectatorCamera: Camera
 				return PPERequester_CameraNV.NV_DAYTIME_OPTICS;
 			case NVTypes.NV_OPTICS_SANDSTORM_NIGHT:
 				return PPERequester_CameraNV.NV_SANDSTORM_OPTICS;
+			case NVTypes.NV_OPTICS_UNDERGROUND:
+				return PPERequester_CameraNV.NV_UNDERGROUND_OPTICS;
+			case NVTypes.NV_OPTICS_UNDERGROUND_DAY:
+				return PPERequester_CameraNV.NV_UNDERGROUND_DAYTIME_OPTICS;
+			case NVTypes.NV_OPTICS_UNDERGROUND_SANDSTORM:
+				return PPERequester_CameraNV.NV_UNDERGROUND_SANDSTORM_OPTICS;
+			case NVTypes.NV_OPTICS_UNDERGROUND_SANDSTORM_DAY:
+				return PPERequester_CameraNV.NV_UNDERGROUND_SANDSTORM_DAYTIME_OPTICS;
 			case NVTypes.NV_OPTICS_OFF:
 				return PPERequester_CameraNV.NV_NO_BATTERY;
 		}

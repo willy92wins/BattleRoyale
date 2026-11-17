@@ -17,6 +17,7 @@ class BattleRoyaleSpectators
 	protected ref map<string, float> m_SentSightsFov;  //!< spectator identity id -> field of view last sent with them
 	protected ref map<string, float> m_SightsWindowStart;  //!< player identity id -> tick time its current report window opened
 	protected ref map<string, int> m_SightsWindowCount;  //!< player identity id -> reports taken in that window
+	protected ref map<string, PlayerIdentity> m_SightsThrottled;  //!< player identity id -> player with a report dropped by its window, asked to report again once the window reopens
 
 	//! Sights reports taken from one player per window: twice the most its client sends (one every 0.1 s), so network
 	//! jitter never drops a report of a regular client
@@ -35,6 +36,7 @@ class BattleRoyaleSpectators
 		m_SentSightsFov = new map<string, float>;
 		m_SightsWindowStart = new map<string, float>;
 		m_SightsWindowCount = new map<string, int>;
+		m_SightsThrottled = new map<string, PlayerIdentity>;
 
 		GetRPCManager().AddRPC(RPC_DAYZBRSERVER_NAMESPACE, "SightsState", this);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(UpdateAnchors, 1000, true);
@@ -435,9 +437,14 @@ class BattleRoyaleSpectators
 			m_SightsWindowStart.Set(id, now);
 			m_SightsWindowCount.Set(id, 0);
 		}
+		// The dropped report may be the player's last change: RelaySights asks for its sights again once the window
+		// reopens, so they never stay behind
 		int count = m_SightsWindowCount.Get(id);
 		if (count >= SIGHTS_REPORTS_PER_WINDOW)
+		{
+			m_SightsThrottled.Set(id, sender);
 			return;
+		}
 		m_SightsWindowCount.Set(id, count + 1);
 
 		Param2<int, float> data;
@@ -466,6 +473,25 @@ class BattleRoyaleSpectators
 	//! gets them. The cost follows the number of watchers, not the number of reports
 	protected void RelaySights()
 	{
+		// A player whose report was dropped by its window reports again once the window reopens (SightsResend)
+		if (m_SightsThrottled.Count() > 0)
+		{
+			float now = GetGame().GetTickTime();
+			array<string> reopened = new array<string>;
+			foreach (string throttledId, PlayerIdentity throttled : m_SightsThrottled)
+			{
+				if (!m_SightsWindowStart.Contains(throttledId) || now - m_SightsWindowStart.Get(throttledId) >= SIGHTS_WINDOW_SECONDS)
+					reopened.Insert(throttledId);
+			}
+			foreach (string reopenedId : reopened)
+			{
+				PlayerIdentity reporter = m_SightsThrottled.Get(reopenedId);
+				m_SightsThrottled.Remove(reopenedId);
+				if (reporter)
+					GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SightsResend", NULL, true, reporter);
+			}
+		}
+
 		foreach (string watcherId, PlayerBase watched : m_Targets)
 		{
 			if (!watched || !m_Identities.Contains(watcherId))
@@ -528,6 +554,7 @@ class BattleRoyaleSpectators
 		ForgetSights(identityId);
 		m_SightsWindowStart.Remove(identityId);
 		m_SightsWindowCount.Remove(identityId);
+		m_SightsThrottled.Remove(identityId);
 	}
 
 	//! A spectator entry that ends: the next one starts with what Watch sends

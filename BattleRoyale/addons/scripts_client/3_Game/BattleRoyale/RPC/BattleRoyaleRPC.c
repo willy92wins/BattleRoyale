@@ -24,6 +24,7 @@ class BattleRoyaleRPC
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "MatchInProgress", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SpectateTarget", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SpectateSights", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SightsResend", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetStayConnected", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetWaitingRoom", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetWaiting", this );
@@ -698,6 +699,16 @@ class BattleRoyaleRPC
 
 		s_SpectateSights = sights;
 		s_SpectateSightsFov = data.param2;
+	}
+
+	//! The server dropped one of this client's sights reports (too many at once) and asks for the current sights again:
+	//! the local player reports them on its next tick (DayZPlayerImplement.BR_ReportSights), changed or not
+	static bool s_SightsResend = false;
+
+	void SightsResend(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		if ( type == CallType.Client )
+			s_SightsResend = true;
 	}
 
 	//! Undoes what the vanilla death simulation did on this client (DayZPlayerImplement.SimulateDeath):

@@ -130,7 +130,8 @@ modded class DayZPlayerImplement
 			sights = EBRSpectateSights.IRONSIGHTS;
 		}
 
-		if (sights == m_BR_ReportedSights && fov == m_BR_ReportedSightsFov)
+		// The server asks again when it dropped a report (SightsResend): the current sights leave even unchanged
+		if (sights == m_BR_ReportedSights && fov == m_BR_ReportedSightsFov && !BattleRoyaleRPC.s_SightsResend)
 			return;
 
 		if (m_BR_SightsReportCooldown > 0)
@@ -139,6 +140,7 @@ modded class DayZPlayerImplement
 		m_BR_ReportedSights = sights;
 		m_BR_ReportedSightsFov = fov;
 		m_BR_SightsReportCooldown = 0.1;
+		BattleRoyaleRPC.s_SightsResend = false;
 		GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "SightsState", new Param2<int, float>(sights, fov), true);
 	}
 }
