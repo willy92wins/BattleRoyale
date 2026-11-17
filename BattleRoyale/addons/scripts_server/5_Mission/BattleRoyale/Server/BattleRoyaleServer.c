@@ -79,6 +79,11 @@ class BattleRoyaleServer: BattleRoyaleBase
         m_Spectators = new BattleRoyaleSpectators;
         m_CharacterTypes = new map<string, string>;
 
+        // The actions that hurt or hold another player are blocked in the lobby (BRProtectedPlayerActions.c)
+        BattleRoyaleSpawnsData spawnsData = config_data.GetSpawnsData();
+        if (spawnsData)
+            ActionBase.BR_SetLobbyArea(spawnsData.spawn_point, spawnsData.radius);
+
         BRMatchDebris.s_Enabled = m_ServerData.UsesSerialMatches();
         if (BRMatchDebris.s_Enabled)
             BattleRoyaleUtils.Info("[Serial] Serial matches on: the server stays up between matches (full restart every " + m_ServerData.serial_restart_every_matches + " matches, 0 = never)");
@@ -560,6 +565,68 @@ class BattleRoyaleServer: BattleRoyaleBase
 	const float CHECK_IS_COMPLETE = 0.1;  //seconds
 	float m_TimeSinceLastTick = CHECK_IS_COMPLETE + 1;
 
+    //--- The lobby is kept free of infected: they cannot hurt its protected players, but they chase and hit them
+
+    //! Seconds between two sweeps of the lobby for infected
+    static const float LOBBY_INFECTED_SWEEP_SECONDS = 5;
+    //! Metres past the lobby radius also swept, so an infected running in goes before it reaches the players
+    static const float LOBBY_INFECTED_MARGIN = 30;
+    protected float m_LobbyInfectedSweepTime;
+
+    //! Removes the living infected within the lobby radius and its margin. While the lobby holds players: between
+    //! matches, during the spawn selection and the preparation that moves them to the match, and later while a player
+    //! of the waiting room is there, so a lobby that lies inside the play area keeps the infected of the match the rest
+    //! of the time
+    protected void SweepLobbyInfected()
+    {
+        BattleRoyaleDebug lobby = BattleRoyaleDebug.Cast( GetState(0) );
+        if (!lobby)
+            return;
+
+        vector center = lobby.GetCenterXZ();
+        float radius = lobby.GetRadius() + LOBBY_INFECTED_MARGIN;
+        float ground = GetGame().SurfaceY(center[0], center[2]);
+        vector boxMin = Vector(center[0] - radius, ground - 200, center[2] - radius);
+        vector boxMax = Vector(center[0] + radius, ground + 200, center[2] + radius);
+
+        array<EntityAI> entities = new array<EntityAI>;
+        DayZPlayerUtils.SceneGetEntitiesInBox(boxMin, boxMax, entities, QueryFlags.DYNAMIC);
+
+        bool lobbyInUse = !IsMatchInProgress();
+        BattleRoyaleState current = GetCurrentState();
+        if (BattleRoyaleSpawnSelection.Cast(current) || BattleRoyalePrepare.Cast(current))
+            lobbyInUse = true;
+
+        array<ZombieBase> infected = new array<ZombieBase>;
+        foreach (EntityAI entity : entities)
+        {
+            PlayerBase waiting = PlayerBase.Cast(entity);
+            if (waiting)
+            {
+                if (waiting.br_waiting && waiting.IsAlive())
+                    lobbyInUse = true;
+                continue;
+            }
+
+            ZombieBase zombie = ZombieBase.Cast(entity);
+            if (!zombie || !zombie.IsAlive())
+                continue;
+
+            vector pos = zombie.GetPosition();
+            if (vector.Distance(Vector(pos[0], 0, pos[2]), Vector(center[0], 0, center[2])) <= radius)
+                infected.Insert(zombie);
+        }
+
+        if (!lobbyInUse || infected.Count() == 0)
+            return;
+
+        foreach (ZombieBase removed : infected)
+            GetGame().ObjectDelete(removed);
+
+        if (BattleRoyaleUtils.CheckLogLevel(BattleRoyaleUtils.DEBUG))
+            BattleRoyaleUtils.Debug("Lobby: removed " + infected.Count() + " infected");
+    }
+
     override void Update(float delta)
     {
         float timeslice = delta; //Legacy
@@ -587,6 +654,13 @@ class BattleRoyaleServer: BattleRoyaleBase
                 state.Update(timeslice);
             else
                 Error("BAD STATE IN m_States!");
+        }
+
+        m_LobbyInfectedSweepTime += delta;
+        if (m_LobbyInfectedSweepTime >= LOBBY_INFECTED_SWEEP_SECONDS)
+        {
+            m_LobbyInfectedSweepTime = 0;
+            SweepLobbyInfected();
         }
 
 		m_TimeSinceLastTick += delta;
