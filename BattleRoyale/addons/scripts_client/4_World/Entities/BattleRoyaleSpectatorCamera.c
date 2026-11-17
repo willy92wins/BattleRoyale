@@ -1,9 +1,21 @@
 //! Camera of a dead player who watches the players still alive (created by the server with SelectSpectator).
-//! First person sits at the watched player's eyes and looks along the weapon, or the body when no weapon is held;
-//! third person orbits behind the player with the mouse. The vanilla person view key switches between them.
+//! First person recreates what the watched player sees: from its eyes along its head, along the barrel of a weapon it
+//! raises, and through the iron sights or the optic it looks through, which its own client reports (SpectateSights RPC).
+//! Its head and what it wears on it are hidden on this client meanwhile, as the vanilla first person camera hides the
+//! player's own. Third person orbits behind the player with the mouse. The vanilla person view key switches between them.
 class BattleRoyaleSpectatorCamera: Camera
 {
 	static bool s_ThirdPerson;
+
+	//! Eyes in the head bone's frame (x up, y forward), where the vanilla first person camera sits (DayZPlayerCamera1stPerson)
+	protected static const float EYE_UP = 0.04;
+	protected static const float EYE_FORWARD = 0.04;
+	//! Near planes of the vanilla cameras: first person and iron sights, the least for an optic, and the default
+	protected static const float NEAR_PLANE_EYES = 0.04;
+	protected static const float NEAR_PLANE_OPTICS = 0.06;
+	protected static const float NEAR_PLANE_ORBIT = 0.07;
+	//! Seconds between two refreshes of the hidden head, so that a helmet put on meanwhile is hidden too
+	protected static const float HEAD_REFRESH_SECONDS = 1.0;
 
 	protected float m_UpdateAccumulator;
 	protected float m_MissingTarget;
@@ -13,10 +25,27 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected int m_HeadBoneIndex = -1;
 	protected string m_HeadBoneTargetType;
 	protected Human m_HeadBoneTarget;
+	protected ref HumanMovementState m_TargetMovement = new HumanMovementState();
+
+	//! Optic of the watched player shown as its owner sees it, and the weapon whose barrel that hides, until LeaveOptics
+	protected ItemOptics m_ShownOptic;
+	protected Weapon_Base m_HiddenBarrelWeapon;
+	//! Watched player whose head is hidden, every entity hidden for it, and the seconds since they were hidden, until ShowHead
+	protected Human m_HiddenHeadTarget;
+	protected ref array<EntityAI> m_HiddenHeadItems = new array<EntityAI>;
+	protected float m_HiddenHeadAge;
 
 	void BattleRoyaleSpectatorCamera()
 	{
 		SetEventMask(EntityEvent.FRAME | EntityEvent.POSTFRAME);
+	}
+
+	void ~BattleRoyaleSpectatorCamera()
+	{
+#ifndef SERVER
+		LeaveOptics();
+		ShowHead();
+#endif
 	}
 
 	override void EOnFrame(IEntity other, float timeSlice)
@@ -44,6 +73,8 @@ class BattleRoyaleSpectatorCamera: Camera
 		// that character is here, so the client is never left without an active camera in between
 		if (!BattleRoyaleRPC.s_Spectating)
 		{
+			LeaveOptics();
+			ShowHead();
 			Man local_player = GetGame().GetPlayer();
 			if (local_player && local_player.IsAlive())
 				SetActive(false);
@@ -63,10 +94,13 @@ class BattleRoyaleSpectatorCamera: Camera
 			if (s_ThirdPerson)
 				FollowThirdPerson(target);
 			else
-				FollowFirstPerson(target);
+				FollowFirstPerson(target, timeSlice);
 		}
 		else
 		{
+			LeaveOptics();
+			ShowHead();
+
 			// Not streamed in yet: wait at the position the server sent, and ask for a fresh one
 			// when the target stays out of reach (moved far away, or died without a new target yet)
 			SetPosition(BattleRoyaleRPC.s_SpectateTargetHint);
@@ -108,8 +142,15 @@ class BattleRoyaleSpectatorCamera: Camera
 		}
 	}
 
-	protected void FollowFirstPerson(Human target)
+	protected void FollowFirstPerson(Human target, float timeSlice)
 	{
+		HideHead(target, timeSlice);
+
+		if (FollowSights(target))
+			return;
+
+		LeaveOptics();
+
 		// All player skeletons share the bone layout, so the by-name lookup is only needed once per target class
 		if (m_HeadBoneIndex == -1)
 		{
@@ -130,13 +171,12 @@ class BattleRoyaleSpectatorCamera: Camera
 		vector head[4];
 		target.GetBoneTransformWS(m_HeadBoneIndex, head);
 
-		vector body[4];
-		target.GetTransform(body);
-		vector direction = body[2];
-
-		// Look along the weapon when one is held, it follows the aim up and down
+		// The eyes look where the head looks. A raised weapon aims along its barrel, which follows the aim up and down; a
+		// lowered one points at the ground or across the body, so the view stays with the head then
+		vector direction = head[1].Normalized();
+		target.GetMovementState(m_TargetMovement);
 		Weapon_Base weapon;
-		if (Class.CastTo(weapon, target.GetHumanInventory().GetEntityInHands()))
+		if (m_TargetMovement.IsRaised() && Class.CastTo(weapon, target.GetHumanInventory().GetEntityInHands()))
 		{
 			vector weaponTransform[4];
 			weapon.GetTransform(weaponTransform);
@@ -146,15 +186,210 @@ class BattleRoyaleSpectatorCamera: Camera
 				direction = (barrelEnd - barrelStart).Normalized();
 		}
 
-		SetPosition(head[3] + direction * 0.15 + "0 0.05 0");
+		SetPosition(head[3] + head[0] * EYE_UP + head[1] * EYE_FORWARD);
 		SetOrientation(direction.VectorToAngles());
+		SetFOV(GetDayZGame().GetUserFOV());
+		SetNearPlane(NEAR_PLANE_EYES);
 
 		// Third person starts behind the player when switching
 		m_OrbitYaw = direction.VectorToAngles()[0];
 	}
 
+	//! Through the sights the watched player looks through: the camera sits at their eye point, as the vanilla iron sights
+	//! and optics cameras do (DayZPlayerCameraIronsights.GetCurrentSightInfo, DayZPlayerCameraOptics), with their field of
+	//! view and near plane, and an optic shows its lens and mask. False when the player looks through none of them
+	protected bool FollowSights(Human target)
+	{
+		int sights = BattleRoyaleRPC.s_SpectateSights;
+		if (sights == EBRSpectateSights.NONE)
+			return false;
+
+		EntityAI inHands = target.GetHumanInventory().GetEntityInHands();
+		Weapon_Base weapon = Weapon_Base.Cast(inHands);
+		ItemOptics optic = ItemOptics.Cast(inHands);
+		if (weapon)
+			optic = weapon.GetAttachedOptics();
+
+		EntityAI sight = null;
+		vector eyePoint;
+		vector eyeDirection;
+		if (sights == EBRSpectateSights.OPTICS && optic)
+		{
+			optic.UseWeaponIronsightsOverride(false);
+			optic.GetCameraPoint(eyePoint, eyeDirection);
+			sight = optic;
+		}
+		else if (sights == EBRSpectateSights.IRONSIGHTS && weapon)
+		{
+			// An optic that stands in for the iron sights (a reflex sight) is looked through instead
+			if (optic && optic.HasWeaponIronsightsOverride())
+			{
+				optic.UseWeaponIronsightsOverride(true);
+				optic.GetCameraPoint(eyePoint, eyeDirection);
+				sight = optic;
+			}
+			else
+			{
+				weapon.GetCameraPoint(weapon.GetCurrentMuzzle(), eyePoint, eyeDirection);
+				sight = weapon;
+			}
+		}
+
+		if (!sight)
+		{
+			LeaveOptics();
+			return false;
+		}
+
+		// The eye point and its direction are in the sight's model space
+		vector sightTransform[4];
+		sight.GetTransform(sightTransform);
+		vector eyePosition = eyePoint.Multiply4(sightTransform);
+		vector ahead = eyePoint + eyeDirection;
+		vector direction = (ahead.Multiply4(sightTransform) - eyePosition).Normalized();
+		SetPosition(eyePosition);
+		SetOrientation(direction.VectorToAngles());
+		m_OrbitYaw = direction.VectorToAngles()[0];
+
+		if (sight == optic && sights == EBRSpectateSights.OPTICS)
+		{
+			ShowOptic(optic, weapon);
+
+			// The magnification its owner chose; the optic's own on this client when the report has none
+			float fov = BattleRoyaleRPC.s_SpectateSightsFov;
+			if (fov <= 0)
+				fov = optic.GetCurrentStepFOV();
+			SetFOV(fov);
+			SetNearPlane(Math.Max(optic.GetNearPlaneValue(), NEAR_PLANE_OPTICS));
+		}
+		else
+		{
+			LeaveOptics();
+			SetFOV(GameConstants.DZPLAYER_CAMERA_FOV_IRONSIGHTS);
+			SetNearPlane(NEAR_PLANE_EYES);
+		}
+		return true;
+	}
+
+	//! Shows the optic as its owner sees it, as the vanilla optics camera does: its own hidden parts, the barrel that would
+	//! cover the view and, for a magnifying optic, the lens and mask effects. Undone by LeaveOptics
+	protected void ShowOptic(ItemOptics optic, Weapon_Base weapon)
+	{
+		if (m_ShownOptic == optic)
+			return;
+
+		LeaveOptics();
+		m_ShownOptic = optic;
+		optic.OnOpticEnter();
+
+		// A sight that allows depth of field (a reflex sight) is not a magnifying optic: no lens, mask or hidden barrel
+		if (optic.AllowsDOF())
+			return;
+
+		if (weapon)
+		{
+			weapon.HideWeaponBarrel(true);
+			m_HiddenBarrelWeapon = weapon;
+		}
+
+		PPERequester_CameraADS requester = PPERequester_CameraADS.Cast(PPERequesterBank.GetRequester(PPERequester_CameraADS));
+		if (requester)
+		{
+			array<float> mask = new array<float>;
+			array<float> lens = new array<float>;
+			if (optic.GetOpticsPPMask() && optic.GetOpticsPPMask().Count() == 4)
+				mask.Copy(optic.GetOpticsPPMask());
+			if (optic.GetOpticsPPLens() && optic.GetOpticsPPLens().Count() == 4)
+				lens.Copy(optic.GetOpticsPPLens());
+			requester.SetValuesOptics(mask, lens, optic.GetOpticsPPBlur());
+		}
+	}
+
+	protected void LeaveOptics()
+	{
+		if (!m_ShownOptic && !m_HiddenBarrelWeapon)
+			return;
+
+		if (m_ShownOptic)
+		{
+			// A night vision optic hides its pilot cover on entering too; its visibility update shows it again
+			m_ShownOptic.OnOpticExit();
+			m_ShownOptic.UpdateSelectionVisibility();
+
+			// The lens and mask effects only run for a magnifying optic
+			if (!m_ShownOptic.AllowsDOF())
+			{
+				PPERequesterBase requester = PPERequesterBank.GetRequester(PPERequester_CameraADS);
+				if (requester)
+					requester.Stop();
+			}
+		}
+
+		if (m_HiddenBarrelWeapon)
+			m_HiddenBarrelWeapon.HideWeaponBarrel(false);
+
+		m_ShownOptic = null;
+		m_HiddenBarrelWeapon = null;
+	}
+
+	//! Hides the watched player's head and what it wears on it (headgear, mask, eyewear, with their attachments) on this
+	//! client, as the vanilla first person camera hides the player's own; refreshed every HEAD_REFRESH_SECONDS
+	protected void HideHead(Human target, float timeSlice)
+	{
+		m_HiddenHeadAge += timeSlice;
+		if (m_HiddenHeadTarget == target && m_HiddenHeadAge < HEAD_REFRESH_SECONDS)
+			return;
+
+		ShowHead();
+		m_HiddenHeadTarget = target;
+		m_HiddenHeadAge = 0;
+
+		GameInventory inventory = target.GetInventory();
+		if (!inventory)
+			return;
+
+		HideRecursive(inventory.FindPlaceholderForSlot(InventorySlots.GetSlotIdFromString("Head")));
+		HideRecursive(inventory.FindAttachment(InventorySlots.HEADGEAR));
+		HideRecursive(inventory.FindAttachment(InventorySlots.MASK));
+		HideRecursive(inventory.FindAttachment(InventorySlots.EYEWEAR));
+	}
+
+	protected void HideRecursive(EntityAI item)
+	{
+		if (!item)
+			return;
+
+		item.SetInvisible(true);
+		m_HiddenHeadItems.Insert(item);
+
+		GameInventory inventory = item.GetInventory();
+		if (!inventory)
+			return;
+
+		int count = inventory.AttachmentCount();
+		for (int i = 0; i < count; i++)
+			HideRecursive(inventory.GetAttachmentFromIndex(i));
+	}
+
+	//! Shows again every entity HideHead hid, even when it has left the head since
+	protected void ShowHead()
+	{
+		foreach (EntityAI item : m_HiddenHeadItems)
+		{
+			if (item)
+				item.SetInvisible(false);
+		}
+		m_HiddenHeadItems.Clear();
+		m_HiddenHeadTarget = null;
+	}
+
 	protected void FollowThirdPerson(Human target)
 	{
+		LeaveOptics();
+		ShowHead();
+		SetFOV(GetDayZGame().GetUserFOV());
+		SetNearPlane(NEAR_PLANE_ORBIT);
+
 		vector pivot = target.GetPosition() + "0 1.6 0";
 		vector angles = Vector(m_OrbitYaw, m_OrbitPitch, 0);
 		vector forward = angles.AnglesToVector();

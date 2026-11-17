@@ -87,6 +87,60 @@ modded class DayZPlayerImplement
 
 		GetGame().GetMission().AbortMission();
 	}
+
+	//! Sights last reported to the server (EBRSpectateSights) and the optic field of view reported with them
+	protected int m_BR_ReportedSights = EBRSpectateSights.NONE;
+	protected float m_BR_ReportedSightsFov = 0;
+	//! Seconds before the next report may leave
+	protected float m_BR_SightsReportCooldown = 0;
+
+	override void CommandHandler(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
+	{
+		super.CommandHandler(pDt, pCurrentCommandID, pCurrentCommandFinished);
+
+		BR_ReportSights(pDt);
+	}
+
+	//! The local player reports the sights it looks through to the server whenever they change, so that the players
+	//! spectating it look through them too. One report every 0.1 s at most: a magnification stepped quickly sends the
+	//! last step, because the change is still there on the next tick
+	protected void BR_ReportSights(float pDt)
+	{
+		if (GetGame().GetPlayer() != this)
+			return;
+
+		if (m_BR_SightsReportCooldown > 0)
+			m_BR_SightsReportCooldown -= pDt;
+
+		int sights = EBRSpectateSights.NONE;
+		float fov = 0;
+		if (IsInOptics())
+		{
+			sights = EBRSpectateSights.OPTICS;
+			EntityAI inHands = GetEntityInHands();
+			ItemOptics optic = ItemOptics.Cast(inHands);
+			Weapon_Base weapon = Weapon_Base.Cast(inHands);
+			if (weapon)
+				optic = weapon.GetAttachedOptics();
+			if (optic)
+				fov = optic.GetCurrentStepFOV();
+		}
+		else if (IsInIronsights())
+		{
+			sights = EBRSpectateSights.IRONSIGHTS;
+		}
+
+		if (sights == m_BR_ReportedSights && fov == m_BR_ReportedSightsFov)
+			return;
+
+		if (m_BR_SightsReportCooldown > 0)
+			return;
+
+		m_BR_ReportedSights = sights;
+		m_BR_ReportedSightsFov = fov;
+		m_BR_SightsReportCooldown = 0.1;
+		GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "SightsState", new Param2<int, float>(sights, fov), true);
+	}
 }
 #endif
 #endif

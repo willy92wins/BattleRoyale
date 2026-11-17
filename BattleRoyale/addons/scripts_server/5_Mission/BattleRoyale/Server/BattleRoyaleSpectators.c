@@ -11,6 +11,10 @@ class BattleRoyaleSpectators
 	protected ref map<string, PlayerBase> m_Anchors;  //!< spectator identity id -> anchor body
 	protected ref map<string, PlayerIdentity> m_Identities;  //!< spectator identity id -> identity resolved once, reused until disconnect
 	protected int m_SweepTicks;  //!< UpdateAnchors passes since the last sweep for disconnected spectators
+	protected ref map<string, int> m_Sights;  //!< player identity id -> sights it last reported (EBRSpectateSights), NONE not kept
+	protected ref map<string, float> m_SightsFov;  //!< player identity id -> optic field of view reported with them, radians
+	protected ref map<string, int> m_SentSights;  //!< spectator identity id -> sights last sent to it
+	protected ref map<string, float> m_SentSightsFov;  //!< spectator identity id -> field of view last sent with them
 
 	void BattleRoyaleSpectators()
 	{
@@ -18,14 +22,23 @@ class BattleRoyaleSpectators
 		m_LastRequest = new map<string, float>;
 		m_Anchors = new map<string, PlayerBase>;
 		m_Identities = new map<string, PlayerIdentity>;
+		m_Sights = new map<string, int>;
+		m_SightsFov = new map<string, float>;
+		m_SentSights = new map<string, int>;
+		m_SentSightsFov = new map<string, float>;
 
+		GetRPCManager().AddRPC(RPC_DAYZBRSERVER_NAMESPACE, "SightsState", this);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(UpdateAnchors, 1000, true);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(RelaySights, 100, true);
 	}
 
 	void ~BattleRoyaleSpectators()
 	{
 		if (GetGame())
+		{
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(UpdateAnchors);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(RelaySights);
+		}
 	}
 
 	//! Anchor bodies are not match players: the match logic leaves them alone.
@@ -138,6 +151,7 @@ class BattleRoyaleSpectators
 		m_Targets.Remove(identityId);
 		m_LastRequest.Remove(identityId);
 		m_Identities.Remove(identityId);
+		ForgetSent(identityId);
 		ClearAnchor(identityId);
 		if (anchor)
 			GetGame().ObjectDelete(anchor);
@@ -164,6 +178,10 @@ class BattleRoyaleSpectators
 	{
 		if (!player)
 			return;
+
+		// Its sights go with it: a later life is watched from the eyes until its client reports new ones
+		if (player.GetIdentity())
+			ForgetSights(player.GetIdentity().GetId());
 
 		array<string> watchers = new array<string>;
 		foreach (string id, PlayerBase target : m_Targets)
@@ -208,6 +226,8 @@ class BattleRoyaleSpectators
 		m_LastRequest.Remove(identity.GetId());
 		ClearAnchor(identity.GetId());
 		m_Identities.Remove(identity.GetId());
+		ForgetSights(identity.GetId());
+		ForgetSent(identity.GetId());
 	}
 
 	//! Serial matches: true while this identity watches the match (it has an anchor or a target)
@@ -232,6 +252,7 @@ class BattleRoyaleSpectators
 		m_Targets.Remove(id);
 		m_LastRequest.Remove(id);
 		m_Identities.Remove(id);
+		ForgetSent(id);
 
 		if (anchor)
 			GetGame().ObjectDelete(anchor);
@@ -241,6 +262,10 @@ class BattleRoyaleSpectators
 	void CancelPending()
 	{
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(Start);
+
+		// The sights reported in the finished match do not carry over: the next one starts from the eyes
+		m_Sights.Clear();
+		m_SightsFov.Clear();
 	}
 
 	//! Asked by the client: next (1) or previous (-1) alive player, or 0 to resend the current one
@@ -359,6 +384,102 @@ class BattleRoyaleSpectators
 		}
 
 		GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SpectateTarget", new Param5<int, int, vector, string, int>(low, high, HeadPosition(target), name, alive), true, identity);
+
+		// The watcher looks through the sights the watched player is already looking through
+		SendSights(identity, target);
+	}
+
+	//! A player reports the sights it looks through whenever they change (its client sends at most ten reports a
+	//! second). Only kept here, so that any number of reports costs the same: RelaySights passes them on
+	void SightsState(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		if (type != CallType.Server || !sender)
+			return;
+
+		Param2<int, float> data;
+		if (!ctx.Read(data))
+			return;
+
+		// A field of view only comes with an optic, and within what the optics configs use (0 < fov < 1 rad)
+		int sights = data.param1;
+		float fov = data.param2;
+		if (sights < EBRSpectateSights.NONE || sights >= EBRSpectateSights.COUNT)
+			return;
+		if (sights != EBRSpectateSights.OPTICS || !(fov > 0 && fov < 1.0))
+			fov = 0;
+
+		string id = sender.GetId();
+		if (sights == EBRSpectateSights.NONE)
+		{
+			ForgetSights(id);
+			return;
+		}
+
+		m_Sights.Set(id, sights);
+		m_SightsFov.Set(id, fov);
+	}
+
+	//! Ten times a second: each watcher whose watched player looks through other sights than the ones last sent to it
+	//! gets them. The cost follows the number of watchers, not the number of reports
+	protected void RelaySights()
+	{
+		foreach (string watcherId, PlayerBase watched : m_Targets)
+		{
+			if (!watched || !m_Identities.Contains(watcherId))
+				continue;
+
+			int sights;
+			float fov;
+			GetSights(watched, sights, fov);
+			if (m_SentSights.Contains(watcherId) && m_SentSights.Get(watcherId) == sights && m_SentSightsFov.Get(watcherId) == fov)
+				continue;
+
+			SendSights(m_Identities.Get(watcherId), watched);
+		}
+	}
+
+	//! The sights the watched player last reported, to one of its watchers; NONE when it reported none
+	protected void SendSights(PlayerIdentity watcher, PlayerBase watched)
+	{
+		if (!watcher || !watched)
+			return;
+
+		int sights;
+		float fov;
+		GetSights(watched, sights, fov);
+
+		string watcherId = watcher.GetId();
+		m_SentSights.Set(watcherId, sights);
+		m_SentSightsFov.Set(watcherId, fov);
+		GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SpectateSights", new Param2<int, float>(sights, fov), true, watcher);
+	}
+
+	protected void GetSights(PlayerBase player, out int sights, out float fov)
+	{
+		sights = EBRSpectateSights.NONE;
+		fov = 0;
+		if (!player || !player.GetIdentity())
+			return;
+
+		string id = player.GetIdentity().GetId();
+		if (!m_Sights.Contains(id))
+			return;
+
+		sights = m_Sights.Get(id);
+		fov = m_SightsFov.Get(id);
+	}
+
+	protected void ForgetSights(string identityId)
+	{
+		m_Sights.Remove(identityId);
+		m_SightsFov.Remove(identityId);
+	}
+
+	//! A spectator entry that ends: the next one starts with what Watch sends
+	protected void ForgetSent(string identityId)
+	{
+		m_SentSights.Remove(identityId);
+		m_SentSightsFov.Remove(identityId);
 	}
 
 	//! Alive player after (direction 1) or before (-1) the given one in the match list; any alive player when from is null or gone

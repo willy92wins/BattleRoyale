@@ -69,3 +69,15 @@ class BRKillFeedFlags
 {
 	static const int HEADSHOT = 1;
 }
+
+//! Sights a player looks through: its client reports them to the server (SightsState RPC), which passes them on to the
+//! players spectating it (SpectateSights RPC, see BattleRoyale_dev/contracts/rpc-1.0.md). The values travel over the
+//! network: add new ones at the end
+enum EBRSpectateSights
+{
+	NONE = 0,       //!< no sights: first person from the eyes
+	IRONSIGHTS,     //!< the weapon's iron sights, or an optic that stands in for them
+	OPTICS,         //!< an optic looked through, attached to the weapon or held in the hands
+
+	COUNT           //!< not a mode: number of values above
+}
