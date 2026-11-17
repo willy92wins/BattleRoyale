@@ -227,6 +227,18 @@ modded class PlayerBase
 		}
 	}
 
+	//! A spectator's anchor has no ground under it: it stays 3 m under the ground below the watched player
+	//! (BattleRoyaleSpectators.AnchorPosition). On dry ground vanilla's command handler started a fall for it about once a
+	//! second: the anchor dropped some 4 m before UpdateAnchors put it back, and the fall started again. The anchor keeps
+	//! the command it was created with; a command that finishes still goes through vanilla, which starts the next one
+	override bool ModCommandHandlerBefore(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
+	{
+		if (br_spectator_anchor && !pCurrentCommandFinished)
+			return true;
+
+		return super.ModCommandHandlerBefore(pDt, pCurrentCommandID, pCurrentCommandFinished);
+	}
+
 	override void OnSyncJuncture( int pJunctureID, ParamsReadContext pCtx )
 	{
 		super.OnSyncJuncture( pJunctureID, pCtx );
