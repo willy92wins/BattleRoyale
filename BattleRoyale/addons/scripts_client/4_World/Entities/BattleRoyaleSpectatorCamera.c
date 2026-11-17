@@ -30,6 +30,10 @@ class BattleRoyaleSpectatorCamera: Camera
 	//! Optic of the watched player shown as its owner sees it, and the weapon whose barrel that hides, until LeaveOptics
 	protected ItemOptics m_ShownOptic;
 	protected Weapon_Base m_HiddenBarrelWeapon;
+	//! Effects this camera started on this client: the optic's mask and lens, and its night vision mode (-1 for none).
+	//! They belong to the client, not to the optic, so they stop even when the optic or the weapon is gone
+	protected bool m_OpticEffects;
+	protected int m_OpticNightVision = -1;
 	//! Watched player whose head is hidden, every entity hidden for it, and the seconds since they were hidden, until ShowHead
 	protected Human m_HiddenHeadTarget;
 	protected ref array<EntityAI> m_HiddenHeadItems = new array<EntityAI>;
@@ -58,6 +62,14 @@ class BattleRoyaleSpectatorCamera: Camera
 	{
 #ifndef SERVER
 		float timeSlice = m_FrameTimeSlice;
+		// Back in the lobby: what this camera changed on this client goes back, also when another camera is the current
+		// one already
+		if (!BattleRoyaleRPC.s_Spectating)
+		{
+			LeaveOptics();
+			ShowHead();
+		}
+
 		// The engine creates this camera for the spectator but does not switch the view to it
 		if (Camera.GetCurrentCamera() != this)
 		{
@@ -73,8 +85,6 @@ class BattleRoyaleSpectatorCamera: Camera
 		// that character is here, so the client is never left without an active camera in between
 		if (!BattleRoyaleRPC.s_Spectating)
 		{
-			LeaveOptics();
-			ShowHead();
 			Man local_player = GetGame().GetPlayer();
 			if (local_player && local_player.IsAlive())
 				SetActive(false);
@@ -100,6 +110,8 @@ class BattleRoyaleSpectatorCamera: Camera
 		{
 			LeaveOptics();
 			ShowHead();
+			SetFOV(GetDayZGame().GetUserFOV());
+			SetNearPlane(NEAR_PLANE_ORBIT);
 
 			// Not streamed in yet: wait at the position the server sent, and ask for a fresh one
 			// when the target stays out of reach (moved far away, or died without a new target yet)
@@ -271,43 +283,89 @@ class BattleRoyaleSpectatorCamera: Camera
 		return true;
 	}
 
-	//! Shows the optic as its owner sees it, as the vanilla optics camera does: its own hidden parts, the barrel that would
-	//! cover the view and, for a magnifying optic, the lens and mask effects. Undone by LeaveOptics
+	//! Shows the optic as its owner sees it, as the vanilla optics camera does (DayZPlayerCameraOptics.SetCameraPP): its own
+	//! hidden parts, its night vision and, for a magnifying optic, the barrel that would cover the view and the lens and
+	//! mask effects. Undone by LeaveOptics
 	protected void ShowOptic(ItemOptics optic, Weapon_Base weapon)
 	{
-		if (m_ShownOptic == optic)
-			return;
-
-		LeaveOptics();
-		m_ShownOptic = optic;
-		optic.OnOpticEnter();
-
-		// A sight that allows depth of field (a reflex sight) is not a magnifying optic: no lens, mask or hidden barrel
-		if (optic.AllowsDOF())
-			return;
-
-		if (weapon)
+		if (m_ShownOptic != optic)
 		{
-			weapon.HideWeaponBarrel(true);
-			m_HiddenBarrelWeapon = weapon;
+			LeaveOptics();
+			m_ShownOptic = optic;
+			optic.OnOpticEnter();
+
+			// A sight that allows depth of field (a reflex sight) is not a magnifying optic: no lens, mask or hidden barrel
+			if (!optic.AllowsDOF())
+			{
+				if (weapon)
+				{
+					weapon.HideWeaponBarrel(true);
+					m_HiddenBarrelWeapon = weapon;
+				}
+
+				PPERequester_CameraADS requester = PPERequester_CameraADS.Cast(PPERequesterBank.GetRequester(PPERequester_CameraADS));
+				if (requester)
+				{
+					array<float> mask = new array<float>;
+					array<float> lens = new array<float>;
+					if (optic.GetOpticsPPMask() && optic.GetOpticsPPMask().Count() == 4)
+						mask.Copy(optic.GetOpticsPPMask());
+					if (optic.GetOpticsPPLens() && optic.GetOpticsPPLens().Count() == 4)
+						lens.Copy(optic.GetOpticsPPLens());
+					requester.SetValuesOptics(mask, lens, optic.GetOpticsPPBlur());
+					m_OpticEffects = true;
+				}
+			}
 		}
 
-		PPERequester_CameraADS requester = PPERequester_CameraADS.Cast(PPERequesterBank.GetRequester(PPERequester_CameraADS));
-		if (requester)
+		// Night vision follows the optic's mode and power for as long as it is looked through
+		int nightVision = -1;
+		if (optic.IsNVOptic())
+			nightVision = OpticNightVisionMode(optic.GetCurrentNVType());
+		SetOpticNightVision(nightVision);
+	}
+
+	//! The camera night vision mode (PPERequester_CameraNV) of an optic's night vision type, as
+	//! DayZPlayerCameraBase.SetNVPostprocess picks it; -1 for none
+	protected static int OpticNightVisionMode(int nvType)
+	{
+		switch (nvType)
 		{
-			array<float> mask = new array<float>;
-			array<float> lens = new array<float>;
-			if (optic.GetOpticsPPMask() && optic.GetOpticsPPMask().Count() == 4)
-				mask.Copy(optic.GetOpticsPPMask());
-			if (optic.GetOpticsPPLens() && optic.GetOpticsPPLens().Count() == 4)
-				lens.Copy(optic.GetOpticsPPLens());
-			requester.SetValuesOptics(mask, lens, optic.GetOpticsPPBlur());
+			case NVTypes.NV_OPTICS_ON:
+			case NVTypes.NV_OPTICS_KAZUAR_NIGHT:
+			case NVTypes.NV_OPTICS_STARLIGHT_NIGHT:
+				return PPERequester_CameraNV.NV_DEFAULT_OPTICS;
+			case NVTypes.NV_OPTICS_KAZUAR_DAY:
+			case NVTypes.NV_OPTICS_STARLIGHT_DAY:
+			case NVTypes.NV_OPTICS_SANDSTORM_DAY:
+				return PPERequester_CameraNV.NV_DAYTIME_OPTICS;
+			case NVTypes.NV_OPTICS_SANDSTORM_NIGHT:
+				return PPERequester_CameraNV.NV_SANDSTORM_OPTICS;
+			case NVTypes.NV_OPTICS_OFF:
+				return PPERequester_CameraNV.NV_NO_BATTERY;
 		}
+		return -1;
+	}
+
+	protected void SetOpticNightVision(int mode)
+	{
+		if (mode == m_OpticNightVision)
+			return;
+
+		m_OpticNightVision = mode;
+		PPERequesterBase requester = PPERequesterBank.GetRequester(PPERequester_CameraNV);
+		if (!requester)
+			return;
+
+		if (mode == -1)
+			requester.Stop();
+		else
+			requester.Start(new Param1<int>(mode));
 	}
 
 	protected void LeaveOptics()
 	{
-		if (!m_ShownOptic && !m_HiddenBarrelWeapon)
+		if (!m_ShownOptic && !m_HiddenBarrelWeapon && !m_OpticEffects && m_OpticNightVision == -1)
 			return;
 
 		if (m_ShownOptic)
@@ -315,21 +373,24 @@ class BattleRoyaleSpectatorCamera: Camera
 			// A night vision optic hides its pilot cover on entering too; its visibility update shows it again
 			m_ShownOptic.OnOpticExit();
 			m_ShownOptic.UpdateSelectionVisibility();
-
-			// The lens and mask effects only run for a magnifying optic
-			if (!m_ShownOptic.AllowsDOF())
-			{
-				PPERequesterBase requester = PPERequesterBank.GetRequester(PPERequester_CameraADS);
-				if (requester)
-					requester.Stop();
-			}
 		}
 
+		// Shown again whatever optic the weapon holds now: HideWeaponBarrel(false) needs a magnifying one still attached
 		if (m_HiddenBarrelWeapon)
-			m_HiddenBarrelWeapon.HideWeaponBarrel(false);
+			m_HiddenBarrelWeapon.BR_ShowWeaponBarrel();
+
+		// The effects belong to this client, not to the optic: they stop even when the optic or the weapon is gone
+		if (m_OpticEffects)
+		{
+			PPERequesterBase requester = PPERequesterBank.GetRequester(PPERequester_CameraADS);
+			if (requester)
+				requester.Stop();
+		}
+		SetOpticNightVision(-1);
 
 		m_ShownOptic = null;
 		m_HiddenBarrelWeapon = null;
+		m_OpticEffects = false;
 	}
 
 	//! Hides the watched player's head and what it wears on it (headgear, mask, eyewear, with their attachments) on this

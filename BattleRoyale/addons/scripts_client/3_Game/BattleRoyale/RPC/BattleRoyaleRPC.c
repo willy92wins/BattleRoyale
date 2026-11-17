@@ -678,13 +678,17 @@ class BattleRoyaleRPC
 	// The watched player started or stopped looking through sights, or changed the magnification of its optic
 	void SpectateSights(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
-		Param2<int, float> data;
+		Param4<int, float, int, int> data;
 		if( !ctx.Read( data ) )
 		{
 			Error("FAILED TO READ SPECTATESIGHTS RPC");
 			return;
 		}
 		if ( type != CallType.Client )
+			return;
+
+		// Sights of another player than the one watched now (sent before the last SpectateTarget) do not apply
+		if ( data.param3 != s_SpectateTargetLow || data.param4 != s_SpectateTargetHigh )
 			return;
 
 		// A mode this client does not know (newer server) is shown from the eyes

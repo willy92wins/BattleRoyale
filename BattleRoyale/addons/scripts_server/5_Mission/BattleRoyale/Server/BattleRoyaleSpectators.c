@@ -15,6 +15,13 @@ class BattleRoyaleSpectators
 	protected ref map<string, float> m_SightsFov;  //!< player identity id -> optic field of view reported with them, radians
 	protected ref map<string, int> m_SentSights;  //!< spectator identity id -> sights last sent to it
 	protected ref map<string, float> m_SentSightsFov;  //!< spectator identity id -> field of view last sent with them
+	protected ref map<string, float> m_SightsWindowStart;  //!< player identity id -> tick time its current report window opened
+	protected ref map<string, int> m_SightsWindowCount;  //!< player identity id -> reports taken in that window
+
+	//! Sights reports taken from one player per window: twice the most its client sends (one every 0.1 s), so network
+	//! jitter never drops a report of a regular client
+	protected static const float SIGHTS_WINDOW_SECONDS = 0.5;
+	protected static const int SIGHTS_REPORTS_PER_WINDOW = 10;
 
 	void BattleRoyaleSpectators()
 	{
@@ -26,6 +33,8 @@ class BattleRoyaleSpectators
 		m_SightsFov = new map<string, float>;
 		m_SentSights = new map<string, int>;
 		m_SentSightsFov = new map<string, float>;
+		m_SightsWindowStart = new map<string, float>;
+		m_SightsWindowCount = new map<string, int>;
 
 		GetRPCManager().AddRPC(RPC_DAYZBRSERVER_NAMESPACE, "SightsState", this);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(UpdateAnchors, 1000, true);
@@ -131,6 +140,21 @@ class BattleRoyaleSpectators
 
 		foreach (string goneId : goneIds)
 			Drop(goneId);
+
+		// Sights reports of players gone without a disconnect event (no body at the time) go with them
+		array<string> goneReporters = new array<string>;
+		foreach (string reporterId, float windowStart : m_SightsWindowStart)
+		{
+			if (!connected.Contains(reporterId))
+				goneReporters.Insert(reporterId);
+		}
+		foreach (string sightsId, int sightsMode : m_Sights)
+		{
+			if (!connected.Contains(sightsId) && goneReporters.Find(sightsId) == -1)
+				goneReporters.Insert(sightsId);
+		}
+		foreach (string goneReporter : goneReporters)
+			ForgetReports(goneReporter);
 	}
 
 	//! True when the identity again controls a living character that is not its anchor: its spectating entry is stale
@@ -226,7 +250,7 @@ class BattleRoyaleSpectators
 		m_LastRequest.Remove(identity.GetId());
 		ClearAnchor(identity.GetId());
 		m_Identities.Remove(identity.GetId());
-		ForgetSights(identity.GetId());
+		ForgetReports(identity.GetId());
 		ForgetSent(identity.GetId());
 	}
 
@@ -390,11 +414,31 @@ class BattleRoyaleSpectators
 	}
 
 	//! A player reports the sights it looks through whenever they change (its client sends at most ten reports a
-	//! second). Only kept here, so that any number of reports costs the same: RelaySights passes them on
+	//! second). Only kept here; RelaySights passes them on, so the cost of passing them on follows the number of
+	//! watchers and not the number of reports
 	void SightsState(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
 		if (type != CallType.Server || !sender)
 			return;
+
+		// Only a living player looks through sights; a report from anyone else is dropped before it is read
+		PlayerBase reporter = PlayerBase.Cast(sender.GetPlayer());
+		if (!reporter || !reporter.IsAlive())
+			return;
+
+		// SIGHTS_REPORTS_PER_WINDOW reports every SIGHTS_WINDOW_SECONDS at most, twice what a client sends: the rest are
+		// dropped before they are read
+		string id = sender.GetId();
+		float now = GetGame().GetTickTime();
+		if (!m_SightsWindowStart.Contains(id) || now - m_SightsWindowStart.Get(id) >= SIGHTS_WINDOW_SECONDS)
+		{
+			m_SightsWindowStart.Set(id, now);
+			m_SightsWindowCount.Set(id, 0);
+		}
+		int count = m_SightsWindowCount.Get(id);
+		if (count >= SIGHTS_REPORTS_PER_WINDOW)
+			return;
+		m_SightsWindowCount.Set(id, count + 1);
 
 		Param2<int, float> data;
 		if (!ctx.Read(data))
@@ -408,7 +452,6 @@ class BattleRoyaleSpectators
 		if (sights != EBRSpectateSights.OPTICS || !(fov > 0 && fov < 1.0))
 			fov = 0;
 
-		string id = sender.GetId();
 		if (sights == EBRSpectateSights.NONE)
 		{
 			ForgetSights(id);
@@ -438,7 +481,8 @@ class BattleRoyaleSpectators
 		}
 	}
 
-	//! The sights the watched player last reported, to one of its watchers; NONE when it reported none
+	//! The sights the watched player last reported, to one of its watchers; NONE when it reported none. They name the
+	//! watched player, so a client never applies them to another one
 	protected void SendSights(PlayerIdentity watcher, PlayerBase watched)
 	{
 		if (!watcher || !watched)
@@ -448,10 +492,13 @@ class BattleRoyaleSpectators
 		float fov;
 		GetSights(watched, sights, fov);
 
+		int low, high;
+		watched.GetNetworkID(low, high);
+
 		string watcherId = watcher.GetId();
 		m_SentSights.Set(watcherId, sights);
 		m_SentSightsFov.Set(watcherId, fov);
-		GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SpectateSights", new Param2<int, float>(sights, fov), true, watcher);
+		GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SpectateSights", new Param4<int, float, int, int>(sights, fov, low, high), true, watcher);
 	}
 
 	protected void GetSights(PlayerBase player, out int sights, out float fov)
@@ -473,6 +520,14 @@ class BattleRoyaleSpectators
 	{
 		m_Sights.Remove(identityId);
 		m_SightsFov.Remove(identityId);
+	}
+
+	//! Everything kept for a player that reported its sights: the sights and its report window
+	protected void ForgetReports(string identityId)
+	{
+		ForgetSights(identityId);
+		m_SightsWindowStart.Remove(identityId);
+		m_SightsWindowCount.Remove(identityId);
 	}
 
 	//! A spectator entry that ends: the next one starts with what Watch sends
