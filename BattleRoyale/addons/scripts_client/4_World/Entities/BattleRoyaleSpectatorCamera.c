@@ -30,9 +30,11 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected Human m_HeadBoneTarget;
 	protected ref HumanMovementState m_TargetMovement = new HumanMovementState();
 
-	//! Optic of the watched player shown as its owner sees it, and the weapon whose barrel that hides, until LeaveOptics
+	//! Optic of the watched player shown as its owner sees it, the weapon whose barrel that hides, and every entity of the
+	//! watched player's clothing hidden for it, until LeaveOptics
 	protected ItemOptics m_ShownOptic;
 	protected Weapon_Base m_HiddenBarrelWeapon;
+	protected ref array<EntityAI> m_HiddenClothingItems = new array<EntityAI>;
 	//! Effects this camera started on this client: the optic's mask and lens, and its night vision mode (-1 for none).
 	//! They belong to the client, not to the optic, so they stop even when the optic or the weapon is gone
 	protected bool m_OpticEffects;
@@ -268,12 +270,12 @@ class BattleRoyaleSpectatorCamera: Camera
 
 		if (sight == optic && sights == EBRSpectateSights.OPTICS)
 		{
-			ShowOptic(target, optic, weapon);
-
 			// The magnification its owner chose; the optic's own on this client when the report has none
 			float fov = BattleRoyaleRPC.s_SpectateSightsFov;
 			if (fov <= 0)
 				fov = optic.GetCurrentStepFOV();
+
+			ShowOptic(target, optic, weapon, fov);
 			SetFOV(fov);
 			SetNearPlane(Math.Max(optic.GetNearPlaneValue(), NEAR_PLANE_OPTICS));
 		}
@@ -287,15 +289,16 @@ class BattleRoyaleSpectatorCamera: Camera
 	}
 
 	//! Shows the optic as its owner sees it, as the vanilla optics camera does (DayZPlayerCameraOptics.SetCameraPP): its own
-	//! hidden parts, its night vision and, for a magnifying optic, the barrel that would cover the view and the lens and
-	//! mask effects. Undone by LeaveOptics
-	protected void ShowOptic(Human target, ItemOptics optic, Weapon_Base weapon)
+	//! hidden parts, the clothing that would cover the view, its night vision and, for a magnifying optic, the barrel that
+	//! would cover the view and the lens and mask effects. Undone by LeaveOptics
+	protected void ShowOptic(Human target, ItemOptics optic, Weapon_Base weapon, float fov)
 	{
 		if (m_ShownOptic != optic)
 		{
 			LeaveOptics();
 			m_ShownOptic = optic;
 			optic.OnOpticEnter();
+			HideClothing(target, fov);
 
 			// A sight that allows depth of field (a reflex sight) is not a magnifying optic: no lens, mask or hidden barrel
 			if (!optic.AllowsDOF())
@@ -414,8 +417,10 @@ class BattleRoyaleSpectatorCamera: Camera
 
 	protected void LeaveOptics()
 	{
-		if (!m_ShownOptic && !m_HiddenBarrelWeapon && !m_OpticEffects && m_OpticNightVision == -1)
+		if (!m_ShownOptic && !m_HiddenBarrelWeapon && !m_OpticEffects && m_OpticNightVision == -1 && m_HiddenClothingItems.Count() == 0)
 			return;
+
+		ShowHidden(m_HiddenClothingItems);
 
 		if (m_ShownOptic)
 		{
@@ -458,19 +463,37 @@ class BattleRoyaleSpectatorCamera: Camera
 		if (!inventory)
 			return;
 
-		HideRecursive(inventory.FindPlaceholderForSlot(InventorySlots.GetSlotIdFromString("Head")));
-		HideRecursive(inventory.FindAttachment(InventorySlots.HEADGEAR));
-		HideRecursive(inventory.FindAttachment(InventorySlots.MASK));
-		HideRecursive(inventory.FindAttachment(InventorySlots.EYEWEAR));
+		HideRecursive(inventory.FindPlaceholderForSlot(InventorySlots.GetSlotIdFromString("Head")), m_HiddenHeadItems);
+		HideRecursive(inventory.FindAttachment(InventorySlots.HEADGEAR), m_HiddenHeadItems);
+		HideRecursive(inventory.FindAttachment(InventorySlots.MASK), m_HiddenHeadItems);
+		HideRecursive(inventory.FindAttachment(InventorySlots.EYEWEAR), m_HiddenHeadItems);
 	}
 
-	protected void HideRecursive(EntityAI item)
+	//! Hides what the watched player carries on its back, shoulder and belt and, behind a magnifying optic, its top and vest
+	//! on this client, as the vanilla optics camera hides the player's own (PlayerBase.HideClothing); until LeaveOptics
+	protected void HideClothing(Human target, float fov)
+	{
+		GameInventory inventory = target.GetInventory();
+		if (!inventory)
+			return;
+
+		HideRecursive(inventory.FindAttachment(InventorySlots.BACK), m_HiddenClothingItems);
+		HideRecursive(inventory.FindAttachment(InventorySlots.SHOULDER), m_HiddenClothingItems);
+		HideRecursive(inventory.FindAttachment(InventorySlots.MELEE), m_HiddenClothingItems);
+		if (fov < GameConstants.DZPLAYER_CAMERA_FOV_IRONSIGHTS)
+		{
+			HideRecursive(inventory.FindAttachment(InventorySlots.BODY), m_HiddenClothingItems);
+			HideRecursive(inventory.FindAttachment(InventorySlots.VEST), m_HiddenClothingItems);
+		}
+	}
+
+	protected void HideRecursive(EntityAI item, array<EntityAI> hidden)
 	{
 		if (!item)
 			return;
 
 		item.SetInvisible(true);
-		m_HiddenHeadItems.Insert(item);
+		hidden.Insert(item);
 
 		GameInventory inventory = item.GetInventory();
 		if (!inventory)
@@ -478,19 +501,25 @@ class BattleRoyaleSpectatorCamera: Camera
 
 		int count = inventory.AttachmentCount();
 		for (int i = 0; i < count; i++)
-			HideRecursive(inventory.GetAttachmentFromIndex(i));
+			HideRecursive(inventory.GetAttachmentFromIndex(i), hidden);
 	}
 
 	//! Shows again every entity HideHead hid, even when it has left the head since
 	protected void ShowHead()
 	{
-		foreach (EntityAI item : m_HiddenHeadItems)
+		ShowHidden(m_HiddenHeadItems);
+		m_HiddenHeadTarget = null;
+	}
+
+	//! Shows again every entity of the list, even when it has moved since, and empties it
+	protected void ShowHidden(array<EntityAI> hidden)
+	{
+		foreach (EntityAI item : hidden)
 		{
 			if (item)
 				item.SetInvisible(false);
 		}
-		m_HiddenHeadItems.Clear();
-		m_HiddenHeadTarget = null;
+		hidden.Clear();
 	}
 
 	protected void FollowThirdPerson(Human target)
