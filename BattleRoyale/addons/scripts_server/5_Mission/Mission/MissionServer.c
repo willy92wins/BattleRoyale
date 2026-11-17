@@ -263,6 +263,20 @@ modded class MissionServer
 			BattleRoyaleServer.Cast( m_BattleRoyale ).OnPlayerDisconnect(player, identity);
 		}
 
+		// A spectator leaves through its anchor body, which the engine still counts as its player. Vanilla would keep that
+		// body for the logout time, and BattleRoyaleSpectators sweeps the anchor of an identity that is no longer listed,
+		// which is already the case during that logout: vanilla then found no body and never disconnected the identity,
+		// and joining again failed ("Player with same UID is already in game") until the server restarted. An anchor is
+		// nobody's character, so it goes at once, as the body of a dead player does
+		BattleRoyaleServer br = BattleRoyaleServer.Cast( m_BattleRoyale );
+		if (br && player && identity && br.GetSpectatorAnchor(identity) == player)
+		{
+			BattleRoyaleUtils.Info("Spectator " + identity.GetName() + " left the server: disconnected at once");
+			GetGame().SendLogoutTime(player, 0);
+			PlayerDisconnected(player, identity, identity.GetId());
+			return;
+		}
+
 		super.OnClientDisconnectedEvent(identity, player, logoutTime, authFailed);
 	}
 }

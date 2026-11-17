@@ -73,7 +73,8 @@ class BattleRoyaleSpectators
 				anchor.SetPosition(AnchorPosition(target));
 		}
 
-		// Every 10 passes, drop spectators the disconnect event never reached (it is discarded when the client has no body)
+		// Every 10 passes, drop spectators whose identity is no longer listed or controls a living character of its own.
+		// A spectator who leaves never waits for this: its disconnect carries the anchor (MissionServer.OnClientDisconnectedEvent)
 		m_SweepTicks++;
 		if (m_SweepTicks >= 10)
 		{
@@ -218,6 +219,15 @@ class BattleRoyaleSpectators
 
 		string id = identity.GetId();
 		return m_Anchors.Contains(id) || m_Targets.Contains(id);
+	}
+
+	//! The anchor body of this spectator, null when it has none
+	PlayerBase GetAnchor(PlayerIdentity identity)
+	{
+		if (!identity)
+			return null;
+
+		return m_Anchors.Get(identity.GetId());
 	}
 
 	//! Serial matches: the identity now controls its new lobby character; its anchor body goes away
