@@ -88,11 +88,8 @@ modded class DayZPlayerImplement
 		GetGame().GetMission().AbortMission();
 	}
 
-	//! Sights last reported to the server (EBRSpectateSights), the optic field of view reported with them, and whether the
-	//! player was underground then (only with an optic: its night vision changes underground)
+	//! Sights last reported to the server (EBRSpectateSights)
 	protected int m_BR_ReportedSights = EBRSpectateSights.NONE;
-	protected float m_BR_ReportedSightsFov = 0;
-	protected bool m_BR_ReportedUnderground = false;
 	//! Seconds before the next report may leave
 	protected float m_BR_SightsReportCooldown = 0;
 
@@ -104,8 +101,8 @@ modded class DayZPlayerImplement
 	}
 
 	//! The local player reports the sights it looks through to the server whenever they change, so that the players
-	//! spectating it look through them too. One report every 0.1 s at most: a magnification stepped quickly sends the
-	//! last step, because the change is still there on the next tick
+	//! spectating it look through them too. One report every 0.1 s at most: sights changed quickly send the last ones,
+	//! because the change is still there on the next tick
 	protected void BR_ReportSights(float pDt)
 	{
 		if (GetGame().GetPlayer() != this)
@@ -115,22 +112,17 @@ modded class DayZPlayerImplement
 			m_BR_SightsReportCooldown -= pDt;
 
 		int sights = EBRSpectateSights.NONE;
-		float fov = 0;
-		bool underground = false;
 		if (IsInOptics())
 		{
-			sights = EBRSpectateSights.OPTICS;
+			// A magnifying optic is drawn as its owner sees it only on the owner's client: on another one its lens is
+			// opaque from inside and its reticle missing, so its spectators stay at the eyes (reported as no sights)
 			EntityAI inHands = GetEntityInHands();
 			ItemOptics optic = ItemOptics.Cast(inHands);
 			Weapon_Base weapon = Weapon_Base.Cast(inHands);
 			if (weapon)
 				optic = weapon.GetAttachedOptics();
-			if (optic)
-				fov = optic.GetCurrentStepFOV();
-
-			// Only this client knows it: the underground presence of a player is not sent to the others
-			PlayerBase player = PlayerBase.Cast(this);
-			underground = player && player.GetUndergroundPresence() != EUndergroundPresence.NONE;
+			if (optic && optic.AllowsDOF())
+				sights = EBRSpectateSights.OPTICS;
 		}
 		else if (IsInIronsights())
 		{
@@ -138,18 +130,16 @@ modded class DayZPlayerImplement
 		}
 
 		// The server asks again when it dropped a report (SightsResend): the current sights leave even unchanged
-		if (sights == m_BR_ReportedSights && fov == m_BR_ReportedSightsFov && underground == m_BR_ReportedUnderground && !BattleRoyaleRPC.s_SightsResend)
+		if (sights == m_BR_ReportedSights && !BattleRoyaleRPC.s_SightsResend)
 			return;
 
 		if (m_BR_SightsReportCooldown > 0)
 			return;
 
 		m_BR_ReportedSights = sights;
-		m_BR_ReportedSightsFov = fov;
-		m_BR_ReportedUnderground = underground;
 		m_BR_SightsReportCooldown = 0.1;
 		BattleRoyaleRPC.s_SightsResend = false;
-		GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "SightsState", new Param3<int, float, bool>(sights, fov, underground), true);
+		GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "SightsState", new Param1<int>(sights), true);
 	}
 }
 #endif

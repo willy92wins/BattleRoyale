@@ -43,11 +43,8 @@ class BattleRoyaleRPC
 	static int s_SpectateTargetHigh = 0;
 	static vector s_SpectateTargetHint = "0 0 0";
 	static string s_SpectateTargetName = "";
-	// Sights the watched player looks through (EBRSpectateSights) and, for an optic, its field of view in radians and
-	// whether the player is underground (its night vision changes there; only the player's own client knows it)
+	// Sights the watched player looks through (EBRSpectateSights)
 	static int s_SpectateSights = EBRSpectateSights.NONE;
-	static float s_SpectateSightsFov = 0;
-	static bool s_SpectateSightsUnderground = false;
 
 	// Overlay that tells a spectator apart from a living player in first person
 	static ref Widget s_SpectatorOverlay;
@@ -58,8 +55,6 @@ class BattleRoyaleRPC
 		s_SpectateTargetLow = 0;
 		s_SpectateTargetHigh = 0;
 		s_SpectateSights = EBRSpectateSights.NONE;
-		s_SpectateSightsFov = 0;
-		s_SpectateSightsUnderground = false;
 
 		if ( s_SpectatorOverlay )
 		{
@@ -663,11 +658,7 @@ class BattleRoyaleRPC
 		bool first = !s_Spectating;
 		// Another player: the sights of the previous one no longer apply, the server sends the new one's next
 		if ( data.param1 != s_SpectateTargetLow || data.param2 != s_SpectateTargetHigh )
-		{
 			s_SpectateSights = EBRSpectateSights.NONE;
-			s_SpectateSightsFov = 0;
-			s_SpectateSightsUnderground = false;
-		}
 		s_Spectating = true;
 		s_SpectateTargetLow = data.param1;
 		s_SpectateTargetHigh = data.param2;
@@ -680,10 +671,10 @@ class BattleRoyaleRPC
 		UpdateSpectatorOverlay( data.param4, data.param5 );
 	}
 
-	// The watched player started or stopped looking through sights, or changed the magnification of its optic
+	// The watched player started or stopped looking through sights
 	void SpectateSights(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
-		Param5<int, float, bool, int, int> data;
+		Param3<int, int, int> data;
 		if( !ctx.Read( data ) )
 		{
 			Error("FAILED TO READ SPECTATESIGHTS RPC");
@@ -693,7 +684,7 @@ class BattleRoyaleRPC
 			return;
 
 		// Sights of another player than the one watched now (sent before the last SpectateTarget) do not apply
-		if ( data.param4 != s_SpectateTargetLow || data.param5 != s_SpectateTargetHigh )
+		if ( data.param2 != s_SpectateTargetLow || data.param3 != s_SpectateTargetHigh )
 			return;
 
 		// A mode this client does not know (newer server) is shown from the eyes
@@ -702,8 +693,6 @@ class BattleRoyaleRPC
 			sights = EBRSpectateSights.NONE;
 
 		s_SpectateSights = sights;
-		s_SpectateSightsFov = data.param2;
-		s_SpectateSightsUnderground = data.param3;
 	}
 
 	//! The server dropped one of this client's sights reports (too many at once) and asks for the current sights again:

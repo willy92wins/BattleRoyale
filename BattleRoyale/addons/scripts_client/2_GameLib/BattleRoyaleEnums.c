@@ -77,7 +77,8 @@ enum EBRSpectateSights
 {
 	NONE = 0,       //!< no sights: first person from the eyes
 	IRONSIGHTS,     //!< the weapon's iron sights, or an optic that stands in for them
-	OPTICS,         //!< an optic looked through, attached to the weapon or held in the hands
+	OPTICS,         //!< an optic that does not magnify (ItemOptics.AllowsDOF), looked through on the weapon or in the
+	                //!< hands. A magnifying one is reported as NONE: its lens is drawn only on its owner's client
 
 	COUNT           //!< not a mode: number of values above
 }
