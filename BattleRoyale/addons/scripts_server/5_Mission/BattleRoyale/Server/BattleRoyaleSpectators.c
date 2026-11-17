@@ -73,7 +73,8 @@ class BattleRoyaleSpectators
 				anchor.SetPosition(AnchorPosition(target));
 		}
 
-		// Every 10 passes, drop spectators the disconnect event never reached (it is discarded when the client has no body)
+		// Every 10 passes, drop spectators whose identity is no longer listed or controls a living character of its own.
+		// A spectator who leaves never waits for this: its disconnect carries the anchor (MissionServer.OnClientDisconnectedEvent)
 		m_SweepTicks++;
 		if (m_SweepTicks >= 10)
 		{
