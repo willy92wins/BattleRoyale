@@ -1,6 +1,6 @@
 //! Camera of a dead player who watches the players still alive (created by the server with SelectSpectator).
-//! First person recreates what the watched player sees: from its eyes along its head, along the barrel of a weapon it
-//! raises, and through the iron sights or the optic it looks through, which its own client reports (SpectateSights RPC).
+//! First person recreates what the watched player sees: from its eyes where it aims, and through the iron sights or the
+//! optic it looks through, which its own client reports (SpectateSights RPC).
 //! Its head and what it wears on it are hidden on this client meanwhile, as the vanilla first person camera hides the
 //! player's own. Third person orbits behind the player with the mouse. The vanilla person view key switches between them.
 class BattleRoyaleSpectatorCamera: Camera
@@ -28,7 +28,6 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected int m_HeadBoneIndex = -1;
 	protected string m_HeadBoneTargetType;
 	protected Human m_HeadBoneTarget;
-	protected ref HumanMovementState m_TargetMovement = new HumanMovementState();
 
 	//! Optic of the watched player shown as its owner sees it, the weapon whose barrel that hides, and every entity of the
 	//! watched player's clothing hidden for it, until LeaveOptics
@@ -188,28 +187,27 @@ class BattleRoyaleSpectatorCamera: Camera
 		vector head[4];
 		target.GetBoneTransformWS(m_HeadBoneIndex, head);
 
-		// The eyes look where the head looks. A raised weapon aims along its barrel, which follows the aim up and down; a
-		// lowered one points at the ground or across the body, so the view stays with the head then
-		vector direction = head[1].Normalized();
-		target.GetMovementState(m_TargetMovement);
-		Weapon_Base weapon;
-		if (m_TargetMovement.IsRaised() && Class.CastTo(weapon, target.GetHumanInventory().GetEntityInHands()))
-		{
-			vector weaponTransform[4];
-			weapon.GetTransform(weaponTransform);
-			vector barrelStart = weapon.GetSelectionPositionLS("konec hlavne").Multiply4(weaponTransform);
-			vector barrelEnd = weapon.GetSelectionPositionLS("usti hlavne").Multiply4(weaponTransform);
-			if (vector.DistanceSq(barrelStart, barrelEnd) > 0.0001)
-				direction = (barrelEnd - barrelStart).Normalized();
-		}
-
+		// As the vanilla first person camera does (DayZPlayerCamera1stPerson), the head bone gives only the position and the
+		// view looks where the player aims. The head bone and a weapon in the hands swing with the running animation
+		vector angles = AimAngles(target, head[1]);
 		SetPosition(head[3] + head[0] * EYE_UP + head[1] * EYE_FORWARD);
-		SetOrientation(direction.VectorToAngles());
+		SetOrientation(angles);
 		SetFOV(GetDayZGame().GetUserFOV());
 		SetNearPlane(NEAR_PLANE_EYES);
 
 		// Third person starts behind the player when switching
-		m_OrbitYaw = direction.VectorToAngles()[0];
+		m_OrbitYaw = angles[0];
+	}
+
+	//! Where the watched player aims, as yaw and pitch in degrees: its heading plus its base aiming angles, which carry no
+	//! sway (HumanCommandWeapons.GetBaseAimingAngleLR/UD, composed as Weapon_Base does). Along the head without them
+	protected vector AimAngles(Human target, vector headForward)
+	{
+		HumanCommandWeapons weapons = target.GetCommandModifier_Weapons();
+		if (!weapons)
+			return headForward.VectorToAngles();
+
+		return Vector(target.GetOrientation()[0] + weapons.GetBaseAimingAngleLR(), weapons.GetBaseAimingAngleUD(), 0);
 	}
 
 	//! Through the sights the watched player looks through: the camera sits at their eye point, as the vanilla iron sights
