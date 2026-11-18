@@ -221,14 +221,15 @@ class BRLeaderboard
 		m_LoadedPath = FilePath();
 	}
 
-	//! Adds two standings counters without overflowing: the result stops at int.MAX (or int.MIN)
+	//! Adds a standings amount without overflowing: the result stops at int.MAX. Amounts are never negative (the point
+	//! settings are 0 to 1000), and a comparison against int.MIN is unreliable in Enforce, so a negative one adds nothing
 	protected static int SaturateAdd(int current, int added)
 	{
-		if (added > 0 && current > int.MAX - added)
-			return int.MAX;
+		if (added <= 0)
+			return current;
 
-		if (added < 0 && current < int.MIN - added)
-			return int.MIN;
+		if (current > int.MAX - added)
+			return int.MAX;
 
 		return current + added;
 	}
