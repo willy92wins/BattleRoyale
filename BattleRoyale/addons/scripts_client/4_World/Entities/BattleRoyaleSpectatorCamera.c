@@ -17,6 +17,10 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected static const float NEAR_PLANE_ORBIT = 0.07;
 	//! Seconds between two refreshes of the hidden head, so that a helmet put on meanwhile is hidden too
 	protected static const float HEAD_REFRESH_SECONDS = 1.0;
+	//! Smoothing times, in seconds, of the first person view: from the eyes its angles follow the watched player's aim,
+	//! which reaches this client in steps, and the view moves over between the eyes and the sights
+	protected static const float VIEW_SMOOTH_TIME = 0.08;
+	protected static const float SIGHTS_SMOOTH_TIME = 0.1;
 
 	protected float m_UpdateAccumulator;
 	protected float m_MissingTarget;
@@ -26,6 +30,27 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected int m_HeadBoneIndex = -1;
 	protected string m_HeadBoneTargetType;
 	protected Human m_HeadBoneTarget;
+
+	//! First person view: the watched player (a new one is taken at once), what it looks through (EBRSpectateSights),
+	//! the angles from the eyes smoothed towards its aim, and the view as shown
+	protected Human m_ViewTarget;
+	protected int m_ViewSights;
+	protected float m_ViewYaw;
+	protected float m_ViewPitch;
+	protected float m_ViewYawVelocity[1];
+	protected float m_ViewPitchVelocity[1];
+	protected vector m_ShownOffset;
+	protected float m_ShownYaw;
+	protected float m_ShownPitch;
+	protected float m_ShownFOV;
+	//! Gap between the view shown and the new one when the watched player switches between the eyes and the sights,
+	//! closed as the weight goes from 1 to 0. Through the sights the view is otherwise their own, with no delay
+	protected vector m_SwitchOffset;
+	protected float m_SwitchYaw;
+	protected float m_SwitchPitch;
+	protected float m_SwitchFOV;
+	protected float m_SwitchWeight;
+	protected float m_SwitchWeightVelocity[1];
 
 	//! Optic of the watched player shown as its owner sees it, and every entity of the watched player's clothing hidden
 	//! for it, until LeaveOptics
@@ -111,12 +136,16 @@ class BattleRoyaleSpectatorCamera: Camera
 		{
 			m_MissingTarget = 0;
 			if (s_ThirdPerson)
+			{
+				m_ViewTarget = null;
 				FollowThirdPerson(target);
+			}
 			else
 				FollowFirstPerson(target, timeSlice);
 		}
 		else
 		{
+			m_ViewTarget = null;
 			LeaveOptics();
 			ShowHead();
 			SetFOV(GetDayZGame().GetUserFOV());
@@ -167,11 +196,6 @@ class BattleRoyaleSpectatorCamera: Camera
 	{
 		HideHead(target, timeSlice);
 
-		if (FollowSights(target))
-			return;
-
-		LeaveOptics();
-
 		// All player skeletons share the bone layout, so the by-name lookup is only needed once per target class
 		if (m_HeadBoneIndex == -1)
 		{
@@ -191,34 +215,126 @@ class BattleRoyaleSpectatorCamera: Camera
 
 		vector head[4];
 		target.GetBoneTransformWS(m_HeadBoneIndex, head);
+		vector eyes = head[3] + head[0] * EYE_UP + head[1] * EYE_FORWARD;
 
-		// As the vanilla first person camera does (DayZPlayerCamera1stPerson), the head bone gives only the position and the
-		// view looks where the player aims. The head bone and a weapon in the hands swing with the running animation
-		vector angles = AimAngles(target, head[1]);
-		SetPosition(head[3] + head[0] * EYE_UP + head[1] * EYE_FORWARD);
-		SetOrientation(angles);
-		SetFOV(GetDayZGame().GetUserFOV());
-		SetNearPlane(NEAR_PLANE_EYES);
+		vector position;
+		vector angles;
+		float fov;
+		float nearPlane;
+		int sights = BattleRoyaleRPC.s_SpectateSights;
+		if (!FollowSights(target, position, angles, fov, nearPlane))
+		{
+			sights = EBRSpectateSights.NONE;
+			LeaveOptics();
+
+			// As the vanilla first person camera does (DayZPlayerCamera1stPerson), the head bone gives the position and
+			// the view looks where the player aims
+			position = eyes;
+			angles = AimAngles(target, head[1]);
+			fov = GetDayZGame().GetUserFOV();
+			nearPlane = NEAR_PLANE_EYES;
+		}
+
+		SmoothView(target, sights, position - eyes, angles, fov, timeSlice);
+		SetPosition(eyes + m_ShownOffset);
+		SetOrientation(Vector(m_ShownYaw, m_ShownPitch, 0));
+		SetFOV(m_ShownFOV);
+		SetNearPlane(nearPlane);
 
 		// Third person starts behind the player when switching
-		m_OrbitYaw = angles[0];
+		m_OrbitYaw = m_ShownYaw;
 	}
 
-	//! Where the watched player aims, as yaw and pitch in degrees: its heading plus its base aiming angles, which carry no
-	//! sway (HumanCommandWeapons.GetBaseAimingAngleLR/UD, composed as Weapon_Base does). Along the head without them
+	//! Works out the view shown from the one wanted (its place relative to the eyes, angles and field of view): from the
+	//! eyes the angles are smoothed, through the sights the view is theirs, and a switch between the two moves over. A
+	//! new watched player is taken at once
+	protected void SmoothView(Human target, int sights, vector offset, vector angles, float fov, float timeSlice)
+	{
+		float yaw = SignedAngle(angles[0]);
+		float pitch = SignedAngle(angles[1]);
+		if (target != m_ViewTarget)
+		{
+			m_ViewTarget = target;
+			m_ViewSights = sights;
+			m_ViewYaw = yaw;
+			m_ViewPitch = pitch;
+			m_ViewYawVelocity[0] = 0;
+			m_ViewPitchVelocity[0] = 0;
+			m_SwitchWeight = 0;
+			m_SwitchWeightVelocity[0] = 0;
+		}
+		else if (sights == EBRSpectateSights.NONE)
+		{
+			// The yaw goes the short way round
+			float yawGoal = m_ViewYaw + SignedAngle(yaw - m_ViewYaw);
+			m_ViewYaw = SignedAngle(Math.SmoothCD(m_ViewYaw, yawGoal, m_ViewYawVelocity, VIEW_SMOOTH_TIME, 10000, timeSlice));
+			m_ViewPitch = Math.SmoothCD(m_ViewPitch, pitch, m_ViewPitchVelocity, VIEW_SMOOTH_TIME, 10000, timeSlice);
+		}
+		else
+		{
+			// Back at the eyes the smoothing starts from the sights' angles
+			m_ViewYaw = yaw;
+			m_ViewPitch = pitch;
+			m_ViewYawVelocity[0] = 0;
+			m_ViewPitchVelocity[0] = 0;
+		}
+
+		if (sights != m_ViewSights)
+		{
+			m_ViewSights = sights;
+			m_SwitchOffset = m_ShownOffset - offset;
+			m_SwitchYaw = SignedAngle(m_ShownYaw - m_ViewYaw);
+			m_SwitchPitch = m_ShownPitch - m_ViewPitch;
+			m_SwitchFOV = m_ShownFOV - fov;
+			m_SwitchWeight = 1;
+			m_SwitchWeightVelocity[0] = 0;
+		}
+		else if (m_SwitchWeight > 0)
+		{
+			m_SwitchWeight = Math.SmoothCD(m_SwitchWeight, 0, m_SwitchWeightVelocity, SIGHTS_SMOOTH_TIME, 1000, timeSlice);
+			if (m_SwitchWeight < 0.001)
+				m_SwitchWeight = 0;
+		}
+
+		m_ShownOffset = offset + m_SwitchOffset * m_SwitchWeight;
+		m_ShownYaw = SignedAngle(m_ViewYaw + m_SwitchYaw * m_SwitchWeight);
+		m_ShownPitch = m_ViewPitch + m_SwitchPitch * m_SwitchWeight;
+		m_ShownFOV = fov + m_SwitchFOV * m_SwitchWeight;
+	}
+
+	//! The angle in degrees between -180 and 180
+	protected static float SignedAngle(float angle)
+	{
+		angle = Math.NormalizeAngle(angle);
+		if (angle > 180)
+			angle -= 360;
+		return angle;
+	}
+
+	//! Where the watched player looks, as yaw and pitch in degrees: its heading plus its base aiming angles, which carry
+	//! no sway (HumanCommandWeapons.GetBaseAimingAngleLR/UD, composed as Weapon_Base does). Those are where its view
+	//! points only while it raises its hands (the view is kept on them, DayZPlayerCameraBase); with them lowered its
+	//! view moves on its own and only its head shows the height, so the pitch is the head's. Along the head without them
 	protected vector AimAngles(Human target, vector headForward)
 	{
+		vector headAngles = headForward.VectorToAngles();
 		HumanCommandWeapons weapons = target.GetCommandModifier_Weapons();
 		if (!weapons)
-			return headForward.VectorToAngles();
+			return headAngles;
 
-		return Vector(target.GetOrientation()[0] + weapons.GetBaseAimingAngleLR(), weapons.GetBaseAimingAngleUD(), 0);
+		float yaw = target.GetOrientation()[0] + weapons.GetBaseAimingAngleLR();
+		HumanMovementState movement = new HumanMovementState();
+		target.GetMovementState(movement);
+		if (!movement.IsRaised())
+			return Vector(yaw, headAngles[1], 0);
+
+		return Vector(yaw, weapons.GetBaseAimingAngleUD(), 0);
 	}
 
 	//! Through the sights the watched player looks through: the camera sits at their eye point, as the vanilla iron sights
 	//! and optics cameras do (DayZPlayerCameraIronsights.GetCurrentSightInfo, DayZPlayerCameraOptics), with their field of
-	//! view and near plane. False when the player looks through none of them
-	protected bool FollowSights(Human target)
+	//! view and near plane, given back for the view. False when the player looks through none of them
+	protected bool FollowSights(Human target, out vector position, out vector angles, out float fov, out float nearPlane)
 	{
 		int sights = BattleRoyaleRPC.s_SpectateSights;
 		if (sights == EBRSpectateSights.NONE)
@@ -268,21 +384,20 @@ class BattleRoyaleSpectatorCamera: Camera
 		vector eyePosition = eyePoint.Multiply4(sightTransform);
 		vector ahead = eyePoint + eyeDirection;
 		vector direction = (ahead.Multiply4(sightTransform) - eyePosition).Normalized();
-		SetPosition(eyePosition);
-		SetOrientation(direction.VectorToAngles());
-		m_OrbitYaw = direction.VectorToAngles()[0];
+		position = eyePosition;
+		angles = direction.VectorToAngles();
 
 		if (sight == optic && sights == EBRSpectateSights.OPTICS)
 		{
 			ShowOptic(target, optic);
-			SetFOV(optic.GetCurrentStepFOV());
-			SetNearPlane(Math.Max(optic.GetNearPlaneValue(), NEAR_PLANE_OPTICS));
+			fov = optic.GetCurrentStepFOV();
+			nearPlane = Math.Max(optic.GetNearPlaneValue(), NEAR_PLANE_OPTICS);
 		}
 		else
 		{
 			LeaveOptics();
-			SetFOV(GameConstants.DZPLAYER_CAMERA_FOV_IRONSIGHTS);
-			SetNearPlane(NEAR_PLANE_EYES);
+			fov = GameConstants.DZPLAYER_CAMERA_FOV_IRONSIGHTS;
+			nearPlane = NEAR_PLANE_EYES;
 		}
 		return true;
 	}
