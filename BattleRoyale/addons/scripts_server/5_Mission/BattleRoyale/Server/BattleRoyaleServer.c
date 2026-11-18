@@ -15,6 +15,11 @@ class BattleRoyaleServer: BattleRoyaleBase
 
     protected ref BattleRoyaleSpectators m_Spectators;
 
+    //! The match in progress, for the match end webhook: players and time at its start, kills by player plain id
+    protected int m_MatchStartPlayers;
+    protected float m_MatchStartTime;
+    protected ref map<string, int> m_MatchKills = new map<string, int>;
+
     void BattleRoyaleServer()
     {
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "PlayerReadyUp", this);
@@ -745,6 +750,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 					BattleRoyaleUtils.Trace("[State Machine] Entering State `" + GetCurrentState().GetName() + "`");
 					GetCurrentState().Activate(); //activate new state
 					NotifyStatsWebhook(GetCurrentState());
+					NotifyMatchEndWebhook(GetCurrentState());
 				}
 				else
 				{
@@ -1105,6 +1111,72 @@ class BattleRoyaleServer: BattleRoyaleBase
             }
             BRStatsWebhook.Send(serverData.stats_webhook_url, "winner", 0, winnerName);
         }
+    }
+
+    //! One more kill in the match in progress for the player with this plain id: the kill CreditKill adds to the HUD counter
+    void AddMatchKill(string plainId)
+    {
+        if (plainId == "")
+            return;
+
+        int kills = 0;
+        m_MatchKills.Find(plainId, kills);
+        m_MatchKills.Set(plainId, kills + 1);
+    }
+
+    //! The message to the Discord webhook of server_settings.json when a match ends. The match start is noted even
+    //! without a URL, so the counts are right for a match that ends after the URL was set
+    protected void NotifyMatchEndWebhook(BattleRoyaleState state)
+    {
+        if (!state)
+            return;
+
+        string stateName = state.GetName();
+        if (stateName == "Start Match State")
+        {
+            m_MatchStartPlayers = 0;
+            if (state.GetPlayers())
+                m_MatchStartPlayers = state.GetPlayers().Count();
+            m_MatchStartTime = GetGame().GetTickTime();
+            m_MatchKills.Clear();
+            return;
+        }
+
+        if (stateName != "Win State")
+            return;
+
+        BattleRoyaleServerData serverData = BattleRoyaleConfig.GetConfig().GetServerData();
+        if (!serverData || serverData.match_end_webhook_url == "")
+            return;
+
+        // The winners are the players left in the win state, a whole team when a team wins
+        string winners = "";
+        int kills = 0;
+        array<PlayerBase> players = state.GetPlayers();
+        if (players)
+        {
+            for (int i = 0; i < players.Count(); i++)
+            {
+                PlayerBase winner = players[i];
+                if (!winner || !winner.GetIdentity())
+                    continue;
+
+                if (winners != "")
+                    winners += ", ";
+                winners += winner.GetIdentity().GetName();
+
+                int winnerKills = 0;
+                m_MatchKills.Find(winner.GetIdentity().GetPlainId(), winnerKills);
+                kills += winnerKills;
+            }
+        }
+
+        string messageFormat = serverData.match_end_message;
+        if (winners == "")
+            messageFormat = serverData.match_end_message_no_winner;
+
+        int minutes = Math.Round((GetGame().GetTickTime() - m_MatchStartTime) / 60.0);
+        BRMatchEndWebhook.Send(serverData.match_end_webhook_url, BRMatchEndWebhook.BuildMessage(messageFormat, winners, kills, m_MatchStartPlayers, minutes));
     }
 
     void OnPlayerDisconnect(PlayerBase player, PlayerIdentity identity)

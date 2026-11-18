@@ -43,6 +43,16 @@ class BattleRoyaleServerData: BattleRoyaleDataBase
 	// The restart loop then wipes the world, which brings the loot back
 	int serial_restart_every_matches = 6;
 
+	// Message posted to a Discord webhook when a match ends. Empty URL disables it. Keep the URL private: whoever has it
+	// can post to the channel. The mod never sends it to the players nor writes it to the logs.
+	// Placeholders: {winner} (the winner's name; the names of a winning team, comma separated), {kills} (the winner's
+	// kills in the match, a team's added together), {players} (players at the match start) and {duration} (minutes from
+	// the match start to the win). Names and mentions in the message ping nobody; Discord refuses over 2000 characters.
+	string match_end_webhook_url = "";
+	string match_end_message = "{winner} won the match with {kills} kills ({players} players, {duration} min)";
+	// Posted instead when nobody wins: the last players died together or left. Empty: nothing is posted then
+	string match_end_message_no_winner = "The match ended without a winner ({players} players, {duration} min)";
+
     override string GetProfilePath()
     {
         return BATTLEROYALE_SETTINGS_FOLDER + "server_settings.json";
