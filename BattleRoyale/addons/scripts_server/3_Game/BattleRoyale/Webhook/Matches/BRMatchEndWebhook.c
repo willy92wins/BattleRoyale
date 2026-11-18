@@ -89,7 +89,7 @@ class BRMatchEndWebhook
 			return;
 		}
 
-		RestContext ctx = restApi.GetRestContext(url);
+		RestContext ctx = restApi.GetRestContext(PostUrl(url));
 		if (!ctx)
 		{
 			BattleRoyaleUtils.Warn("Match end webhook: no REST context for the URL");
@@ -98,20 +98,33 @@ class BRMatchEndWebhook
 
 		ctx.SetHeader("application/json");
 		s_Callback = new BRMatchEndCallback;
-		ctx.POST(s_Callback, WaitQuery(url), body);
+		ctx.POST(s_Callback, "", body);
 	}
 
 	//! Discord answers a webhook with 204 and no body, which the engine reports as an error (OnError 8, measured with
-	//! DayZDiag 1.30). With wait=true it answers 200 with the message it posted. Added to Discord URLs that lack it
-	static string WaitQuery(string url)
+	//! DayZDiag 1.30). With wait=true it answers 200 with the message it posted. Added to a Discord URL whose query has
+	//! no wait parameter, before any #fragment (a fragment is not sent)
+	static string PostUrl(string url)
 	{
-		if (!url.Contains("/api/webhooks/") || url.Contains("wait="))
-			return "";
+		if (!url.Contains("/api/webhooks/"))
+			return url;
 
-		if (url.Contains("?"))
-			return "&wait=true";
+		string address = url;
+		string fragment = "";
+		int hash = url.IndexOf("#");
+		if (hash != -1)
+		{
+			address = url.Substring(0, hash);
+			fragment = url.Substring(hash, url.Length() - hash);
+		}
 
-		return "?wait=true";
+		if (address.Contains("?wait=") || address.Contains("&wait="))
+			return url;
+
+		if (address.Contains("?"))
+			return address + "&wait=true" + fragment;
+
+		return address + "?wait=true" + fragment;
 	}
 }
 #endif
