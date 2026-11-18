@@ -621,11 +621,23 @@ class BattleRoyaleRPC
 	protected ref array<int> m_LeaderboardPoints = new array<int>;
 	protected ref array<int> m_LeaderboardKills = new array<int>;
 	protected ref array<int> m_LeaderboardWins = new array<int>;
+	protected int m_LeaderboardSelfRank = 0;    //!< own rank from 1 in the full list, 0 when not on it this period
+	protected int m_LeaderboardSelfPoints = 0;
+	protected int m_LeaderboardSelfKills = 0;
+	protected int m_LeaderboardSelfWins = 0;
+	protected string m_LeaderboardSeasonStart = "";  //!< first day of the current period, YYYY-MM-DD
+	protected string m_LeaderboardSeasonEnd = "";    //!< last day of the current period, YYYY-MM-DD
+	protected int m_LeaderboardSecondsLeft = 0;      //!< seconds to the end of the period, as sent by the server
+	protected float m_LeaderboardReceivedAt = 0;     //!< GetGame().GetTickTime() when the last LeaderboardData arrived
 
 	void LeaderboardData(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
-		// wipe mode, period label, then the names, points, kills and wins of the top 30 in order
-		Param6<string, string, array<string>, array<int>, array<int>, array<int>> data;
+		// wipe mode, period label, then the names, points, kills and wins of the top 30 in order,
+		// then own [rank, points, kills, wins], season [start, end] and seconds left in the period.
+		// The season and the seconds left name the period stored on the server (the previous
+		// one when its rotation failed), the same period as the standings and the label. The
+		// seconds left assume 86400 seconds per day: aproximado: ±1 h los días de cambio de hora
+		Param9<string, string, array<string>, array<int>, array<int>, array<int>, array<int>, array<string>, int> data;
 		if( !ctx.Read( data ) )
 		{
 			Error("FAILED TO READ LEADERBOARDDATA RPC");
@@ -647,6 +659,26 @@ class BattleRoyaleRPC
 				m_LeaderboardKills.InsertAll(data.param5);
 			if (data.param6)
 				m_LeaderboardWins.InsertAll(data.param6);
+			m_LeaderboardSelfRank = 0;
+			m_LeaderboardSelfPoints = 0;
+			m_LeaderboardSelfKills = 0;
+			m_LeaderboardSelfWins = 0;
+			if (data.param7 && data.param7.Count() >= 4)
+			{
+				m_LeaderboardSelfRank = data.param7[0];
+				m_LeaderboardSelfPoints = data.param7[1];
+				m_LeaderboardSelfKills = data.param7[2];
+				m_LeaderboardSelfWins = data.param7[3];
+			}
+			m_LeaderboardSeasonStart = "";
+			m_LeaderboardSeasonEnd = "";
+			if (data.param8 && data.param8.Count() >= 2)
+			{
+				m_LeaderboardSeasonStart = data.param8[0];
+				m_LeaderboardSeasonEnd = data.param8[1];
+			}
+			m_LeaderboardSecondsLeft = data.param9;
+			m_LeaderboardReceivedAt = GetGame().GetTickTime();
 			leaderboard_serial++;
 		}
 	}
@@ -660,6 +692,30 @@ class BattleRoyaleRPC
 		points = m_LeaderboardPoints;
 		kills = m_LeaderboardKills;
 		wins = m_LeaderboardWins;
+		return leaderboard_serial > 0;
+	}
+
+	//! Own standing of the last LeaderboardData: rank from 1 (0 when not on the list this period)
+	//! with points, kills and wins; false when no LeaderboardData has arrived yet
+	bool GetLeaderboardSelf(out int rank, out int points, out int kills, out int wins)
+	{
+		rank = m_LeaderboardSelfRank;
+		points = m_LeaderboardSelfPoints;
+		kills = m_LeaderboardSelfKills;
+		wins = m_LeaderboardSelfWins;
+		return leaderboard_serial > 0;
+	}
+
+	//! Season of the last LeaderboardData: first and last day (YYYY-MM-DD), the seconds left the
+	//! server sent and when it arrived (GetGame().GetTickTime()), so the panel can discount the
+	//! time since; false when no LeaderboardData has arrived yet. The seconds left are
+	//! aproximado: ±1 h los días de cambio de hora
+	bool GetLeaderboardSeason(out string start, out string end, out int seconds_left, out float received_at)
+	{
+		start = m_LeaderboardSeasonStart;
+		end = m_LeaderboardSeasonEnd;
+		seconds_left = m_LeaderboardSecondsLeft;
+		received_at = m_LeaderboardReceivedAt;
 		return leaderboard_serial > 0;
 	}
 

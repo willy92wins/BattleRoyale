@@ -47,6 +47,12 @@ class BRLeaderboard
 	protected ref BRLeaderboardFile m_File = new BRLeaderboardFile;
 	protected ref map<string, BRLeaderboardEntry> m_ById = new map<string, BRLeaderboardEntry>;
 
+	//! True when an unreadable file could not be preserved: scores stay in memory and nothing is written this run
+	protected bool m_SaveDisabled;
+	//! True only when leaderboard.json is a known good copy: it loaded whole at startup or the last
+	//! save read it back whole. Only then may it be copied to .bak before being replaced
+	protected bool m_MainKnownValid;
+
 	//! Cache of the first TOP_COUNT standings, rebuilt whenever the standings change: client requests read it as it is
 	protected ref array<string> m_TopNames = new array<string>;
 	protected ref array<int> m_TopPoints = new array<int>;
@@ -66,25 +72,178 @@ class BRLeaderboard
 		return BATTLEROYALE_SETTINGS_FOLDER + "leaderboard.json";
 	}
 
-	//! Reads leaderboard.json; a file that cannot be read is copied aside, never overwritten, and the board starts empty
+	static string NewFilePath()
+	{
+		return FilePath() + ".new";
+	}
+
+	static string BakFilePath()
+	{
+		return FilePath() + ".bak";
+	}
+
+	//! First free name for a preserved copy: baseWithoutExtension + ".json", then "_2", "_3" and so on
+	protected string FirstFreeJsonPath(string baseWithoutExtension)
+	{
+		string freePath = baseWithoutExtension + ".json";
+		if (!FileExist(freePath))
+			return freePath;
+
+		int suffix = 2;
+		string candidatePath = baseWithoutExtension + "_" + suffix.ToString() + ".json";
+		while (FileExist(candidatePath))
+		{
+			suffix = suffix + 1;
+			candidatePath = baseWithoutExtension + "_" + suffix.ToString() + ".json";
+		}
+
+		return candidatePath;
+	}
+
+	//! Copies sourcePath to the first free name of baseWithoutExtension; true only when the copy is there
+	protected bool PreserveFile(string sourcePath, string baseWithoutExtension, out string preservedPath)
+	{
+		preservedPath = FirstFreeJsonPath(baseWithoutExtension);
+		if (!CopyFile(sourcePath, preservedPath))
+			return false;
+
+		return FileExist(preservedPath);
+	}
+
+	//! Turns saving off for this run, logged once: matches still score in memory, no file is written
+	protected void DisableSaving()
+	{
+		if (m_SaveDisabled)
+			return;
+
+		m_SaveDisabled = true;
+		Error("[Leaderboard] leaderboard.json could not be read and could not be preserved; saving is disabled for this run, scores are kept in memory only and the file is left for the administrator");
+	}
+
+	protected int PlayerCount(BRLeaderboardFile file)
+	{
+		if (!file || !file.players)
+			return 0;
+
+		return file.players.Count();
+	}
+
+	//! Loads path into a fresh object; true only when the file reads whole into it
+	protected bool TryLoad(string path, out BRLeaderboardFile loaded)
+	{
+		loaded = new BRLeaderboardFile;
+		string tryLoadError;
+		return JsonFileLoader<BRLeaderboardFile>.LoadFile(path, loaded, tryLoadError);
+	}
+
+	//! A file is valid when it reads whole and, when expected is given, its period and player count match it.
+	//! No write or copy is trusted without this read-back
+	protected bool Valid(string path, BRLeaderboardFile expected)
+	{
+		BRLeaderboardFile probe = new BRLeaderboardFile;
+		string probeError;
+		if (!JsonFileLoader<BRLeaderboardFile>.LoadFile(path, probe, probeError))
+			return false;
+
+		if (expected)
+		{
+			if (probe.period != expected.period)
+				return false;
+			if (PlayerCount(probe) != PlayerCount(expected))
+				return false;
+		}
+
+		return true;
+	}
+
+	//! Reads leaderboard.json, then leaderboard.json.new, then leaderboard.json.bak, and uses the first
+	//! one that reads whole. A board recovered from .new or .bak is copied onto leaderboard.json (and read
+	//! back) after the unreadable main file, if any, has been copied aside, so the recovered board lives
+	//! in two places before any later save. Only when none reads is every unreadable file copied aside
+	//! and the board starts empty; when a copy aside fails, saving stays off for this run
 	void Load()
 	{
 		m_File = new BRLeaderboardFile;
 		m_ById.Clear();
+		m_MainKnownValid = false;
 
-		if (FileExist(FilePath()))
+		array<string> loadCandidates = new array<string>;
+		loadCandidates.Insert(FilePath());
+		loadCandidates.Insert(NewFilePath());
+		loadCandidates.Insert(BakFilePath());
+
+		string loadedPath = "";
+		BRLeaderboardFile loadedFile;
+		for (int c = 0; c < loadCandidates.Count(); c++)
 		{
-			BRLeaderboardFile loaded = new BRLeaderboardFile;
-			string errorMessage;
-			if (JsonFileLoader<BRLeaderboardFile>.LoadFile(FilePath(), loaded, errorMessage))
+			string candidatePath = loadCandidates[c];
+			if (!FileExist(candidatePath))
+				continue;
+
+			BRLeaderboardFile candidateFile;
+			if (TryLoad(candidatePath, candidateFile))
 			{
-				m_File = loaded;
+				loadedFile = candidateFile;
+				loadedPath = candidatePath;
+				break;
+			}
+		}
+
+		if (loadedPath != "")
+		{
+			m_File = loadedFile;
+			if (!m_File.players)
+				m_File.players = new array<ref BRLeaderboardEntry>;
+
+			if (loadedPath == FilePath())
+			{
+				m_MainKnownValid = true;
 			}
 			else
 			{
-				CopyFile(FilePath(), BATTLEROYALE_SETTINGS_FOLDER + "leaderboard.broken.json");
-				Error("[Leaderboard] leaderboard.json could not be read, copied to leaderboard.broken.json; starting with an empty leaderboard");
+				BattleRoyaleUtils.Info("[Leaderboard] Loaded " + loadedPath + " instead of leaderboard.json");
+				bool recoveryOk = true;
+				if (FileExist(FilePath()))
+				{
+					string brokenPath;
+					if (PreserveFile(FilePath(), BATTLEROYALE_SETTINGS_FOLDER + "leaderboard.broken", brokenPath))
+						Error("[Leaderboard] leaderboard.json could not be read, copied to " + brokenPath);
+					else
+						recoveryOk = false;
+				}
+
+				if (recoveryOk)
+				{
+					if (!CopyFile(loadedPath, FilePath()) || !Valid(FilePath(), m_File))
+						recoveryOk = false;
+					else
+						m_MainKnownValid = true;
+				}
+
+				if (!recoveryOk)
+					DisableSaving();
 			}
+		}
+		else
+		{
+			bool anyExisting = false;
+			bool allPreserved = true;
+			for (int p = 0; p < loadCandidates.Count(); p++)
+			{
+				string preserveCandidate = loadCandidates[p];
+				if (!FileExist(preserveCandidate))
+					continue;
+
+				anyExisting = true;
+				string preservedCandidatePath;
+				if (!PreserveFile(preserveCandidate, BATTLEROYALE_SETTINGS_FOLDER + "leaderboard.broken", preservedCandidatePath))
+					allPreserved = false;
+			}
+
+			if (anyExisting && allPreserved)
+				Error("[Leaderboard] No leaderboard file could be read; every unreadable file was copied to a leaderboard.broken file and the leaderboard starts empty");
+			if (!allPreserved)
+				DisableSaving();
 		}
 
 		if (!m_File.players)
@@ -101,11 +260,81 @@ class BRLeaderboard
 		RebuildTop();
 	}
 
+	//! Recoverable save, not an atomic one: every write and copy is read back before the next step.
+	//! The new standings go to leaderboard.json.new and are read back against memory; only a main file
+	//! already known to be good is copied to leaderboard.json.bak (and read back), so a bad main file
+	//! never overwrites the backup; then .new is copied over the main file and read back against memory.
+	//! A shutdown mid-save leaves a file Load() can still read: the old main file, the verified .new or the .bak
 	protected void Save()
 	{
+		if (m_SaveDisabled)
+			return;
+
+		string newPath = NewFilePath();
 		string errorMessage;
-		if (!JsonFileLoader<BRLeaderboardFile>.SaveFile(FilePath(), m_File, errorMessage))
+		if (!JsonFileLoader<BRLeaderboardFile>.SaveFile(newPath, m_File, errorMessage))
+		{
 			ErrorEx(errorMessage);
+			return;
+		}
+
+		if (!Valid(newPath, m_File))
+		{
+			Error("[Leaderboard] leaderboard.json.new could not be read back; leaderboard.json was left unchanged");
+			return;
+		}
+
+		if (m_MainKnownValid)
+		{
+			if (!CopyFile(FilePath(), BakFilePath()) || !Valid(BakFilePath(), null))
+			{
+				Error("[Leaderboard] leaderboard.json could not be copied to leaderboard.json.bak or the copy could not be read back; leaderboard.json was left unchanged and the new standings are in leaderboard.json.new");
+				return;
+			}
+		}
+
+		if (!CopyFile(newPath, FilePath()) || !Valid(FilePath(), m_File))
+		{
+			Error("[Leaderboard] leaderboard.json.new could not be copied over leaderboard.json or the result could not be read back; the verified leaderboard.json.new will be used on load");
+			m_MainKnownValid = false;
+			return;
+		}
+
+		m_MainKnownValid = true;
+	}
+
+	//! Adds a standings amount without overflowing: the result stops at int.MAX. Amounts are never negative (the point
+	//! settings are 0 to 1000), and a comparison against int.MIN is unreliable in Enforce, so a negative one adds nothing
+	protected static int SaturateAdd(int current, int added)
+	{
+		if (added <= 0)
+			return current;
+
+		if (current > int.MAX - added)
+			return int.MAX;
+
+		return current + added;
+	}
+
+	//! One coherent reading of the server local clock: the date is read, then the time, then
+	//! the date again, and the whole capture repeats when the day changed in between, so the
+	//! returned date and time always belong to the same day, even around midnight
+	static void CaptureNow(out int year, out int month, out int day, out int hour, out int minute, out int second)
+	{
+		int checkYear;
+		int checkMonth;
+		int checkDay;
+		GetYearMonthDay(year, month, day);
+		GetHourMinuteSecond(hour, minute, second);
+		GetYearMonthDay(checkYear, checkMonth, checkDay);
+		while (checkYear != year || checkMonth != month || checkDay != day)
+		{
+			year = checkYear;
+			month = checkMonth;
+			day = checkDay;
+			GetHourMinuteSecond(hour, minute, second);
+			GetYearMonthDay(checkYear, checkMonth, checkDay);
+		}
 	}
 
 	//! Key of the period that contains today (server local date): monthly-YYYY-MM, yearly-YYYY or
@@ -115,24 +344,196 @@ class BRLeaderboard
 		int year;
 		int month;
 		int day;
-		GetYearMonthDay(year, month, day);
+		int hour;
+		int minute;
+		int second;
+		CaptureNow(year, month, day, hour, minute, second);
+		return PeriodKeyForDate(wipe, year, month, day);
+	}
 
+	//! Key of the period that contains the given civil date, for wipe: monthly-YYYY-MM,
+	//! yearly-YYYY or weekly-YYYY-MM-DD with the Monday of that week. Any other wipe value
+	//! is monthly, as in PeriodKey
+	static string PeriodKeyForDate(string wipe, int year, int month, int day)
+	{
 		if (wipe == "yearly")
 			return "yearly-" + year.ToString();
+
+		if (wipe == "weekly")
+		{
+			int startYear;
+			int startMonth;
+			int startDay;
+			int endYear;
+			int endMonth;
+			int endDay;
+			PeriodBoundsForDate(wipe, year, month, day, startYear, startMonth, startDay, endYear, endMonth, endDay);
+			return "weekly-" + startYear.ToString() + "-" + startMonth.ToStringLen(2) + "-" + startDay.ToStringLen(2);
+		}
+
+		return "monthly-" + year.ToString() + "-" + month.ToStringLen(2);
+	}
+
+	//! First and last day of the period named by key, as YYYY-MM-DD, and the seconds from the
+	//! captured now (year to second, from CaptureNow) until 00:00 on the day after that last
+	//! day; never negative, so a period already past counts 0. The key is the one stored in
+	//! the leaderboard, which stays on the previous period when rotation failed, so the
+	//! season and the counter always name the same period as the standings themselves.
+	//! The count assumes 86400 seconds per day: DayZ has no time zone database, so it is
+	//! approximate on daylight saving change days (aproximado: ±1 h los días de cambio de hora)
+	static void SeasonForPeriod(string key, int year, int month, int day, int hour, int minute, int second, out string start, out string end, out int secondsLeft)
+	{
+		int startYear;
+		int startMonth;
+		int startDay;
+		int endYear;
+		int endMonth;
+		int endDay;
+		start = "";
+		end = "";
+		secondsLeft = 0;
+		if (!PeriodBoundsForKey(key, startYear, startMonth, startDay, endYear, endMonth, endDay))
+			return;
+
+		start = FormatDate(startYear, startMonth, startDay);
+		end = FormatDate(endYear, endMonth, endDay);
+		int daysLeft = DaysFromCivil(endYear, endMonth, endDay) - DaysFromCivil(year, month, day);
+		secondsLeft = (daysLeft + 1) * 86400 - (hour * 3600 + minute * 60 + second);
+		if (secondsLeft < 0)
+			secondsLeft = 0;
+	}
+
+	//! Civil dates of the first and last day of the period named by a period key, from the
+	//! key itself (monthly-YYYY-MM, yearly-YYYY or weekly-YYYY-MM-DD with its Monday), with
+	//! the same day arithmetic as PeriodKeyForDate (DaysFromCivil/CivilFromDays). False when
+	//! the key names no period of those shapes
+	protected static bool PeriodBoundsForKey(string key, out int startYear, out int startMonth, out int startDay, out int endYear, out int endMonth, out int endDay)
+	{
+		startYear = 0;
+		startMonth = 0;
+		startDay = 0;
+		endYear = 0;
+		endMonth = 0;
+		endDay = 0;
+		if (key == "")
+			return false;
+
+		int keyYear;
+		int keyMonth;
+		int keyDay;
+		int checkYear;
+		int checkMonth;
+		int checkDay;
+		string yearText;
+		string monthText;
+		string dayText;
+		if (key.Length() == 11 && key.Substring(0, 7) == "yearly-")
+		{
+			yearText = key.Substring(7, 4);
+			keyYear = yearText.ToInt();
+			if (keyYear <= 0)
+				return false;
+
+			startYear = keyYear;
+			startMonth = 1;
+			startDay = 1;
+			endYear = keyYear;
+			endMonth = 12;
+			endDay = 31;
+			return true;
+		}
+
+		if (key.Length() == 15 && key.Substring(0, 8) == "monthly-")
+		{
+			yearText = key.Substring(8, 4);
+			keyYear = yearText.ToInt();
+			monthText = key.Substring(13, 2);
+			keyMonth = monthText.ToInt();
+			if (keyYear <= 0 || keyMonth < 1 || keyMonth > 12)
+				return false;
+
+			startYear = keyYear;
+			startMonth = keyMonth;
+			startDay = 1;
+			int nextYear = keyYear;
+			int nextMonth = keyMonth + 1;
+			if (nextMonth > 12)
+			{
+				nextMonth = 1;
+				nextYear = keyYear + 1;
+			}
+			CivilFromDays(DaysFromCivil(nextYear, nextMonth, 1) - 1, endYear, endMonth, endDay);
+			return true;
+		}
+
+		if (key.Length() == 17 && key.Substring(0, 7) == "weekly-")
+		{
+			yearText = key.Substring(7, 4);
+			keyYear = yearText.ToInt();
+			monthText = key.Substring(12, 2);
+			keyMonth = monthText.ToInt();
+			dayText = key.Substring(15, 2);
+			keyDay = dayText.ToInt();
+			if (keyYear <= 0 || keyMonth < 1 || keyMonth > 12 || keyDay < 1 || keyDay > 31)
+				return false;
+
+			CivilFromDays(DaysFromCivil(keyYear, keyMonth, keyDay), checkYear, checkMonth, checkDay);
+			if (checkYear != keyYear || checkMonth != keyMonth || checkDay != keyDay)
+				return false;
+
+			startYear = keyYear;
+			startMonth = keyMonth;
+			startDay = keyDay;
+			CivilFromDays(DaysFromCivil(keyYear, keyMonth, keyDay) + 6, endYear, endMonth, endDay);
+			return true;
+		}
+
+		return false;
+	}
+
+	//! Civil dates of the first and last day of the period that contains the given civil
+	//! date for wipe, with the same day arithmetic as PeriodKeyForDate
+	//! (DaysFromCivil/CivilFromDays)
+	protected static void PeriodBoundsForDate(string wipe, int year, int month, int day, out int startYear, out int startMonth, out int startDay, out int endYear, out int endMonth, out int endDay)
+	{
+		if (wipe == "yearly")
+		{
+			startYear = year;
+			startMonth = 1;
+			startDay = 1;
+			endYear = year;
+			endMonth = 12;
+			endDay = 31;
+			return;
+		}
 
 		if (wipe == "weekly")
 		{
 			int days = DaysFromCivil(year, month, day);
 			int weekday = (days + 4) % 7;         // 0 = Sunday; 1970-01-01 (day 0) was a Thursday
 			int sinceMonday = (weekday + 6) % 7;  // days since this week's Monday
-			int mondayYear;
-			int mondayMonth;
-			int mondayDay;
-			CivilFromDays(days - sinceMonday, mondayYear, mondayMonth, mondayDay);
-			return "weekly-" + mondayYear.ToString() + "-" + mondayMonth.ToStringLen(2) + "-" + mondayDay.ToStringLen(2);
+			CivilFromDays(days - sinceMonday, startYear, startMonth, startDay);
+			CivilFromDays(days - sinceMonday + 6, endYear, endMonth, endDay);
+			return;
 		}
 
-		return "monthly-" + year.ToString() + "-" + month.ToStringLen(2);
+		startYear = year;
+		startMonth = month;
+		startDay = 1;
+		int nextYear = year;
+		int nextMonth = month + 1;
+		if (nextMonth > 12)
+		{
+			nextMonth = 1;
+			nextYear = year + 1;
+		}
+		CivilFromDays(DaysFromCivil(nextYear, nextMonth, 1) - 1, endYear, endMonth, endDay);
+	}
+
+	//! A civil date as YYYY-MM-DD
+	protected static string FormatDate(int year, int month, int day)
+	{
+		return year.ToString() + "-" + month.ToStringLen(2) + "-" + day.ToStringLen(2);
 	}
 
 	//! The date part of a period key, as the panel and Discord show it
@@ -189,18 +590,53 @@ class BRLeaderboard
 			year = y + 1;
 	}
 
-	//! Starts today's period when the last one ended: the old board is archived next to leaderboard.json first.
-	//! Changing leaderboard_wipe changes the key, so it archives and starts over too
-	void EnsurePeriod(string wipe)
+	//! Starts today's period when the last one ended. True when the board already is in today's period
+	//! or rotated into it; false when the rotation failed and nothing was emptied, so the caller must not
+	//! score a new match into the old period. To rotate, the standings in memory are written straight to
+	//! the period archive (first free name) and read back against memory before anything is emptied, so
+	//! a failed save since the load cannot make the archive an older copy. Changing leaderboard_wipe
+	//! changes the key, so it archives and starts over too
+	bool EnsurePeriod(string wipe)
 	{
-		string key = PeriodKey(wipe);
+		int year;
+		int month;
+		int day;
+		int hour;
+		int minute;
+		int second;
+		CaptureNow(year, month, day, hour, minute, second);
+		return EnsurePeriodForDate(wipe, year, month, day);
+	}
+
+	//! EnsurePeriod for the period that contains the given civil date (from one CaptureNow
+	//! reading, when the caller already holds one and the answer must share it)
+	bool EnsurePeriodForDate(string wipe, int year, int month, int day)
+	{
+		string key = PeriodKeyForDate(wipe, year, month, day);
 		if (m_File.period == key)
-			return;
+			return true;
 
 		if (m_File.period != "" && m_File.players && m_File.players.Count() > 0)
 		{
-			CopyFile(FilePath(), BATTLEROYALE_SETTINGS_FOLDER + "leaderboard_" + m_File.period + ".json");
-			BattleRoyaleUtils.Info("[Leaderboard] Period " + m_File.period + " archived as leaderboard_" + m_File.period + ".json");
+			if (m_SaveDisabled)
+				return false;
+
+			string archivePath = FirstFreeJsonPath(BATTLEROYALE_SETTINGS_FOLDER + "leaderboard_" + m_File.period);
+			string archiveError;
+			if (!JsonFileLoader<BRLeaderboardFile>.SaveFile(archivePath, m_File, archiveError))
+			{
+				ErrorEx(archiveError);
+				Error("[Leaderboard] Period " + m_File.period + " could not be archived; keeping its standings and retrying at the next period check");
+				return false;
+			}
+
+			if (!Valid(archivePath, m_File))
+			{
+				Error("[Leaderboard] Period " + m_File.period + " archive " + archivePath + " could not be read back; keeping its standings and retrying at the next period check");
+				return false;
+			}
+
+			BattleRoyaleUtils.Info("[Leaderboard] Period " + m_File.period + " archived as " + archivePath);
 		}
 
 		m_File.period = key;
@@ -213,6 +649,7 @@ class BRLeaderboard
 		m_ById.Clear();
 		RebuildTop();
 		Save();
+		return true;
 	}
 
 	//! Adds one finished match: every participant gains its points and kills, the winner of position 1 a win.
@@ -248,11 +685,11 @@ class BRLeaderboard
 			}
 
 			entry.name = names[i];
-			entry.points = entry.points + points[i];
-			entry.kills = entry.kills + kills[i];
+			entry.points = SaturateAdd(entry.points, points[i]);
+			entry.kills = SaturateAdd(entry.kills, kills[i]);
 			if (won[i])
-				entry.wins = entry.wins + 1;
-			entry.matches = entry.matches + 1;
+				entry.wins = SaturateAdd(entry.wins, 1);
+			entry.matches = SaturateAdd(entry.matches, 1);
 		}
 
 		SortPlayers();
@@ -341,6 +778,32 @@ class BRLeaderboard
 	array<int> GetTopWins()
 	{
 		return m_TopWins;
+	}
+
+	//! Standing of plainId in the full standings: rank from 1 with its points, kills and wins, or
+	//! rank 0 and zeroes when it has no entry this period. m_File.players is already sorted, so
+	//! this sorts nothing: one linear scan, O(players)
+	void FindStanding(string plainId, out int rank, out int points, out int kills, out int wins)
+	{
+		rank = 0;
+		points = 0;
+		kills = 0;
+		wins = 0;
+		if (!m_File.players)
+			return;
+
+		for (int i = 0; i < m_File.players.Count(); i++)
+		{
+			BRLeaderboardEntry entry = m_File.players[i];
+			if (entry && entry.id == plainId)
+			{
+				rank = i + 1;
+				points = entry.points;
+				kills = entry.kills;
+				wins = entry.wins;
+				return;
+			}
+		}
 	}
 
 	string GetPeriod()
