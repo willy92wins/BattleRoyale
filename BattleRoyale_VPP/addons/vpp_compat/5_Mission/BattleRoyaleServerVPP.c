@@ -33,5 +33,30 @@ modded class BattleRoyaleServer
         BRAdminController.Next();
     }
 };
+
+//! The core authorizer consults VPP only when it compiled after VPP. This mod always does, so VPP is
+//! always consulted and, as in the core when VPP is compiled in, the BattleRoyale steamid list is not.
+modded class BRAdminAuthorizer
+{
+    override protected static bool HasGrant(PlayerIdentity sender, string action)
+    {
+        if (!sender)
+            return false;
+
+        return HasFrameworkGrant(sender, action);
+    }
+
+    override protected static bool HasFrameworkGrant(PlayerIdentity sender, string action)
+    {
+        if (super.HasFrameworkGrant(sender, action))
+            return true;
+
+        if (!sender)
+            return false;
+
+        PermissionManager vpp = GetPermissionManager();
+        return vpp && vpp.VerifyPermission(sender.GetPlainId(), "BattleRoyale:" + action, "", false);
+    }
+};
 #endif
 #endif
