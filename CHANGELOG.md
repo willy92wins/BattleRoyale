@@ -1,8 +1,20 @@
 # Changelog
 
-## 1.8.0 (2026-11-17)
+## 1.8.0 (2026-11-18)
 
 ### Added
+- Leaderboard: players score points for each kill and for their final place (`leaderboard_points_per_kill`,
+  `leaderboard_points_first` and `leaderboard_points_step` in `server_settings.json`: with 10 and 2, places 1 to 5
+  get 10, 8, 6, 4 and 2, and a kill 1). The board starts again every month by default (`leaderboard_wipe`: `monthly`,
+  `weekly` from Monday or `yearly`, by the server's local date), and the one that ends is kept as
+  `leaderboard_<period>.json`. T («BR Leaderboard» in Controls) opens and closes a panel with the top 30: a podium for
+  the first three, the player's own row or, outside the top 30, their place at the bottom, and the season with the time
+  left until it starts again. It does not take the mouse or the keys, so the player can keep moving. With
+  `leaderboard_webhook_url` set, the server posts the top 30 to a Discord channel at the end of a match when it changed.
+- Discord message at the end of a match: with `match_end_webhook_url` set to a Discord webhook, the server posts
+  `match_end_message` when a match ends, with `{winner}`, `{kills}`, `{players}` and `{duration}` filled in, or
+  `match_end_message_no_winner` when nobody wins. Names and mentions in the message ping nobody, the URL never reaches
+  the players nor the logs, and a server that exits after the match waits up to 10 s for a message still on its way.
 - Watch the match from the waiting room with V («BR Watch the match» in Controls): a player who waits in the lobby
   while a match runs, because they joined late or came back from spectating with F1, watches it the way its dead
   players do, and F1 brings them back to the lobby. The waiting room notice adds «Press V to watch the match.» with
@@ -65,9 +77,16 @@
 
 ### Notes
 - New messages between the server and the clients: `StartZoneShrink` (the zone closing), `WaitingToSpectator` (the
-  spectate key), and `SightsState`, `SightsResend` and `SpectateSights` (the watched player's sights, contract in
-  `BattleRoyale_dev/contracts/rpc-1.0.md`). Each client tells the server when its sights change, at most every 0.1 s,
-  and the server passes them on only to the players who watch it. Server and clients should run 1.8.0.
+  spectate key), `SightsState`, `SightsResend` and `SpectateSights` (the watched player's sights, contract in
+  `BattleRoyale_dev/contracts/rpc-1.0.md`), and `RequestLeaderboard` and `LeaderboardData` (the leaderboard panel; a
+  player can ask at most every 2 s). Each client tells the server when its sights change, at most every 0.1 s, and the
+  server passes them on only to the players who watch it. Server and clients should run 1.8.0.
+- New in `server_settings.json`: the match end message (`match_end_webhook_url`, `match_end_message`,
+  `match_end_message_no_winner`) and the leaderboard (`leaderboard_points_first`, `leaderboard_points_step`,
+  `leaderboard_points_per_kill`, `leaderboard_wipe`, `leaderboard_webhook_url`). A server that ran 1.7.0 gets them on
+  its first start, with both webhooks off. `BattleRoyale_server/README.md` explains them. The leaderboard is kept in
+  `leaderboard.json` in the profile folder; while it saves, the server also writes `leaderboard.json.new` and keeps the
+  previous file as `leaderboard.json.bak`, so a crash in the middle of a save does not lose it.
 - `zone_shrink_speed` in `zone_settings.json` sets the speed of the zone closing, in metres per second of the edge
   point that moves the most. It is 9 by default, faster than a running player and slower than a vehicle, and 0 brings
   back the jump at the lock. If a closing does not fit before the lock, the round grows by that much.
@@ -94,7 +113,16 @@
   - spectator first person: with the weapon lowered, the old camera looked at the ground and the new one looks
     forward; with an AI dummy sprinting (it has no aiming angles, so the camera follows its head), the turn of the
     view from frame to frame fell from 14.5° to 1.5° (RMS); an M68 is looked through with the backpack hidden, an ACOG
-    stays at the eyes, one camera is left after F1 and V, and the client stayed alive after F1.
+    stays at the eyes, one camera is left after F1 and V, and the client stayed alive after F1;
+  - match end message, against a local receiver that answers like Discord: every placeholder filled, emoji, accents,
+    quotes and line breaks intact, `wait=true` added to the URL, the message without a winner, and the server waiting
+    for a message still on its way before it moved on (measured before the next serial match, which goes through the
+    same step as the exit);
+  - leaderboard: at start the server archived an October board and opened the week of Monday 16 November; the winner
+    of a match got 10 points and a win; the top 30 was posted once and not again without a change; the panel showed 30
+    and 60 seeded players (podium, the player's row by place, their place 60 at the bottom, «Temporada de noviembre de
+    2026» and the countdown); the board had the new points after two serial matches; the saves wrote `.new` and
+    `.bak`. The panel was opened with a test hook, because the test tools cannot press a key bound in Controls.
 - Not tested yet in game:
   - with two players: that the spectator's first person view does not sway with a real player (the test dummy is an
     AI without aiming angles), that the watched player no longer hears the anchor's falls, that the aim lines up
@@ -107,7 +135,10 @@
   - the lobby: the client hiding the actions, a pair that walks into the lobby during an action, and the blocked
     actions other than the head sack and force-feeding;
   - the aim fix: the aim on the server (the test's aim did not reach it), real prone, a real obstacle, gamepads and
-    the third person vehicle cameras.
+    the third person vehicle cameras;
+  - the match end message and the leaderboard's top 30 on a real Discord channel;
+  - the leaderboard with two or more players (kills, and places other than the first), the real T key, 720p, the
+    panel fading in, the kill feed keeping to 4 rows while the panel is open, and a weekly season across two months.
 - `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
 
 ## 1.7.0 (2026-11-16)
