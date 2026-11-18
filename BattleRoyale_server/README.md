@@ -237,7 +237,7 @@ Discord webhook (channel settings > Integrations > Webhooks) and the server post
 at the end of every match. `"match_end_message"` is the text, with these placeholders:
 
 - `{winner}`: the winner's name; when a team wins, the names of its players still alive, comma separated;
-- `{kills}`: the winner's kills in the match, the count the HUD shows (a team's kills added together);
+- `{kills}`: the kills credited to the winner in the match (a team's kills added together);
 - `{players}`: the players at the start of the match;
 - `{duration}`: the minutes from the start of the match to the win.
 
@@ -252,7 +252,8 @@ the server); leave it empty to post nothing then. For example:
 
 Keep the URL private: whoever has it can post to the channel. The server never sends it to the players nor
 writes it to its logs. Names and mentions in the message ping nobody, and Discord refuses messages over 2000
-characters. A server that ran an earlier version gets the three fields, with an empty URL, added to its
+characters. When the server exits after the match, it waits up to 10 more seconds for a message still on its
+way. A server that ran an earlier version gets the three fields, with an empty URL, added to its
 `server_settings.json` on its first start.
 
 ## 6. BattleRoyale settings

@@ -14,18 +14,24 @@ class BRMatchEndPayload
 
 class BRMatchEndCallback: RestCallback
 {
+	//! Set by the first answer of the engine, whichever it is
+	bool m_Answered;
+
 	override void OnError(int errorCode)
 	{
+		m_Answered = true;
 		BattleRoyaleUtils.Warn("Match end webhook error: " + errorCode);
 	}
 
 	override void OnTimeout()
 	{
+		m_Answered = true;
 		BattleRoyaleUtils.Warn("Match end webhook timeout");
 	}
 
 	override void OnSuccess(string data, int dataSize)
 	{
+		m_Answered = true;
 		BattleRoyaleUtils.Info("Match end webhook sent");
 	}
 }
@@ -36,6 +42,12 @@ class BRMatchEndWebhook
 {
 	//! Keeps the callback of the request in flight alive until the engine answers; there is one request per match
 	protected static ref BRMatchEndCallback s_Callback;
+
+	//! True while the last message sent has no answer yet: the server exit waits for it (BattleRoyaleRestart.Shutdown)
+	static bool IsPending()
+	{
+		return s_Callback && !s_Callback.m_Answered;
+	}
 
 	//! Fills the placeholders of the message. The names go in last, so a player called "{kills}" keeps that name
 	static string BuildMessage(string messageFormat, string winners, int kills, int players, int minutes)
