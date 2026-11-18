@@ -290,6 +290,12 @@ that same `server_settings.json`:
 A server that ran an earlier version gets the new fields, with the defaults above, added to its
 `server_settings.json` on its first start.
 
+Each of the three point settings must be between 0 and 1000; a value outside that range is logged
+and its default is used. Saving is recoverable rather than atomic: the new board is written to
+`leaderboard.json.new` first, the previous `leaderboard.json` is kept as `leaderboard.json.bak`, and
+on load the first of `leaderboard.json`, `leaderboard.json.new` and `leaderboard.json.bak` that
+reads whole is used.
+
 ## 6. BattleRoyale settings
 
 On the first start the mod writes its settings to `<profiles>\Vigrid-BattleRoyale\`

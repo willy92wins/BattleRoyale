@@ -73,21 +73,21 @@ class BattleRoyaleServerData: BattleRoyaleDataBase
 			serial_restart_every_matches = 6;
 		}
 
-		if (leaderboard_points_first < 0)
+		if (leaderboard_points_first < 0 || leaderboard_points_first > 1000)
 		{
-			LogInvalidSetting("server_settings.json", "leaderboard_points_first", leaderboard_points_first.ToString(), "must be 0 or more");
+			LogInvalidSetting("server_settings.json", "leaderboard_points_first", leaderboard_points_first.ToString(), "must be between 0 and 1000");
 			leaderboard_points_first = 10;
 		}
 
-		if (leaderboard_points_step < 0)
+		if (leaderboard_points_step < 0 || leaderboard_points_step > 1000)
 		{
-			LogInvalidSetting("server_settings.json", "leaderboard_points_step", leaderboard_points_step.ToString(), "must be 0 or more");
+			LogInvalidSetting("server_settings.json", "leaderboard_points_step", leaderboard_points_step.ToString(), "must be between 0 and 1000");
 			leaderboard_points_step = 2;
 		}
 
-		if (leaderboard_points_per_kill < 0)
+		if (leaderboard_points_per_kill < 0 || leaderboard_points_per_kill > 1000)
 		{
-			LogInvalidSetting("server_settings.json", "leaderboard_points_per_kill", leaderboard_points_per_kill.ToString(), "must be 0 or more");
+			LogInvalidSetting("server_settings.json", "leaderboard_points_per_kill", leaderboard_points_per_kill.ToString(), "must be between 0 and 1000");
 			leaderboard_points_per_kill = 1;
 		}
 

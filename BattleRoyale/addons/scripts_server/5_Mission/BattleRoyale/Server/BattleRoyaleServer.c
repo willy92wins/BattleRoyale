@@ -1156,6 +1156,8 @@ class BattleRoyaleServer: BattleRoyaleBase
             // The leaderboard scores everyone who starts the match, under the name they start it with
             m_MatchParticipants.Clear();
             m_MatchPositions.Clear();
+            if (m_LastLeaderboardRequest)
+                m_LastLeaderboardRequest.Clear();
             array<PlayerBase> starters = state.GetPlayers();
             if (starters)
             {
@@ -1236,7 +1238,9 @@ class BattleRoyaleServer: BattleRoyaleBase
         if (!serverData)
             return;
 
-        // Whoever is left in the win state won: in a team, every member of the winning team
+        // Whoever is left in the win state won: in a team, every member of the winning team. Only this
+        // set counts a win; a participant who died last keeps position 1 points without a win
+        array<string> winnerIds = new array<string>;
         array<PlayerBase> winners = state.GetPlayers();
         if (winners)
         {
@@ -1244,7 +1248,10 @@ class BattleRoyaleServer: BattleRoyaleBase
             {
                 PlayerBase winner = winners[w];
                 if (winner && winner.GetIdentity() && m_MatchParticipants.Contains(winner.GetIdentity().GetPlainId()))
+                {
+                    winnerIds.Insert(winner.GetIdentity().GetPlainId());
                     m_MatchPositions.Set(winner.GetIdentity().GetPlainId(), 1);
+                }
             }
         }
 
@@ -1267,15 +1274,26 @@ class BattleRoyaleServer: BattleRoyaleBase
                 int position = 0;
                 m_MatchPositions.Find(plainId, position);
 
-                int points = matchKills * serverData.leaderboard_points_per_kill;
+                int points = 0;
+                if (serverData.leaderboard_points_per_kill > 0 && matchKills > int.MAX / serverData.leaderboard_points_per_kill)
+                    points = int.MAX;
+                else
+                    points = matchKills * serverData.leaderboard_points_per_kill;
+
                 if (position >= 1)
-                    points = points + Math.Max(0, serverData.leaderboard_points_first - serverData.leaderboard_points_step * (position - 1));
+                {
+                    int positionPoints = Math.Max(0, serverData.leaderboard_points_first - serverData.leaderboard_points_step * (position - 1));
+                    if (points > int.MAX - positionPoints)
+                        points = int.MAX;
+                    else
+                        points = points + positionPoints;
+                }
 
                 resultIds.Insert(plainId);
                 resultNames.Insert(participantName);
                 resultPoints.Insert(points);
                 resultKills.Insert(matchKills);
-                resultWon.Insert(position == 1);
+                resultWon.Insert(winnerIds.Find(plainId) >= 0);
             }
 
             leaderboard.ApplyMatch(resultIds, resultNames, resultPoints, resultKills, resultWon);
@@ -1330,6 +1348,9 @@ class BattleRoyaleServer: BattleRoyaleBase
 
                         PlayerBase killer = PlayerBase.Cast( player.last_unconscious_source );
                         GetCurrentState().OnPlayerKilled( player, killer );
+                        // The state already removed the player, so this is the only chance to note
+                        // their position: the later death and disconnect no longer find them
+                        NoteMatchPosition(player);
                     } else {
                         BattleRoyaleUtils.Info("Player " + player.BR_GetPlayerName() + " disconnected while unconscious, but the last damage source is not a player.");
                     }
