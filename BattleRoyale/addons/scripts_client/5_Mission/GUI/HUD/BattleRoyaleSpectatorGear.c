@@ -14,6 +14,8 @@ class BattleRoyaleSpectatorGear
 
 	static const int REFRESH_INTERVAL_MS = 500; //!< at most two refreshes per second while open
 	static const int FADE_IN_MS = 150;          //!< same fade-in as the leaderboard panel
+	static const int MAX_CARGO_DEPTH = 3;       //!< deepest cargo level inspected below a worn item or hands
+	static const int MAX_CARGO_VISITS = 200;    //!< max cargo entities visited per refresh before truncating
 
 	static const int KIND_SLOT = 0;
 	static const int KIND_HANDS = 1;
@@ -21,6 +23,7 @@ class BattleRoyaleSpectatorGear
 	static const int KIND_SUB = 3;
 	static const int KIND_CARGO = 4;
 	static const int KIND_MORE = 5;
+	static const int KIND_CARGO_SUB = 6;
 
 	static const string ELLIPSIS = "...";
 	static const string INPUT_NAME = "UAGear";
@@ -45,6 +48,7 @@ class BattleRoyaleSpectatorGear
 
 	protected ref array<int> m_OrderedSlots;
 	protected ref array<EntityAI> m_VisitedAttachments;
+	protected ref array<EntityAI> m_VisitedCargo;
 	protected ref InventoryLocation m_TempLoc;
 
 	protected ref array<int> m_SnapKinds;
@@ -52,6 +56,10 @@ class BattleRoyaleSpectatorGear
 	protected ref array<string> m_SnapNames;
 	protected ref array<string> m_SnapQtys;
 
+	protected int m_CargoVisits;
+	protected bool m_CargoTruncated;
+	protected ref array<int> m_CargoKinds;
+	protected ref array<int> m_CargoDepths;
 	protected ref array<string> m_CargoNames;
 	protected ref array<string> m_CargoQtys;
 	protected ref array<int> m_CargoCounts;
@@ -89,6 +97,7 @@ class BattleRoyaleSpectatorGear
 
 		m_OrderedSlots = new array<int>;
 		m_VisitedAttachments = new array<EntityAI>;
+		m_VisitedCargo = new array<EntityAI>;
 		m_TempLoc = new InventoryLocation;
 
 		m_SnapKinds = new array<int>;
@@ -96,6 +105,8 @@ class BattleRoyaleSpectatorGear
 		m_SnapNames = new array<string>;
 		m_SnapQtys = new array<string>;
 
+		m_CargoKinds = new array<int>;
+		m_CargoDepths = new array<int>;
 		m_CargoNames = new array<string>;
 		m_CargoQtys = new array<string>;
 		m_CargoCounts = new array<int>;
@@ -133,6 +144,8 @@ class BattleRoyaleSpectatorGear
 	{
 		if ( m_VisitedAttachments )
 			m_VisitedAttachments.Clear();
+		if ( m_VisitedCargo )
+			m_VisitedCargo.Clear();
 		if ( m_Root )
 			m_Root.Unlink();
 	}
@@ -230,6 +243,7 @@ class BattleRoyaleSpectatorGear
 		m_Open = false;
 		m_Dirty = false;
 		m_VisitedAttachments.Clear();
+		m_VisitedCargo.Clear();
 		m_Root.Show( false );
 	}
 
@@ -411,24 +425,39 @@ class BattleRoyaleSpectatorGear
 		}
 
 		// Cargo is listed only when the client actually has items replicated in the player's containers
+		m_VisitedCargo.Clear();
+		m_CargoVisits = 0;
+		m_CargoTruncated = false;
+		m_CargoKinds.Clear();
+		m_CargoDepths.Clear();
 		m_CargoNames.Clear();
 		m_CargoQtys.Clear();
 		m_CargoCounts.Clear();
 
-		CollectDirectCargo( target );
-		if ( in_hands )
-			CollectContainerCargo( in_hands );
+		m_VisitedCargo.Insert( target );
+		CollectDirectCargo( target, 1, 0 );
+		if ( !m_CargoTruncated && in_hands && m_VisitedCargo.Find( in_hands ) == -1 )
+		{
+			m_VisitedCargo.Insert( in_hands );
+			CollectContainerCargo( in_hands, 1, 0 );
+		}
 
 		int visited_count = m_VisitedAttachments.Count();
 		int v;
 		EntityAI worn;
 		for ( v = 0; v < visited_count; v++ )
 		{
+			if ( m_CargoTruncated )
+				break;
 			worn = m_VisitedAttachments.Get( v );
-			if ( worn && target.CanDisplayAttachmentCargo( worn ) )
-				CollectContainerCargo( worn );
+			if ( worn && target.CanDisplayAttachmentCargo( worn ) && m_VisitedCargo.Find( worn ) == -1 )
+			{
+				m_VisitedCargo.Insert( worn );
+				CollectContainerCargo( worn, 1, 0 );
+			}
 		}
 		m_VisitedAttachments.Clear();
+		m_VisitedCargo.Clear();
 
 		int cargo_rows = m_CargoNames.Count();
 		if ( cargo_rows > 0 )
@@ -447,12 +476,12 @@ class BattleRoyaleSpectatorGear
 				c_count = m_CargoCounts.Get( c );
 				if ( c_qty == "" && c_count > 1 )
 					c_qty = "x" + c_count.ToString();
-				AddSnapRow( KIND_CARGO, c_label, m_CargoNames.Get( c ), c_qty );
+				AddSnapRow( m_CargoKinds.Get( c ), c_label, m_CargoNames.Get( c ), c_qty );
 			}
 		}
 
-		// Keep the table within screen bounds; overflow ends with an ellipsis row
-		if ( m_SnapKinds.Count() > SIDE_ROWS )
+		// Keep the table within screen bounds; row overflow or visit-budget truncation ends with an ellipsis row
+		if ( m_SnapKinds.Count() > SIDE_ROWS || m_CargoTruncated )
 		{
 			int trim_idx;
 			while ( m_SnapKinds.Count() > SIDE_ROWS - 1 )
@@ -499,12 +528,14 @@ class BattleRoyaleSpectatorGear
 	}
 
 	//! Reads direct cargo of a container and of its cargo-bearing sub-attachments (such as plate carrier pouches)
-	protected void CollectContainerCargo( EntityAI container )
+	protected void CollectContainerCargo( EntityAI container, int depth, int scope_start )
 	{
-		if ( !container )
+		if ( m_CargoTruncated || !container || depth > MAX_CARGO_DEPTH )
 			return;
 
-		CollectDirectCargo( container );
+		CollectDirectCargo( container, depth, scope_start );
+		if ( m_CargoTruncated )
+			return;
 
 		GameInventory inv = container.GetInventory();
 		if ( !inv )
@@ -513,67 +544,142 @@ class BattleRoyaleSpectatorGear
 		int sub_count = inv.AttachmentCount();
 		int i;
 		EntityAI sub;
+		GameInventory sub_inv;
 		for ( i = 0; i < sub_count; i++ )
 		{
+			if ( m_CargoTruncated )
+				return;
+
 			sub = inv.GetAttachmentFromIndex( i );
 			if ( !sub || inv.IsPlaceholderEntity( sub ) )
 				continue;
 			if ( !container.CanDisplayAttachmentCargo( sub ) )
 				continue;
-			CollectDirectCargo( sub );
+
+			sub_inv = sub.GetInventory();
+			if ( !sub_inv || !sub_inv.GetCargo() || !sub.CanDisplayCargo() )
+				continue;
+
+			if ( !TryVisitCargoEntity( sub ) )
+			{
+				if ( m_CargoTruncated )
+					return;
+				continue;
+			}
+
+			CollectDirectCargo( sub, depth, scope_start );
 		}
 	}
 
-	protected void CollectDirectCargo( EntityAI holder )
+	protected void CollectDirectCargo( EntityAI holder, int depth, int scope_start )
 	{
-		if ( !holder || !holder.CanDisplayCargo() )
+		if ( m_CargoTruncated || !holder || depth > MAX_CARGO_DEPTH )
 			return;
 
 		GameInventory inv = holder.GetInventory();
-		if ( !inv )
+		if ( !inv || !holder.CanDisplayCargo() )
 			return;
 
 		CargoBase cargo = inv.GetCargo();
 		if ( !cargo )
 			return;
 
+		int row_kind = KIND_CARGO;
+		if ( depth > 1 )
+			row_kind = KIND_CARGO_SUB;
+
 		int count = cargo.GetItemCount();
 		int i;
+		int entry_idx;
 		EntityAI item;
 		string item_name;
 		string item_qty;
 		for ( i = 0; i < count; i++ )
 		{
+			if ( m_CargoTruncated )
+				return;
+
 			item = cargo.GetItem( i );
 			if ( !item )
 				continue;
 
+			if ( !TryVisitCargoEntity( item ) )
+			{
+				if ( m_CargoTruncated )
+					return;
+				continue;
+			}
+
 			item_name = GetItemName( item );
+			if ( depth >= 3 )
+				item_name = "- " + item_name;
 			item_qty = GetItemQty( item );
-			AddCargoEntry( item_name, item_qty );
+
+			entry_idx = AppendCargoEntry( row_kind, depth, item_name, item_qty );
+			if ( depth < MAX_CARGO_DEPTH )
+				CollectContainerCargo( item, depth + 1, entry_idx + 1 );
+
+			if ( m_CargoNames.Count() > entry_idx + 1 )
+				m_CargoCounts.Set( entry_idx, 0 );
+			else if ( !m_CargoTruncated )
+				CollapseCargoEntry( entry_idx, scope_start );
 		}
 	}
 
-	//! Collapses identical unstacked items (like grenades or injectors) into a single row with a count
-	protected void AddCargoEntry( string item_name, string item_qty )
+	protected bool TryVisitCargoEntity( EntityAI entity )
 	{
-		if ( item_qty == "" )
+		if ( !entity )
+			return false;
+		if ( m_VisitedCargo.Find( entity ) != -1 )
+			return false;
+		if ( m_CargoVisits >= MAX_CARGO_VISITS )
 		{
-			int existing = m_CargoNames.Count();
-			int i;
-			for ( i = 0; i < existing; i++ )
-			{
-				if ( m_CargoQtys.Get( i ) == "" && m_CargoNames.Get( i ) == item_name )
-				{
-					m_CargoCounts.Set( i, m_CargoCounts.Get( i ) + 1 );
-					return;
-				}
-			}
+			m_CargoTruncated = true;
+			return false;
 		}
 
+		m_VisitedCargo.Insert( entity );
+		m_CargoVisits++;
+		return true;
+	}
+
+	protected int AppendCargoEntry( int kind, int depth, string item_name, string item_qty )
+	{
+		int idx = m_CargoNames.Count();
+		m_CargoKinds.Insert( kind );
+		m_CargoDepths.Insert( depth );
 		m_CargoNames.Insert( item_name );
 		m_CargoQtys.Insert( item_qty );
 		m_CargoCounts.Insert( 1 );
+		return idx;
+	}
+
+	//! Collapses identical unstacked leaf items within the same container scope into one row with a count
+	protected void CollapseCargoEntry( int idx, int scope_start )
+	{
+		if ( m_CargoQtys.Get( idx ) != "" )
+			return;
+
+		int depth = m_CargoDepths.Get( idx );
+		string item_name = m_CargoNames.Get( idx );
+		int i;
+		for ( i = scope_start; i < idx; i++ )
+		{
+			if ( m_CargoCounts.Get( i ) <= 0 )
+				continue;
+			if ( m_CargoDepths.Get( i ) != depth || m_CargoQtys.Get( i ) != "" )
+				continue;
+			if ( m_CargoNames.Get( i ) == item_name )
+			{
+				m_CargoCounts.Set( i, m_CargoCounts.Get( i ) + 1 );
+				m_CargoKinds.RemoveOrdered( idx );
+				m_CargoDepths.RemoveOrdered( idx );
+				m_CargoNames.RemoveOrdered( idx );
+				m_CargoQtys.RemoveOrdered( idx );
+				m_CargoCounts.RemoveOrdered( idx );
+				return;
+			}
+		}
 	}
 
 	protected void AddSnapRow( int kind, string label, string name, string qty )
@@ -735,7 +841,7 @@ class BattleRoyaleSpectatorGear
 	protected void DrawSnapshot( bool has_target, string target_name, string hint )
 	{
 		SetFittedText( m_TargetText, target_name );
-		m_HintText.SetText( hint );
+		SetFittedText( m_HintText, hint );
 
 		// Null watched player on client: show only the header band with the player's name
 		int count = m_SnapKinds.Count();
@@ -788,11 +894,11 @@ class BattleRoyaleSpectatorGear
 		string qty = m_SnapQtys.Get( index );
 
 		// Repeat the Cargo label when cargo rows wrap onto the first line of the right column
-		if ( kind == KIND_CARGO && label == "" && line == 0 )
+		if ( ( kind == KIND_CARGO || kind == KIND_CARGO_SUB ) && label == "" && line == 0 )
 			label = cargo_repeat;
 
 		bool is_hands = kind == KIND_HANDS;
-		bool is_sub = kind == KIND_SUB;
+		bool is_sub = kind == KIND_SUB || kind == KIND_CARGO_SUB;
 		bool is_muted = kind == KIND_EMPTY || kind == KIND_MORE;
 		bool has_qty = qty != "";
 
@@ -899,12 +1005,51 @@ class BattleRoyaleSpectatorGear
 
 	protected string GetCloseHint()
 	{
-		string button = InputUtils.GetButtonNameFromInput( INPUT_NAME, EInputDeviceType.MOUSE_AND_KEYBOARD );
-		if ( button == "" )
+		UAInputAPI uapi = GetUApi();
+		if ( !uapi || !uapi.GetInputByName( INPUT_NAME ) )
+			return "";
+
+		map<int, ref TStringArray> combos = InputUtils.GetComboButtonNamesFromInput( INPUT_NAME, EUAINPUT_DEVICE_KEYBOARDMOUSE );
+		if ( !combos || combos.Count() == 0 )
+			return "";
+
+		int combo_count = combos.Count();
+		int best_alt = -1;
+		TStringArray buttons = null;
+		int i;
+		int alt;
+		for ( i = 0; i < combo_count; i++ )
+		{
+			alt = combos.GetKey( i );
+			if ( best_alt < 0 || alt < best_alt )
+			{
+				best_alt = alt;
+				buttons = combos.GetElement( i );
+			}
+		}
+
+		if ( !buttons || buttons.Count() == 0 )
+			return "";
+
+		string button_text = "";
+		int btn_count = buttons.Count();
+		int j;
+		string part;
+		for ( j = 0; j < btn_count; j++ )
+		{
+			part = buttons.Get( j );
+			if ( part == "" )
+				continue;
+			if ( button_text != "" )
+				button_text = button_text + " + ";
+			button_text = button_text + part;
+		}
+
+		if ( button_text == "" )
 			return "";
 
 		string format = Widget.TranslateString( "#STR_BR_SPECGEAR_CLOSE_HINT" );
-		return string.Format( format, button );
+		return string.Format( format, button_text );
 	}
 }
 #endif
