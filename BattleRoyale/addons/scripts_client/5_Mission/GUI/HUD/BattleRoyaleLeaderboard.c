@@ -24,6 +24,7 @@ class BattleRoyaleLeaderboard
     static const int RETRY_MS = 6000;               //!< an unanswered request is sent again after this long
     static const int MATCH_END_DELAY_MS = 1500;     //!< after the match ends, before asking for the new points
     static const int FADE_IN_MS = 150;              //!< as the kill feed rows
+    static const int SEASON_END_RETRY_MS = 30000;   //!< a season past its end asks for the new one this often
 
     static const string ELLIPSIS = "...";
     static const string INPUT_NAME = "UADayZBRToggleLeaderboard";
@@ -80,7 +81,8 @@ class BattleRoyaleLeaderboard
     protected int m_MatchEndRequest;    //!< GetGame().GetTime() at which to ask for the points of the match that ended, -1 for none
     protected string m_LocalName;       //!< name of the local player's identity, empty until it is known
     protected string m_Hint;            //!< second line of the title band after the time left: the close hint or "Updating..."
-    protected int m_TimeLeftUnit;       //!< what the time left on screen counts: 0 nothing, 1 under a minute, 2 minutes, 3 hours, 4 days
+    protected int m_TimeLeftUnit;       //!< what the time left on screen counts: 0 nothing, 1 under a minute, 2 minutes, 3 hours, 4 days, 5 the season ended
+    protected int m_SeasonEndRequest;   //!< GetGame().GetTime() of the last request made because the season ended, -1 for none
     protected int m_TimeLeftValue;      //!< how many of them it shows
 
     void BattleRoyaleLeaderboard( Widget parent )
@@ -93,6 +95,7 @@ class BattleRoyaleLeaderboard
         m_ShownScreenH = -1;
         m_MatchPhase = -1;
         m_MatchEndRequest = -1;
+        m_SeasonEndRequest = -1;
 
         if ( !GetGame() || !GetGame().GetWorkspace() )
             return;
@@ -402,6 +405,16 @@ class BattleRoyaleLeaderboard
         string local_name = GetLocalName();
         FillFooter( br_rpc, 1 + lines, local_name );
 
+        // The card or the row of the local player is the one of their place, as the server gives it: a name can
+        // be shared, a place cannot. Without a place in the top (none yet, or lower than the list), no highlight
+        int own_index = -1;
+        int self_rank;
+        int self_points;
+        int self_kills;
+        int self_wins;
+        if ( br_rpc.GetLeaderboardSelf( self_rank, self_points, self_kills, self_wins ) && self_rank >= 1 && self_rank <= count )
+            own_index = self_rank - 1;
+
         bool own;
         int i;
         int value;
@@ -417,7 +430,7 @@ class BattleRoyaleLeaderboard
             if ( i >= count )
                 continue;
 
-            own = local_name != "" && names.Get( i ) == local_name;
+            own = i == own_index;
             own_mark = m_CardOwn[i];
             own_mark.Show( own );
             name_text = m_CardName[i];
@@ -436,28 +449,28 @@ class BattleRoyaleLeaderboard
         // Left column, right column, centred column: the first index each one shows and how many rows
         for ( i = 0; i < ROW_LINES; i++ )
         {
-            FillRow( i, i, CARD_COUNT + i, i < left, names, points, kills, wins, local_name );
+            FillRow( i, i, CARD_COUNT + i, i < left, names, points, kills, wins, own_index );
         }
         for ( i = ROW_LINES; i < SIDE_ROWS; i++ )
         {
-            FillRow( i, i - ROW_LINES, CARD_COUNT + left + i - ROW_LINES, i - ROW_LINES < right, names, points, kills, wins, local_name );
+            FillRow( i, i - ROW_LINES, CARD_COUNT + left + i - ROW_LINES, i - ROW_LINES < right, names, points, kills, wins, own_index );
         }
         for ( i = SIDE_ROWS; i < ROW_COUNT; i++ )
         {
-            FillRow( i, i - SIDE_ROWS, CARD_COUNT + i - SIDE_ROWS, i - SIDE_ROWS < centre, names, points, kills, wins, local_name );
+            FillRow( i, i - SIDE_ROWS, CARD_COUNT + i - SIDE_ROWS, i - SIDE_ROWS < centre, names, points, kills, wins, own_index );
         }
     }
 
     //! row: the row widgets; line: its line in its column, for the alternate tones; index: the player it shows;
-    //! shown false hides the row
-    protected void FillRow( int row, int line, int index, bool shown, array<string> names, array<int> points, array<int> kills, array<int> wins, string local_name )
+    //! shown false hides the row; own_index: the player that is the local one, -1 for none
+    protected void FillRow( int row, int line, int index, bool shown, array<string> names, array<int> points, array<int> kills, array<int> wins, int own_index )
     {
         Widget frame = m_Rows[row];
         frame.Show( shown );
         if ( !shown )
             return;
 
-        bool own = local_name != "" && names.Get( index ) == local_name;
+        bool own = index == own_index;
         Widget back = m_RowBack[row];
         Widget own_mark = m_RowOwn[row];
         TextWidget name_text = m_RowName[row];
@@ -619,10 +632,20 @@ class BattleRoyaleLeaderboard
         if ( br_rpc.GetLeaderboardSeason( start, end, seconds_left, received_at ) && start != "" )
         {
             float left = seconds_left - ( GetGame().GetTickTime() - received_at );
-            if ( left < 0 )
-                left = 0;
 
-            if ( left >= 86400 )
+            if ( left <= 0 )
+            {
+                // The season is over: the server has the new one. Ask for it (Update sends the request when
+                // the interval between requests allows), and again later if the answer is still the old one
+                unit = 5;
+                int now = GetGame().GetTime();
+                if ( m_SeasonEndRequest < 0 || now - m_SeasonEndRequest >= SEASON_END_RETRY_MS )
+                {
+                    m_SeasonEndRequest = now;
+                    m_WantRequest = true;
+                }
+            }
+            else if ( left >= 86400 )
             {
                 unit = 4;
                 value = left / 86400;
@@ -648,6 +671,13 @@ class BattleRoyaleLeaderboard
 
         m_TimeLeftUnit = unit;
         m_TimeLeftValue = value;
+
+        // Past the end there is no time left to name: "Updating..." alone until the new season arrives
+        if ( unit == 5 )
+        {
+            m_Status.SetText( "#STR_BR_LEADERBOARD_UPDATING" );
+            return;
+        }
 
         string time_left = GetTimeLeftText( unit, value );
         if ( time_left == "" )
