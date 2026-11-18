@@ -283,6 +283,8 @@ that same `server_settings.json`:
 - Press T in game to show or hide the panel with the top 30 (position, name, points, kills, wins).
   The key can be changed in the game's control settings, in the BATTLE ROYALE group. The panel takes
   no input: the player keeps playing with it open.
+  It names the season and the time it has left, and a player outside the top 30 sees their own place
+  under the table.
 - `"leaderboard_webhook_url"` is a Discord webhook like the one above; empty (the default) posts
   nothing. After a match, the server posts the top 30 there only if it changed since the last post
   Discord accepted. Keep the URL private, as with the match end one.

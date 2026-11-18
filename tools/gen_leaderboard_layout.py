@@ -6,7 +6,8 @@ sized from the script. All the geometry is here, in exact layout units (1/1080 o
 and the names of the widgets are the contract with the script.
 
 Usage: python -I tools/gen_leaderboard_layout.py <output.layout> [--sample <players> [--own <rank>]]
-       [--state loading|empty] [--lang en|es]
+       [--state loading|empty] [--lang en|es] [--self <rank>] [--period <text>] [--status <text>]
+--self writes the footer: the place of the local player outside the top 30, or 0 for one without points.
 --sample writes a filled copy for the offline preview (sample names and numbers, the texts of --lang
 instead of the stringtable keys); --state writes the loading or the empty state. Neither is a file for
 the game.
@@ -18,14 +19,14 @@ TEX = "Vigrid-BattleRoyale/GUI/textures/hud/"
 
 # Panel
 W = 1240
-PANEL_DOWN = 30          # below the middle of the screen: the top is at 215, under the fourth kill feed row
+PANEL_DOWN = 16          # below the middle of the screen: the top is at 215, under the fourth kill feed row
 PAD = 20
 HEADER_H = 72
 PODIUM_BOTTOM = 228
 TABLE_Y = 244            # column headers
 HEAD_H = 26
 ROWS_Y = 274
-ROW_H = 30
+ROW_H = 28               # the texts of a row are as tall as the row
 ROW_LINES = 14           # rows of the left table column; the right one has one less
 SIDE_ROWS = 27           # rows of both columns: places 4 to 30
 CENTRE_LINES = 5         # rows of the centred column, used alone for a table this short
@@ -35,6 +36,8 @@ BOTTOM_PAD = 16
 PANEL_H = ROWS_Y + ROW_LINES * ROW_H + BOTTOM_PAD
 MESSAGE_H = 224
 BACK_COUNT = ROW_LINES + 2  # backdrops: loading/empty, podium alone, podium and 1 to 14 lines of rows
+FOOTER_H = 44            # the place of the local player outside the top 30, under the backdrop: with the tallest
+                         # one the panel ends at 941 of 1080, above the vanilla quickbar
 
 # Podium cards: second, first and third place from left to right, bottoms level
 CARD_W = 388
@@ -86,6 +89,7 @@ SAMPLE_NAMES = (
     "Stary_Sobor", "Gorka", "Polana", "Krasnostav", "Svetlo", "Elektro_Legend", "Kamyshovo", "Solnichniy",
     "Nizhnoye", "Tulga",
 )
+SAMPLE_SELF = ("Dev", "12", "3", "0")    # the local player of the footer: name, points, kills, wins
 TEXTS = {
     "en": {
         "#STR_BR_LEADERBOARD_TITLE": "LEADERBOARD",
@@ -93,8 +97,10 @@ TEXTS = {
         "#STR_BR_LEADERBOARD_COL_POINTS": "POINTS",
         "#STR_BR_LEADERBOARD_COL_KILLS": "KILLS",
         "#STR_BR_LEADERBOARD_COL_WINS": "WINS",
-        "period": "Monthly season: 2026-11",
-        "status": "T: close",
+        "#STR_BR_LEADERBOARD_SELF_LABEL": "YOUR PLACE",
+        "#STR_BR_LEADERBOARD_SELF_NONE": "You have not scored yet this season",
+        "period": "November 2026 season",
+        "status": "Ends in 12 days - T: close",
         "loading": "Loading the leaderboard...",
         "empty": "Nobody has scored yet this season",
         "empty_hint": "Play a match to get on the board.",
@@ -105,8 +111,10 @@ TEXTS = {
         "#STR_BR_LEADERBOARD_COL_POINTS": "PUNTOS",
         "#STR_BR_LEADERBOARD_COL_KILLS": "BAJAS",
         "#STR_BR_LEADERBOARD_COL_WINS": "VICTORIAS",
-        "period": "Temporada mensual: 2026-11",
-        "status": "T: cerrar",
+        "#STR_BR_LEADERBOARD_SELF_LABEL": "TU PUESTO",
+        "#STR_BR_LEADERBOARD_SELF_NONE": "A\u00fan no has puntuado esta temporada",
+        "period": "Temporada de noviembre de 2026",
+        "status": "Termina en 12 d\u00edas - T: cerrar",
         "loading": "Cargando la clasificación...",
         "empty": "Nadie ha puntuado todavía esta temporada",
         "empty_hint": "Juega una partida para entrar en la clasificación.",
@@ -197,7 +205,7 @@ def table_split(players):
     return left, rows - left, 0
 
 
-def build(players, own, state, lang):
+def build(players, own, state, lang, self_rank=-1, period_text="", status_text=""):
     sample = players >= 0 or state != ""
     filled = max(players, 0)
     texts = TEXTS[lang] if sample else None
@@ -250,9 +258,13 @@ def build(players, own, state, lang):
     out.text("LeaderboardTitle", 24, 11, 600, 50, text="#STR_BR_LEADERBOARD_TITLE")
     period = "period" if sample else ""
     status = "status" if sample else ""
+    if sample and period_text:
+        period = period_text
+    if sample and status_text:
+        status = status_text
     right = ("halign right_ref",)
-    out.text("LeaderboardPeriod", 24, 13, 560, 26, TEXT, halign="right", text=period, align=right)
-    out.text("LeaderboardStatus", 24, 41, 560, 22, TEXT_MUTED, bold=False, halign="right", text=status, align=right)
+    out.text("LeaderboardPeriod", 24, 13, 640, 26, TEXT, halign="right", text=period, align=right)
+    out.text("LeaderboardStatus", 24, 41, 640, 22, TEXT_MUTED, bold=False, halign="right", text=status, align=right)
 
     # Podium
     out.frame("LeaderboardPodium", 0, 0, W, PODIUM_BOTTOM, visible=show_content or not sample)
@@ -325,14 +337,56 @@ def build(players, own, state, lang):
         out.panel(row_name + "Back", 0, 0, COL_W, ROW_H, OWN_TINT if is_own else ZEBRA,
                   visible=is_own or line % 2 == 1)
         out.panel(row_name + "Own", 0, 0, OWN_BAR_W, ROW_H, rgba(GOLD), visible=is_own)
-        out.text(row_name + "Rank", C_RANK[0], 1, C_RANK[1], 28, TEXT_MUTED, bold=False, halign="center",
+        out.text(row_name + "Rank", C_RANK[0], 0, C_RANK[1], ROW_H, TEXT_MUTED, bold=False, halign="center",
                  text=str(place) if shown else "")
-        out.text(row_name + "Name", C_NAME[0], 1, C_NAME[1], 28, OWN_NAME if is_own else TEXT, text=str(values[0]))
-        out.text(row_name + "Points", C_POINTS[0], 1, C_POINTS[1], 28, TEXT_STRONG, halign="right", text=str(values[1]))
-        out.text(row_name + "Kills", C_KILLS[0], 1, C_KILLS[1], 28, TEXT_VALUE, bold=False, halign="right", text=str(values[2]))
-        out.text(row_name + "Wins", C_WINS[0], 1, C_WINS[1], 28, TEXT_VALUE, bold=False, halign="right", text=str(values[3]))
+        out.text(row_name + "Name", C_NAME[0], 0, C_NAME[1], ROW_H, OWN_NAME if is_own else TEXT, text=str(values[0]))
+        out.text(row_name + "Points", C_POINTS[0], 0, C_POINTS[1], ROW_H, TEXT_STRONG, halign="right", text=str(values[1]))
+        out.text(row_name + "Kills", C_KILLS[0], 0, C_KILLS[1], ROW_H, TEXT_VALUE, bold=False, halign="right", text=str(values[2]))
+        out.text(row_name + "Wins", C_WINS[0], 0, C_WINS[1], ROW_H, TEXT_VALUE, bold=False, halign="right", text=str(values[3]))
         out.end()
     out.end()
+
+    # Footer: the local player outside the top 30 (place, name and numbers, with the bar and the tint of an own row)
+    # or, without points yet, a line that says so. It hangs under the backdrop as one more piece of the same glass,
+    # with the bottom edge of the backdrop as the line between them. One footer for each backdrop with a podium
+    # (1 to BACK_COUNT - 1), at its height: the script shows the one of the backdrop in use
+    for index in range(1, BACK_COUNT):
+        if index == 1:
+            footer_y = TABLE_Y
+        else:
+            footer_y = ROWS_Y + (index - 1) * ROW_H + BOTTOM_PAD
+        footer = f"LeaderboardFooter{index}"
+        footer_shown = sample and show_content and index == back_used and self_rank >= 0
+        has_place = self_rank > 0
+        out.frame(footer, 0, footer_y, W, FOOTER_H, visible=footer_shown)
+        out.panel(footer + "Glass", 0, 0, W, FOOTER_H, BACKGROUND)
+        out.panel(footer + "Bottom", 0, FOOTER_H - 1, W, 1, EDGE)
+        out.panel(footer + "Left", 0, 0, 1, FOOTER_H - 1, EDGE)
+        out.panel(footer + "Right", W - 1, 0, 1, FOOTER_H - 1, EDGE)
+        out.frame(footer + "Self", 0, 0, W, FOOTER_H, visible=footer_shown and has_place)
+        out.panel(footer + "SelfTint", 1, 0, W - 2, FOOTER_H - 1, OWN_TINT)
+        out.panel(footer + "SelfBar", 1, 0, OWN_BAR_W, FOOTER_H - 1, rgba(GOLD))
+        fill = footer_shown and has_place
+        out.text(footer + "Label", 24, 11, 122, 22, TEXT_MUTED, bold=False, text="#STR_BR_LEADERBOARD_SELF_LABEL")
+        out.text(footer + "Rank", 150, 7, 96, 30, TEXT_STRONG, text=str(self_rank) if fill else "")
+        out.text(footer + "Name", 256, 8, 440, 28, OWN_NAME, text=SAMPLE_SELF[0] if fill else "")
+        # Numbers and their labels from the right edge: wins, kills, points
+        x = W - 24 - 108
+        out.text(footer + "WinsLabel", x, 11, 108, 22, TEXT_MUTED, bold=False, text="#STR_BR_LEADERBOARD_COL_WINS")
+        x -= 8 + 56
+        out.text(footer + "Wins", x, 8, 56, 28, TEXT, halign="right", text=SAMPLE_SELF[3] if fill else "")
+        x -= 20 + 64
+        out.text(footer + "KillsLabel", x, 11, 64, 22, TEXT_MUTED, bold=False, text="#STR_BR_LEADERBOARD_COL_KILLS")
+        x -= 8 + 56
+        out.text(footer + "Kills", x, 8, 56, 28, TEXT, halign="right", text=SAMPLE_SELF[2] if fill else "")
+        x -= 20 + 80
+        out.text(footer + "PointsLabel", x, 11, 80, 22, TEXT_MUTED, bold=False, text="#STR_BR_LEADERBOARD_COL_POINTS")
+        x -= 8 + 72
+        out.text(footer + "Points", x, 8, 72, 28, TEXT_STRONG, halign="right", text=SAMPLE_SELF[1] if fill else "")
+        out.end()
+        out.text(footer + "None", 24, 9, W - 48, 26, TEXT_MUTED, bold=False, text="#STR_BR_LEADERBOARD_SELF_NONE",
+                 visible=footer_shown and not has_place)
+        out.end()
 
     # Loading and empty states: a line and, under it, a hint
     message = ""
@@ -359,8 +413,11 @@ def main():
     parser.add_argument("--own", type=int, default=0)
     parser.add_argument("--state", default="", choices=("", "loading", "empty"))
     parser.add_argument("--lang", default="en", choices=("en", "es"))
+    parser.add_argument("--self", dest="self_rank", type=int, default=-1)
+    parser.add_argument("--period", default="")
+    parser.add_argument("--status", default="")
     args = parser.parse_args()
-    text = build(args.sample, args.own, args.state, args.lang)
+    text = build(args.sample, args.own, args.state, args.lang, args.self_rank, args.period, args.status)
     if text.count("{") != text.count("}"):
         raise SystemExit("unbalanced braces")
     with open(args.output, "w", encoding="utf-8", newline="") as handle:

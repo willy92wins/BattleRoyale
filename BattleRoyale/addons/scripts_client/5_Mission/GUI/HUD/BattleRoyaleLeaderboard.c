@@ -5,6 +5,8 @@
 //! The panel is part of the HUD: it takes no input, hides while a menu is open and comes back after.
 //! Opening it asks the server for the data (BattleRoyaleRPC stores the answer); what the client already has is
 //! shown at once and replaced when the answer arrives. A match that ends with the panel open asks again.
+//! The title band names the season and counts down the time it has left; a local player outside the top 30
+//! gets a footer with their place.
 //! Every widget has its place and size in leaderboard.layout (written by tools/gen_leaderboard_layout.py): the
 //! script only shows, hides, colours and writes them
 class BattleRoyaleLeaderboard
@@ -29,6 +31,15 @@ class BattleRoyaleLeaderboard
     protected Widget m_Root;
     protected Widget m_Panel;
     protected Widget m_Backs[BACK_COUNT];       //!< one backdrop for each height of the panel; one is shown
+    // Footer under each backdrop with a podium (1 .. BACK_COUNT - 1; index 0 is not used)
+    protected Widget m_Footers[BACK_COUNT];
+    protected Widget m_FooterSelf[BACK_COUNT];          //!< place and numbers of the local player
+    protected Widget m_FooterNone[BACK_COUNT];          //!< line for a local player without points
+    protected TextWidget m_FooterRank[BACK_COUNT];
+    protected TextWidget m_FooterName[BACK_COUNT];
+    protected TextWidget m_FooterPoints[BACK_COUNT];
+    protected TextWidget m_FooterKills[BACK_COUNT];
+    protected TextWidget m_FooterWins[BACK_COUNT];
     protected Widget m_Podium;
     protected Widget m_Table;
     protected Widget m_Message;
@@ -68,6 +79,9 @@ class BattleRoyaleLeaderboard
     protected int m_MatchPhase;         //!< match_phase last seen with the panel open
     protected int m_MatchEndRequest;    //!< GetGame().GetTime() at which to ask for the points of the match that ended, -1 for none
     protected string m_LocalName;       //!< name of the local player's identity, empty until it is known
+    protected string m_Hint;            //!< second line of the title band after the time left: the close hint or "Updating..."
+    protected int m_TimeLeftUnit;       //!< what the time left on screen counts: 0 nothing, 1 under a minute, 2 minutes, 3 hours, 4 days
+    protected int m_TimeLeftValue;      //!< how many of them it shows
 
     void BattleRoyaleLeaderboard( Widget parent )
     {
@@ -130,6 +144,21 @@ class BattleRoyaleLeaderboard
             name = "LeaderboardBack" + i.ToString();
             m_Backs[i] = m_Root.FindAnyWidget( name );
             if ( !m_Backs[i] )
+                return false;
+        }
+
+        for ( i = 1; i < BACK_COUNT; i++ )
+        {
+            name = "LeaderboardFooter" + i.ToString();
+            m_Footers[i] = m_Root.FindAnyWidget( name );
+            m_FooterSelf[i] = m_Root.FindAnyWidget( name + "Self" );
+            m_FooterNone[i] = m_Root.FindAnyWidget( name + "None" );
+            m_FooterRank[i] = TextWidget.Cast( m_Root.FindAnyWidget( name + "Rank" ) );
+            m_FooterName[i] = TextWidget.Cast( m_Root.FindAnyWidget( name + "Name" ) );
+            m_FooterPoints[i] = TextWidget.Cast( m_Root.FindAnyWidget( name + "Points" ) );
+            m_FooterKills[i] = TextWidget.Cast( m_Root.FindAnyWidget( name + "Kills" ) );
+            m_FooterWins[i] = TextWidget.Cast( m_Root.FindAnyWidget( name + "Wins" ) );
+            if ( !m_Footers[i] || !m_FooterSelf[i] || !m_FooterNone[i] || !m_FooterRank[i] || !m_FooterName[i] || !m_FooterPoints[i] || !m_FooterKills[i] || !m_FooterWins[i] )
                 return false;
         }
 
@@ -287,6 +316,9 @@ class BattleRoyaleLeaderboard
             Refresh( br_rpc );
         }
 
+        // The time left counts down with the panel open: its text changes only when its number does
+        UpdateStatus( br_rpc, false );
+
         if ( m_Fading )
         {
             if ( m_FadeStart < 0 )
@@ -316,16 +348,18 @@ class BattleRoyaleLeaderboard
         if ( !br_rpc.GetLeaderboard( wipe, period, names, points, kills, wins ) || !names || !points || !kills || !wins )
         {
             m_Period.SetText( "" );
-            m_Status.SetText( GetCloseHint() );
+            m_Hint = GetCloseHint();
+            UpdateStatus( br_rpc, true );
             ShowMessage( "#STR_BR_LEADERBOARD_LOADING", "" );
             return;
         }
 
-        m_Period.SetText( GetPeriodText( wipe, period ) );
+        m_Period.SetText( GetSeasonText( br_rpc, wipe, period ) );
         if ( m_Waiting )
-            m_Status.SetText( "#STR_BR_LEADERBOARD_UPDATING" );
+            m_Hint = Widget.TranslateString( "#STR_BR_LEADERBOARD_UPDATING" );
         else
-            m_Status.SetText( GetCloseHint() );
+            m_Hint = GetCloseHint();
+        UpdateStatus( br_rpc, true );
 
         int count = names.Count();
         if ( points.Count() < count )
@@ -365,8 +399,9 @@ class BattleRoyaleLeaderboard
         if ( centre > lines )
             lines = centre;
         ShowContent( 1 + lines, left > 0, right > 0, centre > 0 );
-
         string local_name = GetLocalName();
+        FillFooter( br_rpc, 1 + lines, local_name );
+
         bool own;
         int i;
         int value;
@@ -477,7 +512,7 @@ class BattleRoyaleLeaderboard
         widget.Show( centre );
     }
 
-    //! Shows the backdrop of that index and hides the others
+    //! Shows the backdrop of that index and hides the others, and every footer
     protected void ShowBack( int index )
     {
         Widget back;
@@ -485,7 +520,47 @@ class BattleRoyaleLeaderboard
         {
             back = m_Backs[i];
             back.Show( i == index );
+            if ( i > 0 )
+            {
+                back = m_Footers[i];
+                back.Show( false );
+            }
         }
+    }
+
+    //! Footer under the backdrop in use (m_Backs index, 1 or more): the place and the numbers of a local player
+    //! outside the top 30, or a line for one without points in this period. In the top 30 the row or the card
+    //! of the player is already marked, so there is no footer
+    protected void FillFooter( BattleRoyaleRPC br_rpc, int back, string local_name )
+    {
+        int rank;
+        int points;
+        int kills;
+        int wins;
+        if ( back < 1 || back >= BACK_COUNT || !br_rpc.GetLeaderboardSelf( rank, points, kills, wins ) )
+            return;
+        if ( rank >= 1 && rank <= TOP_COUNT )
+            return;
+
+        Widget footer = m_Footers[back];
+        Widget self_part = m_FooterSelf[back];
+        Widget none = m_FooterNone[back];
+        footer.Show( true );
+        self_part.Show( rank > 0 );
+        none.Show( rank <= 0 );
+        if ( rank <= 0 )
+            return;
+
+        TextWidget text = m_FooterRank[back];
+        text.SetText( rank.ToString() );
+        text = m_FooterName[back];
+        SetFittedText( text, local_name );
+        text = m_FooterPoints[back];
+        text.SetText( points.ToString() );
+        text = m_FooterKills[back];
+        text.SetText( kills.ToString() );
+        text = m_FooterWins[back];
+        text.SetText( wins.ToString() );
     }
 
     //! Loading and empty states: the title band over a short backdrop with a line and, under it, a hint (empty for none)
@@ -528,6 +603,153 @@ class BattleRoyaleLeaderboard
             widget.SetText( text.SubstringUtf8( 0, chars ) + ELLIPSIS );
             widget.GetTextSize( text_w, text_h );
         }
+    }
+
+    //! Second line of the title band: the time the season has left, then m_Hint. force writes it even when the
+    //! time left on screen did not change
+    protected void UpdateStatus( BattleRoyaleRPC br_rpc, bool force )
+    {
+        string start;
+        string end;
+        int seconds_left;
+        float received_at;
+        int unit = 0;
+        int value = 0;
+
+        if ( br_rpc.GetLeaderboardSeason( start, end, seconds_left, received_at ) && start != "" )
+        {
+            float left = seconds_left - ( GetGame().GetTickTime() - received_at );
+            if ( left < 0 )
+                left = 0;
+
+            if ( left >= 86400 )
+            {
+                unit = 4;
+                value = left / 86400;
+            }
+            else if ( left >= 3600 )
+            {
+                unit = 3;
+                value = left / 3600;
+            }
+            else if ( left >= 60 )
+            {
+                unit = 2;
+                value = left / 60;
+            }
+            else
+            {
+                unit = 1;
+            }
+        }
+
+        if ( !force && unit == m_TimeLeftUnit && value == m_TimeLeftValue )
+            return;
+
+        m_TimeLeftUnit = unit;
+        m_TimeLeftValue = value;
+
+        string time_left = GetTimeLeftText( unit, value );
+        if ( time_left == "" )
+            m_Status.SetText( m_Hint );
+        else if ( m_Hint == "" )
+            m_Status.SetText( time_left );
+        else
+            m_Status.SetText( time_left + " - " + m_Hint );
+    }
+
+    //! "Ends in 12 days", in hours under a day and in minutes under an hour; empty for unit 0
+    protected string GetTimeLeftText( int unit, int value )
+    {
+        string key = "";
+        switch ( unit )
+        {
+            case 1:
+                return Widget.TranslateString( "#STR_BR_LEADERBOARD_ENDS_SOON" );
+            case 2:
+                key = "#STR_BR_LEADERBOARD_ENDS_MINUTES";
+                if ( value == 1 )
+                    key = "#STR_BR_LEADERBOARD_ENDS_MINUTE";
+                break;
+            case 3:
+                key = "#STR_BR_LEADERBOARD_ENDS_HOURS";
+                if ( value == 1 )
+                    key = "#STR_BR_LEADERBOARD_ENDS_HOUR";
+                break;
+            case 4:
+                key = "#STR_BR_LEADERBOARD_ENDS_DAYS";
+                if ( value == 1 )
+                    key = "#STR_BR_LEADERBOARD_ENDS_DAY";
+                break;
+        }
+
+        if ( key == "" )
+            return "";
+
+        return string.Format( Widget.TranslateString( key ), value );
+    }
+
+    //! The season in words, from its first and last day: "November 2026 season", "Week of 16-22 November" (with
+    //! both months when it spans two) or "2026 season". Without valid days, what GetPeriodText gives
+    protected string GetSeasonText( BattleRoyaleRPC br_rpc, string wipe, string period )
+    {
+        string start;
+        string end;
+        int seconds_left;
+        float received_at;
+        int start_year;
+        int start_month;
+        int start_day;
+        int end_year;
+        int end_month;
+        int end_day;
+
+        if ( !br_rpc.GetLeaderboardSeason( start, end, seconds_left, received_at ) )
+            return GetPeriodText( wipe, period );
+        if ( !ParseDate( start, start_year, start_month, start_day ) || !ParseDate( end, end_year, end_month, end_day ) )
+            return GetPeriodText( wipe, period );
+
+        if ( wipe == "monthly" )
+            return string.Format( Widget.TranslateString( "#STR_BR_LEADERBOARD_SEASON_MONTH" ), GetMonthName( start_month ), start_year );
+
+        if ( wipe == "yearly" )
+            return string.Format( Widget.TranslateString( "#STR_BR_LEADERBOARD_SEASON_YEAR" ), start_year );
+
+        if ( wipe == "weekly" )
+        {
+            if ( start_month == end_month )
+                return string.Format( Widget.TranslateString( "#STR_BR_LEADERBOARD_SEASON_WEEK" ), start_day, end_day, GetMonthName( end_month ) );
+
+            return string.Format( Widget.TranslateString( "#STR_BR_LEADERBOARD_SEASON_WEEK_2" ), start_day, GetMonthName( start_month ), end_day, GetMonthName( end_month ) );
+        }
+
+        return GetPeriodText( wipe, period );
+    }
+
+    //! Reads YYYY-MM-DD; false when the text is not a date
+    protected bool ParseDate( string date, out int year, out int month, out int day )
+    {
+        year = 0;
+        month = 0;
+        day = 0;
+        if ( date.Length() != 10 || date.Substring( 4, 1 ) != "-" || date.Substring( 7, 1 ) != "-" )
+            return false;
+
+        string part = date.Substring( 0, 4 );
+        year = part.ToInt();
+        part = date.Substring( 5, 2 );
+        month = part.ToInt();
+        part = date.Substring( 8, 2 );
+        day = part.ToInt();
+        return year > 0 && month >= 1 && month <= 12 && day >= 1 && day <= 31;
+    }
+
+    //! Name of the month (1 to 12) in the client's language, as it goes inside a sentence
+    protected string GetMonthName( int month )
+    {
+        // Keys STR_BR_LEADERBOARD_MONTH_1 to STR_BR_LEADERBOARD_MONTH_12
+        string key = "STR_BR_LEADERBOARD_MONTH_" + month.ToString();
+        return Widget.TranslateString( "#" + key );
     }
 
     //! "Monthly season: 2026-11"; the period label alone for a wipe mode this client does not know
