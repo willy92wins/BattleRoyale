@@ -49,8 +49,9 @@ class BRLeaderboard
 
 	//! True when an unreadable file could not be preserved: scores stay in memory and nothing is written this run
 	protected bool m_SaveDisabled;
-	//! File the standings were read from, so a rotation before the first save archives what was read, not a bad main file
-	protected string m_LoadedPath = "";
+	//! True only when leaderboard.json is a known good copy: it loaded whole at startup or the last
+	//! save read it back whole. Only then may it be copied to .bak before being replaced
+	protected bool m_MainKnownValid;
 
 	//! Cache of the first TOP_COUNT standings, rebuilt whenever the standings change: client requests read it as it is
 	protected ref array<string> m_TopNames = new array<string>;
@@ -119,51 +120,129 @@ class BRLeaderboard
 		Error("[Leaderboard] leaderboard.json could not be read and could not be preserved; saving is disabled for this run, scores are kept in memory only and the file is left for the administrator");
 	}
 
+	protected int PlayerCount(BRLeaderboardFile file)
+	{
+		if (!file || !file.players)
+			return 0;
+
+		return file.players.Count();
+	}
+
+	//! Loads path into a fresh object; true only when the file reads whole into it
+	protected bool TryLoad(string path, out BRLeaderboardFile loaded)
+	{
+		loaded = new BRLeaderboardFile;
+		string tryLoadError;
+		return JsonFileLoader<BRLeaderboardFile>.LoadFile(path, loaded, tryLoadError);
+	}
+
+	//! A file is valid when it reads whole and, when expected is given, its period and player count match it.
+	//! No write or copy is trusted without this read-back
+	protected bool Valid(string path, BRLeaderboardFile expected)
+	{
+		BRLeaderboardFile probe = new BRLeaderboardFile;
+		string probeError;
+		if (!JsonFileLoader<BRLeaderboardFile>.LoadFile(path, probe, probeError))
+			return false;
+
+		if (expected)
+		{
+			if (probe.period != expected.period)
+				return false;
+			if (PlayerCount(probe) != PlayerCount(expected))
+				return false;
+		}
+
+		return true;
+	}
+
 	//! Reads leaderboard.json, then leaderboard.json.new, then leaderboard.json.bak, and uses the first
-	//! one that reads whole. Only when none reads is an unreadable file copied aside, never overwritten,
-	//! and the board starts empty; when that copy fails, saving stays off for this run
+	//! one that reads whole. A board recovered from .new or .bak is copied onto leaderboard.json (and read
+	//! back) after the unreadable main file, if any, has been copied aside, so the recovered board lives
+	//! in two places before any later save. Only when none reads is every unreadable file copied aside
+	//! and the board starts empty; when a copy aside fails, saving stays off for this run
 	void Load()
 	{
 		m_File = new BRLeaderboardFile;
 		m_ById.Clear();
-		m_LoadedPath = "";
+		m_MainKnownValid = false;
 
 		array<string> loadCandidates = new array<string>;
 		loadCandidates.Insert(FilePath());
 		loadCandidates.Insert(NewFilePath());
 		loadCandidates.Insert(BakFilePath());
 
-		bool loadedOk = false;
-		string firstExistingPath = "";
+		string loadedPath = "";
+		BRLeaderboardFile loadedFile;
 		for (int c = 0; c < loadCandidates.Count(); c++)
 		{
 			string candidatePath = loadCandidates[c];
 			if (!FileExist(candidatePath))
 				continue;
 
-			if (firstExistingPath == "")
-				firstExistingPath = candidatePath;
-
-			BRLeaderboardFile candidateFile = new BRLeaderboardFile;
-			string loadError;
-			if (JsonFileLoader<BRLeaderboardFile>.LoadFile(candidatePath, candidateFile, loadError))
+			BRLeaderboardFile candidateFile;
+			if (TryLoad(candidatePath, candidateFile))
 			{
-				m_File = candidateFile;
-				m_LoadedPath = candidatePath;
-				loadedOk = true;
-				if (candidatePath != FilePath())
-					BattleRoyaleUtils.Info("[Leaderboard] Loaded " + candidatePath + " instead of leaderboard.json");
-
+				loadedFile = candidateFile;
+				loadedPath = candidatePath;
 				break;
 			}
 		}
 
-		if (!loadedOk && firstExistingPath != "")
+		if (loadedPath != "")
 		{
-			string preservedPath;
-			if (PreserveFile(firstExistingPath, BATTLEROYALE_SETTINGS_FOLDER + "leaderboard.broken", preservedPath))
-				Error("[Leaderboard] leaderboard.json could not be read, copied to " + preservedPath + "; starting with an empty leaderboard");
+			m_File = loadedFile;
+			if (!m_File.players)
+				m_File.players = new array<ref BRLeaderboardEntry>;
+
+			if (loadedPath == FilePath())
+			{
+				m_MainKnownValid = true;
+			}
 			else
+			{
+				BattleRoyaleUtils.Info("[Leaderboard] Loaded " + loadedPath + " instead of leaderboard.json");
+				bool recoveryOk = true;
+				if (FileExist(FilePath()))
+				{
+					string brokenPath;
+					if (PreserveFile(FilePath(), BATTLEROYALE_SETTINGS_FOLDER + "leaderboard.broken", brokenPath))
+						Error("[Leaderboard] leaderboard.json could not be read, copied to " + brokenPath);
+					else
+						recoveryOk = false;
+				}
+
+				if (recoveryOk)
+				{
+					if (!CopyFile(loadedPath, FilePath()) || !Valid(FilePath(), m_File))
+						recoveryOk = false;
+					else
+						m_MainKnownValid = true;
+				}
+
+				if (!recoveryOk)
+					DisableSaving();
+			}
+		}
+		else
+		{
+			bool anyExisting = false;
+			bool allPreserved = true;
+			for (int p = 0; p < loadCandidates.Count(); p++)
+			{
+				string preserveCandidate = loadCandidates[p];
+				if (!FileExist(preserveCandidate))
+					continue;
+
+				anyExisting = true;
+				string preservedCandidatePath;
+				if (!PreserveFile(preserveCandidate, BATTLEROYALE_SETTINGS_FOLDER + "leaderboard.broken", preservedCandidatePath))
+					allPreserved = false;
+			}
+
+			if (anyExisting && allPreserved)
+				Error("[Leaderboard] No leaderboard file could be read; every unreadable file was copied to a leaderboard.broken file and the leaderboard starts empty");
+			if (!allPreserved)
 				DisableSaving();
 		}
 
@@ -181,9 +260,11 @@ class BRLeaderboard
 		RebuildTop();
 	}
 
-	//! Recoverable save, not an atomic one: the new standings go to leaderboard.json.new first, the
-	//! current leaderboard.json is copied to leaderboard.json.bak, and only then .new is copied over
-	//! leaderboard.json, so a shutdown mid-save leaves a file Load() can still read
+	//! Recoverable save, not an atomic one: every write and copy is read back before the next step.
+	//! The new standings go to leaderboard.json.new and are read back against memory; only a main file
+	//! already known to be good is copied to leaderboard.json.bak (and read back), so a bad main file
+	//! never overwrites the backup; then .new is copied over the main file and read back against memory.
+	//! A shutdown mid-save leaves a file Load() can still read: the old main file, the verified .new or the .bak
 	protected void Save()
 	{
 		if (m_SaveDisabled)
@@ -197,28 +278,29 @@ class BRLeaderboard
 			return;
 		}
 
-		if (!FileExist(newPath))
+		if (!Valid(newPath, m_File))
 		{
-			Error("[Leaderboard] leaderboard.json.new was not created; leaderboard.json was left unchanged");
+			Error("[Leaderboard] leaderboard.json.new could not be read back; leaderboard.json was left unchanged");
 			return;
 		}
 
-		if (FileExist(FilePath()))
+		if (m_MainKnownValid)
 		{
-			if (!CopyFile(FilePath(), BakFilePath()) || !FileExist(BakFilePath()))
+			if (!CopyFile(FilePath(), BakFilePath()) || !Valid(BakFilePath(), null))
 			{
-				Error("[Leaderboard] leaderboard.json could not be copied to leaderboard.json.bak; leaderboard.json was left unchanged and the new standings are in leaderboard.json.new");
+				Error("[Leaderboard] leaderboard.json could not be copied to leaderboard.json.bak or the copy could not be read back; leaderboard.json was left unchanged and the new standings are in leaderboard.json.new");
 				return;
 			}
 		}
 
-		if (!CopyFile(newPath, FilePath()) || !FileExist(FilePath()))
+		if (!CopyFile(newPath, FilePath()) || !Valid(FilePath(), m_File))
 		{
-			Error("[Leaderboard] leaderboard.json.new could not be copied over leaderboard.json; leaderboard.json.bak and leaderboard.json.new are kept");
+			Error("[Leaderboard] leaderboard.json.new could not be copied over leaderboard.json or the result could not be read back; the verified leaderboard.json.new will be used on load");
+			m_MainKnownValid = false;
 			return;
 		}
 
-		m_LoadedPath = FilePath();
+		m_MainKnownValid = true;
 	}
 
 	//! Adds a standings amount without overflowing: the result stops at int.MAX. Amounts are never negative (the point
@@ -315,31 +397,39 @@ class BRLeaderboard
 			year = y + 1;
 	}
 
-	//! Starts today's period when the last one ended: the old board is archived next to leaderboard.json first.
-	//! Changing leaderboard_wipe changes the key, so it archives and starts over too
-	void EnsurePeriod(string wipe)
+	//! Starts today's period when the last one ended. True when the board already is in today's period
+	//! or rotated into it; false when the rotation failed and nothing was emptied, so the caller must not
+	//! score a new match into the old period. To rotate, the standings in memory are written straight to
+	//! the period archive (first free name) and read back against memory before anything is emptied, so
+	//! a failed save since the load cannot make the archive an older copy. Changing leaderboard_wipe
+	//! changes the key, so it archives and starts over too
+	bool EnsurePeriod(string wipe)
 	{
 		string key = PeriodKey(wipe);
 		if (m_File.period == key)
-			return;
+			return true;
 
 		if (m_File.period != "" && m_File.players && m_File.players.Count() > 0)
 		{
 			if (m_SaveDisabled)
-				return;
+				return false;
 
-			string archiveSource = m_LoadedPath;
-			if (archiveSource == "" || !FileExist(archiveSource))
-				archiveSource = FilePath();
-
-			string archivedPath;
-			if (!PreserveFile(archiveSource, BATTLEROYALE_SETTINGS_FOLDER + "leaderboard_" + m_File.period, archivedPath))
+			string archivePath = FirstFreeJsonPath(BATTLEROYALE_SETTINGS_FOLDER + "leaderboard_" + m_File.period);
+			string archiveError;
+			if (!JsonFileLoader<BRLeaderboardFile>.SaveFile(archivePath, m_File, archiveError))
 			{
+				ErrorEx(archiveError);
 				Error("[Leaderboard] Period " + m_File.period + " could not be archived; keeping its standings and retrying at the next period check");
-				return;
+				return false;
 			}
 
-			BattleRoyaleUtils.Info("[Leaderboard] Period " + m_File.period + " archived as " + archivedPath);
+			if (!Valid(archivePath, m_File))
+			{
+				Error("[Leaderboard] Period " + m_File.period + " archive " + archivePath + " could not be read back; keeping its standings and retrying at the next period check");
+				return false;
+			}
+
+			BattleRoyaleUtils.Info("[Leaderboard] Period " + m_File.period + " archived as " + archivePath);
 		}
 
 		m_File.period = key;
@@ -352,6 +442,7 @@ class BRLeaderboard
 		m_ById.Clear();
 		RebuildTop();
 		Save();
+		return true;
 	}
 
 	//! Adds one finished match: every participant gains its points and kills, the winner of position 1 a win.

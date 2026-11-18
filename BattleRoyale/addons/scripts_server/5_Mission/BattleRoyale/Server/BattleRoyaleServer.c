@@ -1256,7 +1256,11 @@ class BattleRoyaleServer: BattleRoyaleBase
         }
 
         BRLeaderboard leaderboard = BRLeaderboard.Get();
-        leaderboard.EnsurePeriod(serverData.leaderboard_wipe);
+        if (!leaderboard.EnsurePeriod(serverData.leaderboard_wipe))
+        {
+            Error("[Leaderboard] The finished match was not applied to the leaderboard because its period could not be rotated; the standings of the previous period were kept unchanged");
+            return;
+        }
 
         if (m_MatchParticipants.Count() > 0)
         {

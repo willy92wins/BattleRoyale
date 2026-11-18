@@ -291,10 +291,21 @@ A server that ran an earlier version gets the new fields, with the defaults abov
 `server_settings.json` on its first start.
 
 Each of the three point settings must be between 0 and 1000; a value outside that range is logged
-and its default is used. Saving is recoverable rather than atomic: the new board is written to
-`leaderboard.json.new` first, the previous `leaderboard.json` is kept as `leaderboard.json.bak`, and
-on load the first of `leaderboard.json`, `leaderboard.json.new` and `leaderboard.json.bak` that
-reads whole is used.
+and its default is used. Saving is recoverable rather than atomic, and no write or copy is trusted
+until it has been read back: the new board is written to `leaderboard.json.new` and read back first,
+and only a `leaderboard.json` already known to be good (it loaded whole, or the last save read it
+back whole) is copied to `leaderboard.json.bak` and read back, so an unreadable main file never
+overwrites the backup. Then `leaderboard.json.new` is copied over `leaderboard.json` and read back;
+if that fails, the verified `leaderboard.json.new` is used on the next load. On load the first of
+`leaderboard.json`, `leaderboard.json.new` and `leaderboard.json.bak` that reads whole is used; when
+that is `leaderboard.json.new` or `leaderboard.json.bak`, the unreadable `leaderboard.json` is first
+copied to `leaderboard.broken.json` (or the next free `leaderboard.broken` name), then the recovered
+board is copied onto `leaderboard.json` and read back, so it lives in two places before any later
+save. When no file reads whole, every unreadable file is copied to a `leaderboard.broken` name and
+the board starts empty, or, if a copy fails, nothing is saved for the rest of that run. At a period
+change the board in memory is written straight to its `leaderboard_<period>.json` archive and read
+back before it is emptied; if that fails, the old board is kept and the match that just ended is not
+scored into it.
 
 ## 6. BattleRoyale settings
 
