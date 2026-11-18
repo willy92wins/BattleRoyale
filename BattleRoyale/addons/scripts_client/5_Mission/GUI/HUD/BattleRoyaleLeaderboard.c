@@ -716,7 +716,8 @@ class BattleRoyaleLeaderboard
         if ( key == "" )
             return "";
 
-        return string.Format( Widget.TranslateString( key ), value );
+        string format = Widget.TranslateString( key );
+        return string.Format( format, value );
     }
 
     //! The season in words, from its first and last day: "November 2026 season", "Week of 16-22 November" (with
@@ -739,18 +740,38 @@ class BattleRoyaleLeaderboard
         if ( !ParseDate( start, start_year, start_month, start_day ) || !ParseDate( end, end_year, end_month, end_day ) )
             return GetPeriodText( wipe, period );
 
+        // One translation per statement, each kept in its own variable before string.Format: seen in game, a
+        // second Widget.TranslateString inside the same expression replaced the text of the first, and the
+        // season came out as the name of the month alone
+        string format;
+        string start_month_name;
+        string end_month_name;
+
         if ( wipe == "monthly" )
-            return string.Format( Widget.TranslateString( "#STR_BR_LEADERBOARD_SEASON_MONTH" ), GetMonthName( start_month ), start_year );
+        {
+            start_month_name = GetMonthName( start_month );
+            format = Widget.TranslateString( "#STR_BR_LEADERBOARD_SEASON_MONTH" );
+            return string.Format( format, start_month_name, start_year );
+        }
 
         if ( wipe == "yearly" )
-            return string.Format( Widget.TranslateString( "#STR_BR_LEADERBOARD_SEASON_YEAR" ), start_year );
+        {
+            format = Widget.TranslateString( "#STR_BR_LEADERBOARD_SEASON_YEAR" );
+            return string.Format( format, start_year );
+        }
 
         if ( wipe == "weekly" )
         {
+            start_month_name = GetMonthName( start_month );
+            end_month_name = GetMonthName( end_month );
             if ( start_month == end_month )
-                return string.Format( Widget.TranslateString( "#STR_BR_LEADERBOARD_SEASON_WEEK" ), start_day, end_day, GetMonthName( end_month ) );
+            {
+                format = Widget.TranslateString( "#STR_BR_LEADERBOARD_SEASON_WEEK" );
+                return string.Format( format, start_day, end_day, end_month_name );
+            }
 
-            return string.Format( Widget.TranslateString( "#STR_BR_LEADERBOARD_SEASON_WEEK_2" ), start_day, GetMonthName( start_month ), end_day, GetMonthName( end_month ) );
+            format = Widget.TranslateString( "#STR_BR_LEADERBOARD_SEASON_WEEK_2" );
+            return string.Format( format, start_day, start_month_name, end_day, end_month_name );
         }
 
         return GetPeriodText( wipe, period );
@@ -779,7 +800,9 @@ class BattleRoyaleLeaderboard
     {
         // Keys STR_BR_LEADERBOARD_MONTH_1 to STR_BR_LEADERBOARD_MONTH_12
         string key = "STR_BR_LEADERBOARD_MONTH_" + month.ToString();
-        return Widget.TranslateString( "#" + key );
+        key = "#" + key;
+        string month_name = Widget.TranslateString( key );
+        return month_name;
     }
 
     //! "Monthly season: 2026-11"; the period label alone for a wipe mode this client does not know
