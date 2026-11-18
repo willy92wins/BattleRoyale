@@ -316,6 +316,27 @@ class BRLeaderboard
 		return current + added;
 	}
 
+	//! One coherent reading of the server local clock: the date is read, then the time, then
+	//! the date again, and the whole capture repeats when the day changed in between, so the
+	//! returned date and time always belong to the same day, even around midnight
+	static void CaptureNow(out int year, out int month, out int day, out int hour, out int minute, out int second)
+	{
+		int checkYear;
+		int checkMonth;
+		int checkDay;
+		GetYearMonthDay(year, month, day);
+		GetHourMinuteSecond(hour, minute, second);
+		GetYearMonthDay(checkYear, checkMonth, checkDay);
+		while (checkYear != year || checkMonth != month || checkDay != day)
+		{
+			year = checkYear;
+			month = checkMonth;
+			day = checkDay;
+			GetHourMinuteSecond(hour, minute, second);
+			GetYearMonthDay(checkYear, checkMonth, checkDay);
+		}
+	}
+
 	//! Key of the period that contains today (server local date): monthly-YYYY-MM, yearly-YYYY or
 	//! weekly-YYYY-MM-DD with the Monday of this week
 	static string PeriodKey(string wipe)
@@ -323,8 +344,18 @@ class BRLeaderboard
 		int year;
 		int month;
 		int day;
-		GetYearMonthDay(year, month, day);
+		int hour;
+		int minute;
+		int second;
+		CaptureNow(year, month, day, hour, minute, second);
+		return PeriodKeyForDate(wipe, year, month, day);
+	}
 
+	//! Key of the period that contains the given civil date, for wipe: monthly-YYYY-MM,
+	//! yearly-YYYY or weekly-YYYY-MM-DD with the Monday of that week. Any other wipe value
+	//! is monthly, as in PeriodKey
+	static string PeriodKeyForDate(string wipe, int year, int month, int day)
+	{
 		if (wipe == "yearly")
 			return "yearly-" + year.ToString();
 
@@ -336,17 +367,21 @@ class BRLeaderboard
 			int endYear;
 			int endMonth;
 			int endDay;
-			PeriodBounds(wipe, startYear, startMonth, startDay, endYear, endMonth, endDay);
+			PeriodBoundsForDate(wipe, year, month, day, startYear, startMonth, startDay, endYear, endMonth, endDay);
 			return "weekly-" + startYear.ToString() + "-" + startMonth.ToStringLen(2) + "-" + startDay.ToStringLen(2);
 		}
 
 		return "monthly-" + year.ToString() + "-" + month.ToStringLen(2);
 	}
 
-	//! First and last day of the period that contains today for wipe, as YYYY-MM-DD (server local
-	//! date): monthly from the 1st to the last day of the month, weekly from Monday to Sunday,
-	//! yearly from 1 January to 31 December. Any other wipe value is monthly, as in PeriodKey
-	static void SeasonRange(string wipe, out string start, out string end)
+	//! First and last day of the period named by key, as YYYY-MM-DD, and the seconds from the
+	//! captured now (year to second, from CaptureNow) until 00:00 on the day after that last
+	//! day; never negative, so a period already past counts 0. The key is the one stored in
+	//! the leaderboard, which stays on the previous period when rotation failed, so the
+	//! season and the counter always name the same period as the standings themselves.
+	//! The count assumes 86400 seconds per day: DayZ has no time zone database, so it is
+	//! approximate on daylight saving change days (aproximado: ±1 h los días de cambio de hora)
+	static void SeasonForPeriod(string key, int year, int month, int day, int hour, int minute, int second, out string start, out string end, out int secondsLeft)
 	{
 		int startYear;
 		int startMonth;
@@ -354,49 +389,113 @@ class BRLeaderboard
 		int endYear;
 		int endMonth;
 		int endDay;
-		PeriodBounds(wipe, startYear, startMonth, startDay, endYear, endMonth, endDay);
+		start = "";
+		end = "";
+		secondsLeft = 0;
+		if (!PeriodBoundsForKey(key, startYear, startMonth, startDay, endYear, endMonth, endDay))
+			return;
+
 		start = FormatDate(startYear, startMonth, startDay);
 		end = FormatDate(endYear, endMonth, endDay);
-	}
-
-	//! Seconds from now (server local time) until 00:00 on the day after the last day of the
-	//! period that contains today for wipe; never negative
-	static int SecondsLeftInPeriod(string wipe)
-	{
-		int startYear;
-		int startMonth;
-		int startDay;
-		int endYear;
-		int endMonth;
-		int endDay;
-		PeriodBounds(wipe, startYear, startMonth, startDay, endYear, endMonth, endDay);
-
-		int year;
-		int month;
-		int day;
-		GetYearMonthDay(year, month, day);
-		int hour;
-		int minute;
-		int second;
-		GetHourMinuteSecond(hour, minute, second);
-
 		int daysLeft = DaysFromCivil(endYear, endMonth, endDay) - DaysFromCivil(year, month, day);
-		int secondsLeft = (daysLeft + 1) * 86400 - (hour * 3600 + minute * 60 + second);
+		secondsLeft = (daysLeft + 1) * 86400 - (hour * 3600 + minute * 60 + second);
 		if (secondsLeft < 0)
-			return 0;
-
-		return secondsLeft;
+			secondsLeft = 0;
 	}
 
-	//! Civil dates of the first and last day of the period that contains today for wipe, with the
-	//! same day arithmetic as PeriodKey (DaysFromCivil/CivilFromDays)
-	protected static void PeriodBounds(string wipe, out int startYear, out int startMonth, out int startDay, out int endYear, out int endMonth, out int endDay)
+	//! Civil dates of the first and last day of the period named by a period key, from the
+	//! key itself (monthly-YYYY-MM, yearly-YYYY or weekly-YYYY-MM-DD with its Monday), with
+	//! the same day arithmetic as PeriodKeyForDate (DaysFromCivil/CivilFromDays). False when
+	//! the key names no period of those shapes
+	protected static bool PeriodBoundsForKey(string key, out int startYear, out int startMonth, out int startDay, out int endYear, out int endMonth, out int endDay)
 	{
-		int year;
-		int month;
-		int day;
-		GetYearMonthDay(year, month, day);
+		startYear = 0;
+		startMonth = 0;
+		startDay = 0;
+		endYear = 0;
+		endMonth = 0;
+		endDay = 0;
+		if (key == "")
+			return false;
 
+		int keyYear;
+		int keyMonth;
+		int keyDay;
+		int checkYear;
+		int checkMonth;
+		int checkDay;
+		string yearText;
+		string monthText;
+		string dayText;
+		if (key.Length() == 11 && key.Substring(0, 7) == "yearly-")
+		{
+			yearText = key.Substring(7, 4);
+			keyYear = yearText.ToInt();
+			if (keyYear <= 0)
+				return false;
+
+			startYear = keyYear;
+			startMonth = 1;
+			startDay = 1;
+			endYear = keyYear;
+			endMonth = 12;
+			endDay = 31;
+			return true;
+		}
+
+		if (key.Length() == 15 && key.Substring(0, 8) == "monthly-")
+		{
+			yearText = key.Substring(8, 4);
+			keyYear = yearText.ToInt();
+			monthText = key.Substring(13, 2);
+			keyMonth = monthText.ToInt();
+			if (keyYear <= 0 || keyMonth < 1 || keyMonth > 12)
+				return false;
+
+			startYear = keyYear;
+			startMonth = keyMonth;
+			startDay = 1;
+			int nextYear = keyYear;
+			int nextMonth = keyMonth + 1;
+			if (nextMonth > 12)
+			{
+				nextMonth = 1;
+				nextYear = keyYear + 1;
+			}
+			CivilFromDays(DaysFromCivil(nextYear, nextMonth, 1) - 1, endYear, endMonth, endDay);
+			return true;
+		}
+
+		if (key.Length() == 17 && key.Substring(0, 7) == "weekly-")
+		{
+			yearText = key.Substring(7, 4);
+			keyYear = yearText.ToInt();
+			monthText = key.Substring(12, 2);
+			keyMonth = monthText.ToInt();
+			dayText = key.Substring(15, 2);
+			keyDay = dayText.ToInt();
+			if (keyYear <= 0 || keyMonth < 1 || keyMonth > 12 || keyDay < 1 || keyDay > 31)
+				return false;
+
+			CivilFromDays(DaysFromCivil(keyYear, keyMonth, keyDay), checkYear, checkMonth, checkDay);
+			if (checkYear != keyYear || checkMonth != keyMonth || checkDay != keyDay)
+				return false;
+
+			startYear = keyYear;
+			startMonth = keyMonth;
+			startDay = keyDay;
+			CivilFromDays(DaysFromCivil(keyYear, keyMonth, keyDay) + 6, endYear, endMonth, endDay);
+			return true;
+		}
+
+		return false;
+	}
+
+	//! Civil dates of the first and last day of the period that contains the given civil
+	//! date for wipe, with the same day arithmetic as PeriodKeyForDate
+	//! (DaysFromCivil/CivilFromDays)
+	protected static void PeriodBoundsForDate(string wipe, int year, int month, int day, out int startYear, out int startMonth, out int startDay, out int endYear, out int endMonth, out int endDay)
+	{
 		if (wipe == "yearly")
 		{
 			startYear = year;
@@ -499,7 +598,21 @@ class BRLeaderboard
 	//! changes the key, so it archives and starts over too
 	bool EnsurePeriod(string wipe)
 	{
-		string key = PeriodKey(wipe);
+		int year;
+		int month;
+		int day;
+		int hour;
+		int minute;
+		int second;
+		CaptureNow(year, month, day, hour, minute, second);
+		return EnsurePeriodForDate(wipe, year, month, day);
+	}
+
+	//! EnsurePeriod for the period that contains the given civil date (from one CaptureNow
+	//! reading, when the caller already holds one and the answer must share it)
+	bool EnsurePeriodForDate(string wipe, int year, int month, int day)
+	{
+		string key = PeriodKeyForDate(wipe, year, month, day);
 		if (m_File.period == key)
 			return true;
 

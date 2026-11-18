@@ -1331,7 +1331,16 @@ class BattleRoyaleServer: BattleRoyaleBase
             return;
 
         BRLeaderboard lb = BRLeaderboard.Get();
-        lb.EnsurePeriod(lbServerData.leaderboard_wipe);
+        // One coherent clock reading for the whole answer: the rotation check, the season
+        // and the counter below all share it, so they cannot straddle midnight
+        int nowYear;
+        int nowMonth;
+        int nowDay;
+        int nowHour;
+        int nowMinute;
+        int nowSecond;
+        BRLeaderboard.CaptureNow(nowYear, nowMonth, nowDay, nowHour, nowMinute, nowSecond);
+        lb.EnsurePeriodForDate(lbServerData.leaderboard_wipe, nowYear, nowMonth, nowDay);
 
         // The requester's own standing in the full sorted list: one linear scan, O(players), no sort
         int selfRank;
@@ -1345,13 +1354,16 @@ class BattleRoyaleServer: BattleRoyaleBase
         lbSelf.Insert(selfKills);
         lbSelf.Insert(selfWins);
 
+        // The season and the counter come from the period stored in the leaderboard (which
+        // stays on the previous period when rotation failed), never from today alone, so
+        // self, the table, the label, the season and the counter name the same period
         string seasonStart;
         string seasonEnd;
-        BRLeaderboard.SeasonRange(lbServerData.leaderboard_wipe, seasonStart, seasonEnd);
+        int lbSecondsLeft;
+        BRLeaderboard.SeasonForPeriod(lb.GetPeriod(), nowYear, nowMonth, nowDay, nowHour, nowMinute, nowSecond, seasonStart, seasonEnd, lbSecondsLeft);
         array<string> lbSeason = new array<string>;
         lbSeason.Insert(seasonStart);
         lbSeason.Insert(seasonEnd);
-        int lbSecondsLeft = BRLeaderboard.SecondsLeftInPeriod(lbServerData.leaderboard_wipe);
 
         Param9<string, string, array<string>, array<int>, array<int>, array<int>, array<int>, array<string>, int> lbData = new Param9<string, string, array<string>, array<int>, array<int>, array<int>, array<int>, array<string>, int>(lbServerData.leaderboard_wipe, BRLeaderboard.PeriodLabel(lb.GetPeriod()), lb.GetTopNames(), lb.GetTopPoints(), lb.GetTopKills(), lb.GetTopWins(), lbSelf, lbSeason, lbSecondsLeft);
         GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "LeaderboardData", lbData, true, sender);

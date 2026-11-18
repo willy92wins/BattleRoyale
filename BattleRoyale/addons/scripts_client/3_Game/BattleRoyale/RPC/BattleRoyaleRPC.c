@@ -633,7 +633,10 @@ class BattleRoyaleRPC
 	void LeaderboardData(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
 		// wipe mode, period label, then the names, points, kills and wins of the top 30 in order,
-		// then own [rank, points, kills, wins], season [start, end] and seconds left in the period
+		// then own [rank, points, kills, wins], season [start, end] and seconds left in the period.
+		// The season and the seconds left name the period stored on the server (the previous
+		// one when its rotation failed), the same period as the standings and the label. The
+		// seconds left assume 86400 seconds per day: aproximado: ±1 h los días de cambio de hora
 		Param9<string, string, array<string>, array<int>, array<int>, array<int>, array<int>, array<string>, int> data;
 		if( !ctx.Read( data ) )
 		{
@@ -705,7 +708,8 @@ class BattleRoyaleRPC
 
 	//! Season of the last LeaderboardData: first and last day (YYYY-MM-DD), the seconds left the
 	//! server sent and when it arrived (GetGame().GetTickTime()), so the panel can discount the
-	//! time since; false when no LeaderboardData has arrived yet
+	//! time since; false when no LeaderboardData has arrived yet. The seconds left are
+	//! aproximado: ±1 h los días de cambio de hora
 	bool GetLeaderboardSeason(out string start, out string end, out int seconds_left, out float received_at)
 	{
 		start = m_LeaderboardSeasonStart;
