@@ -25,6 +25,8 @@ class BattleRoyaleHud
 
     //! The zone arrow icon (dayz_gui icon_arrow) points down at rest; this turns it to point up at angle 0
     protected static const float ZONE_ARROW_ICON_OFFSET = 0;  //!< br_zone_arrow_ca.paa points up
+    protected static const float ZONE_DISTANCE_ROW_Y = 80;   //!< y of ZoneDistancePanel in br_hud.layout
+    protected static const float SILENT_MODE_ROW_Y = 120;    //!< y of SilentModePanel in br_hud.layout
 
     protected Widget m_Root;
 
@@ -53,6 +55,7 @@ class BattleRoyaleHud
     protected int m_DistanceColorState;
     protected int m_LastDistanceMeters;
     protected float m_LastArrowAngle;
+    protected float m_SilentModeRowY;
     protected int m_LastPhaseLabel;
     protected int m_LastPhaseSeconds;
 
@@ -94,6 +97,7 @@ class BattleRoyaleHud
         m_DistanceColorState = -1;
         m_LastDistanceMeters = -2;
         m_LastArrowAngle = -1000;
+        m_SilentModeRowY = SILENT_MODE_ROW_Y;
         m_LastPhaseLabel = PHASE_LABEL_NONE;
         m_LastPhaseSeconds = -1;
     }
@@ -122,11 +126,24 @@ class BattleRoyaleHud
         return left;
     }
 
-    //! Called every frame: shows the silent mode icon, in its own row under the zone distance, while the mode is on and
-    //! the vanilla HUD shows (BattleRoyaleCompass.IsHudShown)
+    //! Called every frame: shows the silent mode icon while the mode is on and the vanilla HUD shows
+    //! (BattleRoyaleCompass.IsHudShown), in its own row under the zone distance, or in the zone distance's row while
+    //! the zone distance is hidden
     void UpdateSilentMode( bool active )
     {
         SetVisible( m_SilentModePanel, active );
+        if ( !active )
+            return;
+
+        float row_y = SILENT_MODE_ROW_Y;
+        if ( !m_ZoneDistancePanel.IsVisible() )
+            row_y = ZONE_DISTANCE_ROW_Y;
+
+        if ( row_y != m_SilentModeRowY )
+        {
+            m_SilentModeRowY = row_y;
+            m_SilentModePanel.SetPos( 0, row_y );
+        }
     }
 
     //! Right edge, in screen pixels, of the centred lines at the top (phase, zone damage) as drawn now; -1 when
