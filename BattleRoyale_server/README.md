@@ -252,9 +252,10 @@ the server); leave it empty to post nothing then. For example:
 
 Keep the URL private: whoever has it can post to the channel. The server never sends it to the players nor
 writes it to its logs. Names and mentions in the message ping nobody, and Discord refuses messages over 2000
-characters. When the server exits after the match, it waits up to 10 more seconds for a message still on its
-way. A server that ran an earlier version gets the three fields, with an empty URL, added to its
-`server_settings.json` on its first start.
+characters. The server asks Discord to confirm each message (it adds `wait=true` to the URL) and writes
+`Match end webhook sent` to its script log once Discord has answered. When the server exits after the match, it
+waits up to 10 more seconds for a message still on its way. A server that ran an earlier version gets the three
+fields, with an empty URL, added to its `server_settings.json` on its first start.
 
 ## 6. BattleRoyale settings
 

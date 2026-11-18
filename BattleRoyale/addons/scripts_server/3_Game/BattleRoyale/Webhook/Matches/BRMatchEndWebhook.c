@@ -98,7 +98,20 @@ class BRMatchEndWebhook
 
 		ctx.SetHeader("application/json");
 		s_Callback = new BRMatchEndCallback;
-		ctx.POST(s_Callback, "", body);
+		ctx.POST(s_Callback, WaitQuery(url), body);
+	}
+
+	//! Discord answers a webhook with 204 and no body, which the engine reports as an error (OnError 8, measured with
+	//! DayZDiag 1.30). With wait=true it answers 200 with the message it posted. Added to Discord URLs that lack it
+	static string WaitQuery(string url)
+	{
+		if (!url.Contains("/api/webhooks/") || url.Contains("wait="))
+			return "";
+
+		if (url.Contains("?"))
+			return "&wait=true";
+
+		return "?wait=true";
 	}
 }
 #endif
