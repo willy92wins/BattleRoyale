@@ -1006,10 +1006,17 @@ class BattleRoyaleSpectatorGear
 	protected string GetCloseHint()
 	{
 		UAInputAPI uapi = GetUApi();
-		if ( !uapi || !uapi.GetInputByName( INPUT_NAME ) )
+		if ( !uapi )
 			return "";
 
+		UAInput gear_input = uapi.GetInputByName( INPUT_NAME );
+		if ( !gear_input )
+			return "";
+
+		// The vanilla helper leaves the last binding alternative selected: put back the one the input had
+		int selected_alt = gear_input.AlternativeIndex();
 		map<int, ref TStringArray> combos = InputUtils.GetComboButtonNamesFromInput( INPUT_NAME, EUAINPUT_DEVICE_KEYBOARDMOUSE );
+		gear_input.SelectAlternative( selected_alt );
 		if ( !combos || combos.Count() == 0 )
 			return "";
 
