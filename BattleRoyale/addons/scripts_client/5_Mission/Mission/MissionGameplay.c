@@ -6,6 +6,7 @@ modded class MissionGameplay
 	protected ref BattleRoyaleKillFeed m_BattleRoyaleKillFeed;
 	protected ref BattleRoyaleMiniMap m_BattleRoyaleMiniMap;
 	protected ref BattleRoyaleCompass m_BattleRoyaleCompass;
+	protected ref BattleRoyaleLeaderboard m_BattleRoyaleLeaderboard;
 	protected Widget m_BattleRoyaleWinScreen;
 
 	//! Seconds the silent mode notification stays
@@ -143,6 +144,7 @@ modded class MissionGameplay
 		m_BattleRoyaleKillFeed = null;
 		m_BattleRoyaleMiniMap = null;
 		m_BattleRoyaleCompass = null;
+		m_BattleRoyaleLeaderboard = null;
 		InitBRhud();
 	}
 
@@ -170,6 +172,9 @@ modded class MissionGameplay
 
 			// So is the compass, at the top centre
 			m_BattleRoyaleCompass = new BattleRoyaleCompass( m_BattleRoyaleHudRootWidget );
+
+			// The leaderboard panel is created last, so it is drawn over the rest of the HUD; hidden until its key
+			m_BattleRoyaleLeaderboard = new BattleRoyaleLeaderboard( m_BattleRoyaleHudRootWidget );
 			BattleRoyaleUtils.Trace("HUD Initialized");
 		}
 	}
@@ -245,6 +250,12 @@ modded class MissionGameplay
 		if (!m_BattleRoyaleKillFeed)
 			return;
 
+		// With the leaderboard panel on screen the feed keeps the rows that fit above it
+		float bottom_limit = -1;
+		if (m_BattleRoyaleLeaderboard)
+			bottom_limit = m_BattleRoyaleLeaderboard.GetScreenTop();
+		m_BattleRoyaleKillFeed.SetBottomLimit( bottom_limit );
+
 		// The kill feed sits beside the top right corner of the HUD, whatever it shows, and right of the compass
 		m_BattleRoyaleKillFeed.Update( m_BattleRoyaleHud, m_BattleRoyaleMiniMap, m_BattleRoyaleCompass );
 	}
@@ -291,6 +302,11 @@ modded class MissionGameplay
 		if (m_BattleRoyaleWinScreen || !GetGame().GetWorkspace())
 			return;
 
+		// The win screen takes the middle of the screen: the leaderboard panel closes, and its key does
+		// nothing while the win screen is up
+		if (m_BattleRoyaleLeaderboard)
+			m_BattleRoyaleLeaderboard.Close();
+
 		m_BattleRoyaleWinScreen = GetGame().GetWorkspace().CreateWidgets("Vigrid-BattleRoyale/GUI/layouts/hud/win_screen.layout");
 		if (m_BattleRoyaleWinScreen)
 		{
@@ -333,8 +349,15 @@ modded class MissionGameplay
 				if (GetUApi().GetInputByID(UADayZBRSpectate).LocalPress()) {
 					BattleRoyaleClient.Cast( m_BattleRoyale ).WatchMatch();
 				}
+				if (m_BattleRoyaleLeaderboard && !m_BattleRoyaleWinScreen && GetUApi().GetInputByID(UADayZBRToggleLeaderboard).LocalPress()) {
+					m_BattleRoyaleLeaderboard.Toggle();
+				}
 			}
 		}
+
+		// The leaderboard panel hides while a menu is open and comes back when it closes
+		if (m_BattleRoyaleLeaderboard)
+			m_BattleRoyaleLeaderboard.Update( m_UIManager.GetMenu() != null );
 
 		// The indicator hides with the vanilla HUD, by the same rule as the compass
 		if (m_BattleRoyaleHud)
