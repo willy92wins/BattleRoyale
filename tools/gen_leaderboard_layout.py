@@ -19,7 +19,7 @@ TEX = "Vigrid-BattleRoyale/GUI/textures/hud/"
 
 # Panel
 W = 1240
-PANEL_DOWN = 16          # below the middle of the screen: the top is at 215, under the fourth kill feed row
+PANEL_TOP = 215          # top of the panel on the 1080 units of screen height: under the fourth kill feed row
 PAD = 20
 HEADER_H = 72
 PODIUM_BOTTOM = 228
@@ -38,6 +38,12 @@ MESSAGE_H = 224
 BACK_COUNT = ROW_LINES + 2  # backdrops: loading/empty, podium alone, podium and 1 to 14 lines of rows
 FOOTER_H = 44            # the place of the local player outside the top 30, under the backdrop: with the tallest
                          # one the panel ends at 941 of 1080, above the vanilla quickbar
+# LeaderboardPanel holds the tallest backdrop and its footer: seen in game, the engine does not draw a widget that
+# lies outside the rectangle of its parent. It is centred (valign center_ref), so its offset from the middle of
+# the screen is what puts its top at PANEL_TOP
+FRAME_H = PANEL_H + FOOTER_H
+PANEL_DOWN = PANEL_TOP - (1080 - FRAME_H) / 2
+MIN_SCREEN_W = 1350      # units of width of the narrowest screen checked (5:4)
 
 # Podium cards: second, first and third place from left to right, bottoms level
 CARD_W = 388
@@ -127,8 +133,10 @@ class Layout:
         self.lines = []
         self.depth = 0
         self.texts = texts      # None for the layout of the game
+        self.sizes = []         # width and height of the open widgets, to check that each child is inside its parent
 
     def widget(self, cls, name, x, y, w, h, visible=True, color=None, align=(), tail=(), children=False, inherit=True):
+        self.check_inside(name, x, y, w, h, align)
         pad = " " * self.depth
         self.lines.append(f"{pad}{cls} {name} {{")
         attrs = []
@@ -149,10 +157,24 @@ class Layout:
         if children:
             self.lines.append(f"{pad} {{")
             self.depth += 2
+            self.sizes.append((w, h))
         else:
             self.lines.append(f"{pad}}}")
 
+    def check_inside(self, name, x, y, w, h, align):
+        """Fails when the widget is not whole inside its parent: the engine would not draw it."""
+        parent_w, parent_h = self.sizes[-1]
+        left, top = x, y        # left_ref and right_ref measure x from an edge: the same test serves both
+        if "halign center_ref" in align:
+            left = (parent_w - w) / 2 + x
+        if "valign center_ref" in align:
+            top = (parent_h - h) / 2 + y
+        if left < 0 or top < 0 or left + w > parent_w + 1e-6 or top + h > parent_h + 1e-6:
+            raise SystemExit(f"{name} ({num(left)}, {num(top)}, {num(w)} x {num(h)}) is not inside its parent "
+                             f"({num(parent_w)} x {num(parent_h)})")
+
     def end(self):
+        self.sizes.pop()
         self.depth -= 2
         pad = " " * self.depth
         self.lines.append(f"{pad} }}")
@@ -227,7 +249,8 @@ def build(players, own, state, lang, self_rank=-1, period_text="", status_text="
     ]
     out.depth = 2
     centre = ("halign center_ref", "valign center_ref")
-    out.frame("LeaderboardPanel", 0, PANEL_DOWN, W, PANEL_H, align=centre, inherit=False)
+    out.sizes.append((MIN_SCREEN_W, 1080))      # the root is the whole screen
+    out.frame("LeaderboardPanel", 0, PANEL_DOWN, W, FRAME_H, align=centre, inherit=False)
 
     # Backdrop: one piece for each height the panel can have, the glass with a 1 unit inner edge. The script shows
     # one: 0 the loading and empty states, 1 the podium alone, 1 + n the podium and n lines of table rows

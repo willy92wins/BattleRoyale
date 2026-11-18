@@ -11,8 +11,8 @@ FrameWidgetClass LeaderboardRoot {
   FrameWidgetClass LeaderboardPanel {
    inheritalpha 0
    ignorepointer 1
-   position 0 16
-   size 1240 682
+   position 0 38
+   size 1240 726
    halign center_ref
    valign center_ref
    hexactpos 1
