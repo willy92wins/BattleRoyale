@@ -330,17 +330,111 @@ class BRLeaderboard
 
 		if (wipe == "weekly")
 		{
-			int days = DaysFromCivil(year, month, day);
-			int weekday = (days + 4) % 7;         // 0 = Sunday; 1970-01-01 (day 0) was a Thursday
-			int sinceMonday = (weekday + 6) % 7;  // days since this week's Monday
-			int mondayYear;
-			int mondayMonth;
-			int mondayDay;
-			CivilFromDays(days - sinceMonday, mondayYear, mondayMonth, mondayDay);
-			return "weekly-" + mondayYear.ToString() + "-" + mondayMonth.ToStringLen(2) + "-" + mondayDay.ToStringLen(2);
+			int startYear;
+			int startMonth;
+			int startDay;
+			int endYear;
+			int endMonth;
+			int endDay;
+			PeriodBounds(wipe, startYear, startMonth, startDay, endYear, endMonth, endDay);
+			return "weekly-" + startYear.ToString() + "-" + startMonth.ToStringLen(2) + "-" + startDay.ToStringLen(2);
 		}
 
 		return "monthly-" + year.ToString() + "-" + month.ToStringLen(2);
+	}
+
+	//! First and last day of the period that contains today for wipe, as YYYY-MM-DD (server local
+	//! date): monthly from the 1st to the last day of the month, weekly from Monday to Sunday,
+	//! yearly from 1 January to 31 December. Any other wipe value is monthly, as in PeriodKey
+	static void SeasonRange(string wipe, out string start, out string end)
+	{
+		int startYear;
+		int startMonth;
+		int startDay;
+		int endYear;
+		int endMonth;
+		int endDay;
+		PeriodBounds(wipe, startYear, startMonth, startDay, endYear, endMonth, endDay);
+		start = FormatDate(startYear, startMonth, startDay);
+		end = FormatDate(endYear, endMonth, endDay);
+	}
+
+	//! Seconds from now (server local time) until 00:00 on the day after the last day of the
+	//! period that contains today for wipe; never negative
+	static int SecondsLeftInPeriod(string wipe)
+	{
+		int startYear;
+		int startMonth;
+		int startDay;
+		int endYear;
+		int endMonth;
+		int endDay;
+		PeriodBounds(wipe, startYear, startMonth, startDay, endYear, endMonth, endDay);
+
+		int year;
+		int month;
+		int day;
+		GetYearMonthDay(year, month, day);
+		int hour;
+		int minute;
+		int second;
+		GetHourMinuteSecond(hour, minute, second);
+
+		int daysLeft = DaysFromCivil(endYear, endMonth, endDay) - DaysFromCivil(year, month, day);
+		int secondsLeft = (daysLeft + 1) * 86400 - (hour * 3600 + minute * 60 + second);
+		if (secondsLeft < 0)
+			return 0;
+
+		return secondsLeft;
+	}
+
+	//! Civil dates of the first and last day of the period that contains today for wipe, with the
+	//! same day arithmetic as PeriodKey (DaysFromCivil/CivilFromDays)
+	protected static void PeriodBounds(string wipe, out int startYear, out int startMonth, out int startDay, out int endYear, out int endMonth, out int endDay)
+	{
+		int year;
+		int month;
+		int day;
+		GetYearMonthDay(year, month, day);
+
+		if (wipe == "yearly")
+		{
+			startYear = year;
+			startMonth = 1;
+			startDay = 1;
+			endYear = year;
+			endMonth = 12;
+			endDay = 31;
+			return;
+		}
+
+		if (wipe == "weekly")
+		{
+			int days = DaysFromCivil(year, month, day);
+			int weekday = (days + 4) % 7;         // 0 = Sunday; 1970-01-01 (day 0) was a Thursday
+			int sinceMonday = (weekday + 6) % 7;  // days since this week's Monday
+			CivilFromDays(days - sinceMonday, startYear, startMonth, startDay);
+			CivilFromDays(days - sinceMonday + 6, endYear, endMonth, endDay);
+			return;
+		}
+
+		startYear = year;
+		startMonth = month;
+		startDay = 1;
+		int nextYear = year;
+		int nextMonth = month + 1;
+		if (nextMonth > 12)
+		{
+			nextMonth = 1;
+			nextYear = year + 1;
+		}
+		CivilFromDays(DaysFromCivil(nextYear, nextMonth, 1) - 1, endYear, endMonth, endDay);
+	}
+
+	//! A civil date as YYYY-MM-DD
+	protected static string FormatDate(int year, int month, int day)
+	{
+		return year.ToString() + "-" + month.ToStringLen(2) + "-" + day.ToStringLen(2);
 	}
 
 	//! The date part of a period key, as the panel and Discord show it
@@ -571,6 +665,32 @@ class BRLeaderboard
 	array<int> GetTopWins()
 	{
 		return m_TopWins;
+	}
+
+	//! Standing of plainId in the full standings: rank from 1 with its points, kills and wins, or
+	//! rank 0 and zeroes when it has no entry this period. m_File.players is already sorted, so
+	//! this sorts nothing: one linear scan, O(players)
+	void FindStanding(string plainId, out int rank, out int points, out int kills, out int wins)
+	{
+		rank = 0;
+		points = 0;
+		kills = 0;
+		wins = 0;
+		if (!m_File.players)
+			return;
+
+		for (int i = 0; i < m_File.players.Count(); i++)
+		{
+			BRLeaderboardEntry entry = m_File.players[i];
+			if (entry && entry.id == plainId)
+			{
+				rank = i + 1;
+				points = entry.points;
+				kills = entry.kills;
+				wins = entry.wins;
+				return;
+			}
+		}
 	}
 
 	string GetPeriod()

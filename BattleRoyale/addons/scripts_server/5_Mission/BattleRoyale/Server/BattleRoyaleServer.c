@@ -1333,7 +1333,27 @@ class BattleRoyaleServer: BattleRoyaleBase
         BRLeaderboard lb = BRLeaderboard.Get();
         lb.EnsurePeriod(lbServerData.leaderboard_wipe);
 
-        Param6<string, string, array<string>, array<int>, array<int>, array<int>> lbData = new Param6<string, string, array<string>, array<int>, array<int>, array<int>>(lbServerData.leaderboard_wipe, BRLeaderboard.PeriodLabel(lb.GetPeriod()), lb.GetTopNames(), lb.GetTopPoints(), lb.GetTopKills(), lb.GetTopWins());
+        // The requester's own standing in the full sorted list: one linear scan, O(players), no sort
+        int selfRank;
+        int selfPoints;
+        int selfKills;
+        int selfWins;
+        lb.FindStanding(sender.GetPlainId(), selfRank, selfPoints, selfKills, selfWins);
+        array<int> lbSelf = new array<int>;
+        lbSelf.Insert(selfRank);
+        lbSelf.Insert(selfPoints);
+        lbSelf.Insert(selfKills);
+        lbSelf.Insert(selfWins);
+
+        string seasonStart;
+        string seasonEnd;
+        BRLeaderboard.SeasonRange(lbServerData.leaderboard_wipe, seasonStart, seasonEnd);
+        array<string> lbSeason = new array<string>;
+        lbSeason.Insert(seasonStart);
+        lbSeason.Insert(seasonEnd);
+        int lbSecondsLeft = BRLeaderboard.SecondsLeftInPeriod(lbServerData.leaderboard_wipe);
+
+        Param9<string, string, array<string>, array<int>, array<int>, array<int>, array<int>, array<string>, int> lbData = new Param9<string, string, array<string>, array<int>, array<int>, array<int>, array<int>, array<string>, int>(lbServerData.leaderboard_wipe, BRLeaderboard.PeriodLabel(lb.GetPeriod()), lb.GetTopNames(), lb.GetTopPoints(), lb.GetTopKills(), lb.GetTopWins(), lbSelf, lbSeason, lbSecondsLeft);
         GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "LeaderboardData", lbData, true, sender);
     }
 
