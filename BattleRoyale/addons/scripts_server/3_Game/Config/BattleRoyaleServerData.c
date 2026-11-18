@@ -53,6 +53,13 @@ class BattleRoyaleServerData: BattleRoyaleDataBase
 	// Posted instead when nobody wins: the last players died together or left. Empty: nothing is posted then
 	string match_end_message_no_winner = "The match ended without a winner ({players} players, {duration} min)";
 
+	// Leaderboard points: by final position and by kill, kept in leaderboard.json next to this file
+	int leaderboard_points_first = 10;     // 1st place
+	int leaderboard_points_step = 2;       // each later place gets this much less, never below 0
+	int leaderboard_points_per_kill = 1;   // each kill the HUD counts in the match
+	string leaderboard_wipe = "monthly";   // "monthly" (1st of the month), "weekly" (Monday) or "yearly" (1 January)
+	string leaderboard_webhook_url = "";   // Discord webhook for the top 30 after a match that changed it; empty = off
+
     override string GetProfilePath()
     {
         return BATTLEROYALE_SETTINGS_FOLDER + "server_settings.json";
@@ -64,6 +71,31 @@ class BattleRoyaleServerData: BattleRoyaleDataBase
 		{
 			LogInvalidSetting("server_settings.json", "serial_restart_every_matches", serial_restart_every_matches.ToString(), "must be 0 or more");
 			serial_restart_every_matches = 6;
+		}
+
+		if (leaderboard_points_first < 0)
+		{
+			LogInvalidSetting("server_settings.json", "leaderboard_points_first", leaderboard_points_first.ToString(), "must be 0 or more");
+			leaderboard_points_first = 10;
+		}
+
+		if (leaderboard_points_step < 0)
+		{
+			LogInvalidSetting("server_settings.json", "leaderboard_points_step", leaderboard_points_step.ToString(), "must be 0 or more");
+			leaderboard_points_step = 2;
+		}
+
+		if (leaderboard_points_per_kill < 0)
+		{
+			LogInvalidSetting("server_settings.json", "leaderboard_points_per_kill", leaderboard_points_per_kill.ToString(), "must be 0 or more");
+			leaderboard_points_per_kill = 1;
+		}
+
+		// The webhook URL is never a logged value, so it is not validated here
+		if (leaderboard_wipe != "monthly" && leaderboard_wipe != "weekly" && leaderboard_wipe != "yearly")
+		{
+			LogInvalidSetting("server_settings.json", "leaderboard_wipe", leaderboard_wipe, "must be monthly, weekly or yearly");
+			leaderboard_wipe = "monthly";
 		}
 	}
 

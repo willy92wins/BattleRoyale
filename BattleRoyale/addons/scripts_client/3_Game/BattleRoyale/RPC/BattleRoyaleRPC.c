@@ -28,6 +28,7 @@ class BattleRoyaleRPC
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetStayConnected", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetWaitingRoom", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetWaiting", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "LeaderboardData", this );
 
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
 	}
@@ -609,6 +610,57 @@ class BattleRoyaleRPC
 			m_KillFeedTime[slot] = GetGame().GetTime();
 			kill_feed_serial++;
 		}
+	}
+
+	// Leaderboard top 30 of the current period, stored until the panel reads it
+
+	int leaderboard_serial = 0; //!< number of LeaderboardData received since this client started
+	protected string m_LeaderboardWipe = "";    //!< leaderboard_wipe of the server: monthly, weekly or yearly
+	protected string m_LeaderboardPeriod = "";  //!< date part of the period key, as the panel shows it
+	protected ref array<string> m_LeaderboardNames = new array<string>;
+	protected ref array<int> m_LeaderboardPoints = new array<int>;
+	protected ref array<int> m_LeaderboardKills = new array<int>;
+	protected ref array<int> m_LeaderboardWins = new array<int>;
+
+	void LeaderboardData(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		// wipe mode, period label, then the names, points, kills and wins of the top 30 in order
+		Param6<string, string, array<string>, array<int>, array<int>, array<int>> data;
+		if( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ LEADERBOARDDATA RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+		{
+			m_LeaderboardWipe = data.param1;
+			m_LeaderboardPeriod = data.param2;
+			m_LeaderboardNames.Clear();
+			m_LeaderboardPoints.Clear();
+			m_LeaderboardKills.Clear();
+			m_LeaderboardWins.Clear();
+			if (data.param3)
+				m_LeaderboardNames.InsertAll(data.param3);
+			if (data.param4)
+				m_LeaderboardPoints.InsertAll(data.param4);
+			if (data.param5)
+				m_LeaderboardKills.InsertAll(data.param5);
+			if (data.param6)
+				m_LeaderboardWins.InsertAll(data.param6);
+			leaderboard_serial++;
+		}
+	}
+
+	//! The leaderboard the panel shows: wipe mode, period label and the four columns of the top 30
+	bool GetLeaderboard(out string wipe, out string period, out array<string> names, out array<int> points, out array<int> kills, out array<int> wins)
+	{
+		wipe = m_LeaderboardWipe;
+		period = m_LeaderboardPeriod;
+		names = m_LeaderboardNames;
+		points = m_LeaderboardPoints;
+		kills = m_LeaderboardKills;
+		wins = m_LeaderboardWins;
+		return leaderboard_serial > 0;
 	}
 
 	//! Display name of an item, vehicle or creature class in the client's language; the class name itself when the config has none
