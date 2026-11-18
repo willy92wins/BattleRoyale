@@ -28,6 +28,12 @@
   with their field of view. Behind a reflex sight, what that player carries on the back, shoulder and belt is hidden,
   as vanilla does for a player's own optics. With a magnifying optic the view stays at the eyes, because on another
   player's screen its lens is opaque and has no reticle.
+- Spectator equipment panel on Tab (the inventory key): while spectating, pressing Tab opens and closes a read-only
+  panel with the watched player's equipment instead of the naked anchor body's inventory. It shows the watched player's
+  name, what they hold in their hands, each occupied equipment slot, the attachments of a weapon in the hands or on the
+  shoulder, and any cargo items with their quantities present on the client, without taking the mouse or the keys so
+  the spectator can keep switching players. Opening a menu (Esc), leaving spectating, returning to the waiting room or
+  the lobby, or the win screen closes it.
 - Lobby: nobody can force-feed or force-drink another player (food, drinks, tablets, single bites), tie or handcuff
   them, put the head sack or the gag on them, take or give them blood, or use the defibrillator on them, in any phase:
   before a match, during the spawn selection, and in the waiting room while a match runs. The client does not offer

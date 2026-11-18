@@ -7,6 +7,7 @@ modded class MissionGameplay
 	protected ref BattleRoyaleMiniMap m_BattleRoyaleMiniMap;
 	protected ref BattleRoyaleCompass m_BattleRoyaleCompass;
 	protected ref BattleRoyaleLeaderboard m_BattleRoyaleLeaderboard;
+	protected ref BattleRoyaleSpectatorGear m_BattleRoyaleSpectatorGear;
 	protected Widget m_BattleRoyaleWinScreen;
 
 	//! Seconds the silent mode notification stays
@@ -145,6 +146,7 @@ modded class MissionGameplay
 		m_BattleRoyaleMiniMap = null;
 		m_BattleRoyaleCompass = null;
 		m_BattleRoyaleLeaderboard = null;
+		m_BattleRoyaleSpectatorGear = null;
 		InitBRhud();
 	}
 
@@ -173,8 +175,9 @@ modded class MissionGameplay
 			// So is the compass, at the top centre
 			m_BattleRoyaleCompass = new BattleRoyaleCompass( m_BattleRoyaleHudRootWidget );
 
-			// The leaderboard panel is created last, so it is drawn over the rest of the HUD; hidden until its key
+			// The leaderboard and spectator gear panels are created last, drawn over the rest of the HUD; hidden until their keys
 			m_BattleRoyaleLeaderboard = new BattleRoyaleLeaderboard( m_BattleRoyaleHudRootWidget );
+			m_BattleRoyaleSpectatorGear = new BattleRoyaleSpectatorGear( m_BattleRoyaleHudRootWidget );
 			BattleRoyaleUtils.Trace("HUD Initialized");
 		}
 	}
@@ -250,10 +253,16 @@ modded class MissionGameplay
 		if (!m_BattleRoyaleKillFeed)
 			return;
 
-		// With the leaderboard panel on screen the feed keeps the rows that fit above it
+		// With the leaderboard or spectator gear panel on screen the feed keeps the rows that fit above it
 		float bottom_limit = -1;
 		if (m_BattleRoyaleLeaderboard)
 			bottom_limit = m_BattleRoyaleLeaderboard.GetScreenTop();
+		if (m_BattleRoyaleSpectatorGear)
+		{
+			float gear_top = m_BattleRoyaleSpectatorGear.GetScreenTop();
+			if (gear_top >= 0 && (bottom_limit < 0 || gear_top < bottom_limit))
+				bottom_limit = gear_top;
+		}
 		m_BattleRoyaleKillFeed.SetBottomLimit( bottom_limit );
 
 		// The kill feed sits beside the top right corner of the HUD, whatever it shows, and right of the compass
@@ -302,16 +311,27 @@ modded class MissionGameplay
 		if (m_BattleRoyaleWinScreen || !GetGame().GetWorkspace())
 			return;
 
-		// The win screen takes the middle of the screen: the leaderboard panel closes, and its key does
+		// The win screen takes the middle of the screen: the leaderboard and spectator gear panels close, and their keys do
 		// nothing while the win screen is up
 		if (m_BattleRoyaleLeaderboard)
 			m_BattleRoyaleLeaderboard.Close();
+		if (m_BattleRoyaleSpectatorGear)
+			m_BattleRoyaleSpectatorGear.Close();
 
 		m_BattleRoyaleWinScreen = GetGame().GetWorkspace().CreateWidgets("Vigrid-BattleRoyale/GUI/layouts/hud/win_screen.layout");
 		if (m_BattleRoyaleWinScreen)
 		{
 			m_BattleRoyaleWinScreen.Show( true );
 		}
+	}
+
+	//! Blocks the naked anchor body's inventory while spectating; TAB toggles the watched player's gear panel instead
+	override void ShowInventory()
+	{
+		if (BattleRoyaleRPC.s_Spectating)
+			return;
+
+		super.ShowInventory();
 	}
 
 
@@ -321,8 +341,25 @@ modded class MissionGameplay
 
 		m_BattleRoyale.Update( timeslice ); //send tick to br client
 
+		// Close any vanilla inventory left open from the waiting room if spectating started before it was closed
+		if (BattleRoyaleRPC.s_Spectating && m_UIManager && m_UIManager.FindMenu(MENU_INVENTORY))
+		{
+			UIScriptedMenu open_menu = m_UIManager.GetMenu();
+			if (open_menu && m_InventoryMenu && open_menu == m_InventoryMenu)
+			{
+				if (PlayerBase.Cast(GetGame().GetPlayer()))
+					HideInventory();
+			}
+			else if (open_menu && m_InventoryMenu && open_menu.GetParentMenu() == m_InventoryMenu)
+			{
+				open_menu.Close();
+			}
+		}
+
 		if (GetUApi() && !m_UIManager.IsMenuOpen(MENU_CHAT_INPUT)) {
 			if (GetUApi().GetInputByID(UADayZBRReadyUp).LocalPress()) {
+				if (m_BattleRoyaleSpectatorGear && BattleRoyaleRPC.s_Spectating && BattleRoyaleRPC.s_WaitingRoom)
+					m_BattleRoyaleSpectatorGear.Close();
 				BattleRoyaleClient.Cast( m_BattleRoyale ).ReadyUp();
 			}
 			if (GetUApi().GetInputByID(UADayZBRUnstuck).LocalPress()) {
@@ -350,7 +387,14 @@ modded class MissionGameplay
 					BattleRoyaleClient.Cast( m_BattleRoyale ).WatchMatch();
 				}
 				if (m_BattleRoyaleLeaderboard && !m_BattleRoyaleWinScreen && GetUApi().GetInputByID(UADayZBRToggleLeaderboard).LocalPress()) {
+					if (m_BattleRoyaleSpectatorGear)
+						m_BattleRoyaleSpectatorGear.Close();
 					m_BattleRoyaleLeaderboard.Toggle();
+				}
+				if (m_BattleRoyaleSpectatorGear && BattleRoyaleRPC.s_Spectating && !m_BattleRoyaleWinScreen && GetUApi().GetInputByID(UAGear).LocalPress()) {
+					if (m_BattleRoyaleLeaderboard)
+						m_BattleRoyaleLeaderboard.Close();
+					m_BattleRoyaleSpectatorGear.Toggle();
 				}
 			}
 		}
@@ -358,6 +402,10 @@ modded class MissionGameplay
 		// The leaderboard panel hides while a menu is open and comes back when it closes
 		if (m_BattleRoyaleLeaderboard)
 			m_BattleRoyaleLeaderboard.Update( m_UIManager.GetMenu() != null );
+
+		// Opening a menu (ESC) or leaving spectating closes the spectator gear panel for good
+		if (m_BattleRoyaleSpectatorGear)
+			m_BattleRoyaleSpectatorGear.Update( m_UIManager.GetMenu() != null );
 
 		// The indicator hides with the vanilla HUD, by the same rule as the compass
 		if (m_BattleRoyaleHud)
