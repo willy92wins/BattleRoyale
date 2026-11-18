@@ -28,6 +28,7 @@ class BattleRoyaleKillFeed
     static const float PLACE_HYSTERESIS = 24;   //!< the panel moves right only once the room grew this much
     static const float CENTRE_GAP = 16;         //!< between the rows and the centred phase lines
     static const float CENTRE_RELAYOUT_PX = 8;  //!< centred lines that grew this much (screen pixels) lay the rows out again
+    static const float BOTTOM_GAP = 6;          //!< between the last row and what SetBottomLimit keeps the rows above
 
     static const int NAME_MAX_CHARS = 24;       //!< longer player names are cut
     static const int NAME_SHORT_CHARS = 12;     //!< names of a row too wide for its room
@@ -54,6 +55,8 @@ class BattleRoyaleKillFeed
     protected int m_LastSerial;     //!< kill_feed_serial the rows were built from
     protected int m_NextExpiry;     //!< GetGame().GetTime() at which the oldest shown row expires, -1 if no row is shown
     protected int m_ShownRows;      //!< rows 0 .. m_ShownRows - 1 show an event
+    protected float m_BottomLimit;  //!< screen y the rows stay above, -1 for none (SetBottomLimit)
+    protected int m_RowLimit;       //!< rows the feed may show: ROW_COUNT, or those that fit above m_BottomLimit
 
     protected int m_RowTime[ROW_COUNT];         //!< reception time of the event in the row
     protected int m_RowIcon[ROW_COUNT];         //!< EBRKillFeedType whose icon the row has loaded, -1 for the one of the layout
@@ -66,6 +69,8 @@ class BattleRoyaleKillFeed
     {
         m_LastSerial = -1;
         m_NextExpiry = -1;
+        m_BottomLimit = -1;
+        m_RowLimit = ROW_COUNT;
         m_LocalPlayerId = -1;
         m_PanelOffset = -1;
         m_PanelPxPerUnit = -1;
@@ -127,6 +132,13 @@ class BattleRoyaleKillFeed
             m_Root.Unlink();
     }
 
+    //! Something else takes the screen from screen_y down (the leaderboard panel, its top edge in screen pixels):
+    //! the feed shows only the newest rows that fit above it. -1 gives the feed all its rows back
+    void SetBottomLimit( float screen_y )
+    {
+        m_BottomLimit = screen_y;
+    }
+
     //! Called every frame; rebuilds the rows only when an event arrived or a row expired, keeps the panel beside
     //! the top right corner of the HUD while rows are on screen, and moves the fade of the rows.
     //! hud, minimap and compass may be null
@@ -144,6 +156,13 @@ class BattleRoyaleKillFeed
             return;
 
         Place( hud, minimap );
+
+        int row_limit = RowLimit();
+        if ( row_limit != m_RowLimit )
+        {
+            m_RowLimit = row_limit;
+            refresh = true;
+        }
 
         // Rows stay clear of everything centred at the top: the phase lines and the compass under them
         float centre_right = -1;
@@ -245,6 +264,31 @@ class BattleRoyaleKillFeed
         return Math.Max( room, 0 );
     }
 
+    //! Rows that fit between the top of the feed and m_BottomLimit, with BOTTOM_GAP between them; ROW_COUNT without a limit
+    protected int RowLimit()
+    {
+        if ( m_BottomLimit < 0 )
+            return ROW_COUNT;
+
+        float px_per_unit = PxPerUnit();
+        if ( px_per_unit <= 0 )
+            return ROW_COUNT;
+
+        float panel_x;
+        float panel_y;
+        m_Panel.GetScreenPos( panel_x, panel_y );
+
+        // Row i ends i * ROW_PITCH + ROW_HEIGHT under the top of the feed
+        float room = ( m_BottomLimit - panel_y ) / px_per_unit - BOTTOM_GAP - ROW_HEIGHT;
+        if ( room < 0 )
+            return 0;
+
+        int rows = Math.Floor( room / ROW_PITCH ) + 1;
+        if ( rows > ROW_COUNT )
+            rows = ROW_COUNT;
+        return rows;
+    }
+
     //! Screen pixels per exact layout unit: the units are 1/1080 of the screen height. The layout is scaled with it,
     //! but SetPos and SetSize from a script take screen pixels: every place and size the script sets goes through it
     protected float PxPerUnit()
@@ -274,7 +318,7 @@ class BattleRoyaleKillFeed
         int row = 0;
 
         // Newest event first; events arrive in time order, so the first expired one ends the list
-        for ( int serial = br_rpc.kill_feed_serial - 1; serial >= 0 && row < ROW_COUNT; serial-- )
+        for ( int serial = br_rpc.kill_feed_serial - 1; serial >= 0 && row < m_RowLimit; serial-- )
         {
             if ( !br_rpc.GetKillFeedEvent( serial, kill_type, flags, killer, victim, item, distance, killer_id, victim_id, time ) )
                 break;

@@ -250,6 +250,12 @@ modded class MissionGameplay
 		if (!m_BattleRoyaleKillFeed)
 			return;
 
+		// With the leaderboard panel on screen the feed keeps the rows that fit above it
+		float bottom_limit = -1;
+		if (m_BattleRoyaleLeaderboard)
+			bottom_limit = m_BattleRoyaleLeaderboard.GetScreenTop();
+		m_BattleRoyaleKillFeed.SetBottomLimit( bottom_limit );
+
 		// The kill feed sits beside the top right corner of the HUD, whatever it shows, and right of the compass
 		m_BattleRoyaleKillFeed.Update( m_BattleRoyaleHud, m_BattleRoyaleMiniMap, m_BattleRoyaleCompass );
 	}
@@ -296,6 +302,11 @@ modded class MissionGameplay
 		if (m_BattleRoyaleWinScreen || !GetGame().GetWorkspace())
 			return;
 
+		// The win screen takes the middle of the screen: the leaderboard panel closes, and its key does
+		// nothing while the win screen is up
+		if (m_BattleRoyaleLeaderboard)
+			m_BattleRoyaleLeaderboard.Close();
+
 		m_BattleRoyaleWinScreen = GetGame().GetWorkspace().CreateWidgets("Vigrid-BattleRoyale/GUI/layouts/hud/win_screen.layout");
 		if (m_BattleRoyaleWinScreen)
 		{
@@ -338,7 +349,7 @@ modded class MissionGameplay
 				if (GetUApi().GetInputByID(UADayZBRSpectate).LocalPress()) {
 					BattleRoyaleClient.Cast( m_BattleRoyale ).WatchMatch();
 				}
-				if (m_BattleRoyaleLeaderboard && GetUApi().GetInputByID(UADayZBRToggleLeaderboard).LocalPress()) {
+				if (m_BattleRoyaleLeaderboard && !m_BattleRoyaleWinScreen && GetUApi().GetInputByID(UADayZBRToggleLeaderboard).LocalPress()) {
 					m_BattleRoyaleLeaderboard.Toggle();
 				}
 			}

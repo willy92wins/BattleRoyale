@@ -9,9 +9,10 @@ FrameWidgetClass LeaderboardRoot {
  vexactsize 0
  {
   FrameWidgetClass LeaderboardPanel {
+   inheritalpha 0
    ignorepointer 1
-   position 0 20
-   size 1200 710
+   position 0 30
+   size 1240 710
    halign center_ref
    valign center_ref
    hexactpos 1
@@ -19,213 +20,1192 @@ FrameWidgetClass LeaderboardRoot {
    hexactsize 1
    vexactsize 1
    {
-    PanelWidgetClass LeaderboardBackTop {
+    FrameWidgetClass LeaderboardBack0 {
+     visible 0
+     inheritalpha 1
      ignorepointer 1
-     color 0.03 0.035 0.045 0.74
      position 0 0
-     size 1200 244
+     size 1240 224
      hexactpos 1
      vexactpos 1
      hexactsize 1
      vexactsize 1
-     style rover_sim_colorable
+     {
+      PanelWidgetClass LeaderboardBack0Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 224
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack0Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack0Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 223
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack0Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 222
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack0Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 222
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
     }
-    PanelWidgetClass LeaderboardBackTable1 {
+    FrameWidgetClass LeaderboardBack1 {
      visible 0
+     inheritalpha 1
      ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 76
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackTable2 {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 106
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackTable3 {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 136
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackTable4 {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 166
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackTable5 {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 196
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackTable6 {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 226
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackTable7 {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 256
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackTable8 {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 286
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackTable9 {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 316
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackTable10 {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 346
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackTable11 {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 376
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackTable12 {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 406
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackTable13 {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 436
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackTable14 {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
-     position 0 244
-     size 1200 466
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardBackMessage {
-     visible 0
-     ignorepointer 1
-     color 0.03 0.035 0.045 0.74
      position 0 0
-     size 1200 224
+     size 1240 244
      hexactpos 1
      vexactpos 1
      hexactsize 1
      vexactsize 1
-     style rover_sim_colorable
+     {
+      PanelWidgetClass LeaderboardBack1Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 244
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack1Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack1Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 243
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack1Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 242
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack1Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 242
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack2 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 320
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack2Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 320
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack2Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack2Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 319
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack2Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 318
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack2Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 318
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack3 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 350
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack3Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 350
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack3Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack3Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 349
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack3Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 348
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack3Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 348
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack4 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 380
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack4Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 380
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack4Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack4Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 379
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack4Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 378
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack4Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 378
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack5 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 410
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack5Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 410
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack5Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack5Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 409
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack5Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 408
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack5Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 408
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack6 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 440
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack6Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 440
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack6Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack6Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 439
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack6Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 438
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack6Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 438
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack7 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 470
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack7Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 470
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack7Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack7Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 469
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack7Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 468
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack7Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 468
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack8 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 500
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack8Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 500
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack8Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack8Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 499
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack8Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 498
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack8Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 498
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack9 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 530
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack9Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 530
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack9Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack9Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 529
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack9Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 528
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack9Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 528
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack10 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 560
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack10Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 560
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack10Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack10Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 559
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack10Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 558
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack10Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 558
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack11 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 590
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack11Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 590
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack11Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack11Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 589
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack11Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 588
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack11Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 588
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack12 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 620
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack12Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 620
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack12Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack12Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 619
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack12Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 618
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack12Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 618
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack13 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 650
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack13Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 650
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack13Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack13Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 649
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack13Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 648
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack13Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 648
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack14 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 680
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack14Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 680
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack14Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack14Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 679
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack14Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 678
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack14Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 678
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
+    }
+    FrameWidgetClass LeaderboardBack15 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1240 710
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      PanelWidgetClass LeaderboardBack15Glass {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.06 0.07 0.09 0.91
+       position 0 0
+       size 1240 710
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack15Top {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 0
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack15Bottom {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 709
+       size 1240 1
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack15Left {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 0 1
+       size 1 708
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+      PanelWidgetClass LeaderboardBack15Right {
+       inheritalpha 1
+       ignorepointer 1
+       color 0.21 0.225 0.26 0.9
+       position 1239 1
+       size 1 708
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style rover_sim_colorable
+      }
+     }
     }
     PanelWidgetClass LeaderboardHeaderBack {
+     inheritalpha 1
      ignorepointer 1
-     color 0 0 0 0.42
-     position 0 0
-     size 1200 72
+     color 0 0 0 0.26
+     position 1 1
+     size 1238 71
      hexactpos 1
      vexactpos 1
      hexactsize 1
      vexactsize 1
      style rover_sim_colorable
     }
-    ImageWidgetClass LeaderboardHeaderSheen {
+    ImageWidgetClass LeaderboardHeaderLine {
+     inheritalpha 1
      ignorepointer 1
-     color 1 0.77 0 0.28
-     position 0 0
-     size 520 72
+     color 1 0.77 0 1
+     position 1 72
+     size 1238 2
      hexactpos 1
      vexactpos 1
      hexactsize 1
@@ -236,31 +1216,10 @@ FrameWidgetClass LeaderboardRoot {
      "no wrap" 1
      stretch 1
     }
-    PanelWidgetClass LeaderboardHeaderBar {
-     ignorepointer 1
-     color 1 0.77 0 1
-     position 0 0
-     size 5 72
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
-    PanelWidgetClass LeaderboardHeaderLine {
-     ignorepointer 1
-     color 1 0.77 0 0.85
-     position 0 72
-     size 1200 2
-     hexactpos 1
-     vexactpos 1
-     hexactsize 1
-     vexactsize 1
-     style rover_sim_colorable
-    }
     TextWidgetClass LeaderboardTitle {
+     inheritalpha 1
      ignorepointer 1
-     color 1 1 1 1
+     color 0.95 0.95 0.95 1
      position 24 11
      size 600 50
      hexactpos 1
@@ -271,16 +1230,15 @@ FrameWidgetClass LeaderboardRoot {
      style Bold
      font "gui/fonts/etelkatextpro"
      "exact text" 0
-     "outline size" 1
-     "outline color" 0 0 0 1
      "text halign" left
      "text valign" center
     }
     TextWidgetClass LeaderboardPeriod {
+     inheritalpha 1
      ignorepointer 1
-     color 0.86 0.86 0.86 1
+     color 0.95 0.95 0.95 1
      position 24 13
-     size 540 26
+     size 560 26
      halign right_ref
      hexactpos 1
      vexactpos 1
@@ -289,16 +1247,15 @@ FrameWidgetClass LeaderboardRoot {
      style Bold
      font "gui/fonts/etelkatextpro"
      "exact text" 0
-     "outline size" 1
-     "outline color" 0 0 0 1
      "text halign" right
      "text valign" center
     }
     TextWidgetClass LeaderboardStatus {
+     inheritalpha 1
      ignorepointer 1
-     color 0.62 0.62 0.62 1
+     color 0.58 0.6 0.635 1
      position 24 41
-     size 540 22
+     size 560 22
      halign right_ref
      hexactpos 1
      vexactpos 1
@@ -306,15 +1263,14 @@ FrameWidgetClass LeaderboardRoot {
      vexactsize 1
      font "gui/fonts/etelkatextpro"
      "exact text" 0
-     "outline size" 1
-     "outline color" 0 0 0 1
      "text halign" right
      "text valign" center
     }
     FrameWidgetClass LeaderboardPodium {
+     inheritalpha 1
      ignorepointer 1
      position 0 0
-     size 1200 228
+     size 1240 228
      hexactpos 1
      vexactpos 1
      hexactsize 1
@@ -322,19 +1278,21 @@ FrameWidgetClass LeaderboardRoot {
      {
       FrameWidgetClass LeaderboardCard0 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 412 88
-       size 376 140
+       position 426 88
+       size 388 140
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardCard0Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0.17 0.12 0.02 0.92
+         color 0.115 0.127 0.155 0.96
          position 0 0
-         size 376 140
+         size 388 140
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -342,10 +1300,11 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         ImageWidgetClass LeaderboardCard0Glow {
+         inheritalpha 1
          ignorepointer 1
-         color 1 0.77 0 0.3
-         position 0 4
-         size 376 116
+         color 1 0.77 0 0.22
+         position 0 2
+         size 388 84
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -356,18 +1315,57 @@ FrameWidgetClass LeaderboardRoot {
          "no wrap" 1
          stretch 1
         }
-        PanelWidgetClass LeaderboardCard0Bar {
+        PanelWidgetClass LeaderboardCard0Line {
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 376 4
+         size 388 2
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          style rover_sim_colorable
         }
+        FrameWidgetClass LeaderboardCard0Own {
+         visible 0
+         inheritalpha 1
+         ignorepointer 1
+         position 0 0
+         size 388 140
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          PanelWidgetClass LeaderboardCard0OwnTint {
+           inheritalpha 1
+           ignorepointer 1
+           color 0.56 0.43 0.02 0.22
+           position 0 2
+           size 388 138
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+          PanelWidgetClass LeaderboardCard0OwnBar {
+           inheritalpha 1
+           ignorepointer 1
+           color 1 0.77 0 1
+           position 0 2
+           size 3 138
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
         TextWidgetClass LeaderboardCard0Rank {
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 14 30
@@ -380,15 +1378,14 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         ImageWidgetClass LeaderboardCard0Crown {
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
-         position 322 14
+         position 334 14
          size 38 38
          hexactpos 1
          vexactpos 1
@@ -401,10 +1398,11 @@ FrameWidgetClass LeaderboardRoot {
          stretch 1
         }
         TextWidgetClass LeaderboardCard0Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 88 14
-         size 226 38
+         size 238 38
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -412,16 +1410,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard0Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 88 80
-         size 88 30
+         size 90 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -429,16 +1426,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard0PointsLabel {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 88 110
-         size 88 20
+         size 90 20
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -446,16 +1442,15 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_POINTS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard0Kills {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
-         position 180 80
-         size 88 30
+         color 0.95 0.95 0.95 1
+         position 184 80
+         size 90 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -463,16 +1458,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard0KillsLabel {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 180 110
-         size 88 20
+         color 0.58 0.6 0.635 1
+         position 184 110
+         size 90 20
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -480,16 +1474,15 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_KILLS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard0Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
-         position 272 80
-         size 88 30
+         color 0.95 0.95 0.95 1
+         position 280 80
+         size 90 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -497,16 +1490,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard0WinsLabel {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 272 110
-         size 88 20
+         color 0.58 0.6 0.635 1
+         position 280 110
+         size 90 20
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -514,84 +1506,28 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_WINS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
-        }
-        FrameWidgetClass LeaderboardCard0Own {
-         visible 0
-         ignorepointer 1
-         position 0 0
-         size 376 140
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         {
-          PanelWidgetClass LeaderboardCard0OwnTop {
-           ignorepointer 1
-           color 1 0.77 0 1
-           position 0 0
-           size 376 3
-           hexactpos 1
-           vexactpos 1
-           hexactsize 1
-           vexactsize 1
-           style rover_sim_colorable
-          }
-          PanelWidgetClass LeaderboardCard0OwnBottom {
-           ignorepointer 1
-           color 1 0.77 0 1
-           position 0 137
-           size 376 3
-           hexactpos 1
-           vexactpos 1
-           hexactsize 1
-           vexactsize 1
-           style rover_sim_colorable
-          }
-          PanelWidgetClass LeaderboardCard0OwnLeft {
-           ignorepointer 1
-           color 1 0.77 0 1
-           position 0 0
-           size 3 140
-           hexactpos 1
-           vexactpos 1
-           hexactsize 1
-           vexactsize 1
-           style rover_sim_colorable
-          }
-          PanelWidgetClass LeaderboardCard0OwnRight {
-           ignorepointer 1
-           color 1 0.77 0 1
-           position 373 0
-           size 3 140
-           hexactpos 1
-           vexactpos 1
-           hexactsize 1
-           vexactsize 1
-           style rover_sim_colorable
-          }
-         }
         }
        }
       }
       FrameWidgetClass LeaderboardCard1 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 104
-       size 376 124
+       size 388 124
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardCard1Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0.11 0.12 0.14 0.92
+         color 0.115 0.127 0.155 0.96
          position 0 0
-         size 376 124
+         size 388 124
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -599,10 +1535,11 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         ImageWidgetClass LeaderboardCard1Glow {
+         inheritalpha 1
          ignorepointer 1
-         color 0.8 0.83 0.88 0.3
-         position 0 4
-         size 376 100
+         color 0.78 0.81 0.86 0.22
+         position 0 2
+         size 388 74.4
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -613,20 +1550,59 @@ FrameWidgetClass LeaderboardRoot {
          "no wrap" 1
          stretch 1
         }
-        PanelWidgetClass LeaderboardCard1Bar {
+        PanelWidgetClass LeaderboardCard1Line {
+         inheritalpha 1
          ignorepointer 1
-         color 0.8 0.83 0.88 1
+         color 0.78 0.81 0.86 1
          position 0 0
-         size 376 4
+         size 388 2
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          style rover_sim_colorable
         }
-        TextWidgetClass LeaderboardCard1Rank {
+        FrameWidgetClass LeaderboardCard1Own {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0.8 0.83 0.88 1
+         position 0 0
+         size 388 124
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          PanelWidgetClass LeaderboardCard1OwnTint {
+           inheritalpha 1
+           ignorepointer 1
+           color 0.56 0.43 0.02 0.22
+           position 0 2
+           size 388 122
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+          PanelWidgetClass LeaderboardCard1OwnBar {
+           inheritalpha 1
+           ignorepointer 1
+           color 1 0.77 0 1
+           position 0 2
+           size 3 122
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        TextWidgetClass LeaderboardCard1Rank {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.78 0.81 0.86 1
          position 14 28
          size 64 72
          hexactpos 1
@@ -637,16 +1613,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardCard1Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 88 14
-         size 272 32
+         size 284 32
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -654,16 +1629,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard1Points {
+         inheritalpha 1
          ignorepointer 1
-         color 0.8 0.83 0.88 1
+         color 0.78 0.81 0.86 1
          position 88 64
-         size 88 30
+         size 90 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -671,16 +1645,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard1PointsLabel {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 88 94
-         size 88 20
+         size 90 20
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -688,16 +1661,15 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_POINTS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard1Kills {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
-         position 180 64
-         size 88 30
+         color 0.95 0.95 0.95 1
+         position 184 64
+         size 90 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -705,16 +1677,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard1KillsLabel {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 180 94
-         size 88 20
+         color 0.58 0.6 0.635 1
+         position 184 94
+         size 90 20
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -722,16 +1693,15 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_KILLS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard1Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
-         position 272 64
-         size 88 30
+         color 0.95 0.95 0.95 1
+         position 280 64
+         size 90 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -739,16 +1709,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard1WinsLabel {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 272 94
-         size 88 20
+         color 0.58 0.6 0.635 1
+         position 280 94
+         size 90 20
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -756,84 +1725,28 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_WINS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
-        }
-        FrameWidgetClass LeaderboardCard1Own {
-         visible 0
-         ignorepointer 1
-         position 0 0
-         size 376 124
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         {
-          PanelWidgetClass LeaderboardCard1OwnTop {
-           ignorepointer 1
-           color 1 0.77 0 1
-           position 0 0
-           size 376 3
-           hexactpos 1
-           vexactpos 1
-           hexactsize 1
-           vexactsize 1
-           style rover_sim_colorable
-          }
-          PanelWidgetClass LeaderboardCard1OwnBottom {
-           ignorepointer 1
-           color 1 0.77 0 1
-           position 0 121
-           size 376 3
-           hexactpos 1
-           vexactpos 1
-           hexactsize 1
-           vexactsize 1
-           style rover_sim_colorable
-          }
-          PanelWidgetClass LeaderboardCard1OwnLeft {
-           ignorepointer 1
-           color 1 0.77 0 1
-           position 0 0
-           size 3 124
-           hexactpos 1
-           vexactpos 1
-           hexactsize 1
-           vexactsize 1
-           style rover_sim_colorable
-          }
-          PanelWidgetClass LeaderboardCard1OwnRight {
-           ignorepointer 1
-           color 1 0.77 0 1
-           position 373 0
-           size 3 124
-           hexactpos 1
-           vexactpos 1
-           hexactsize 1
-           vexactsize 1
-           style rover_sim_colorable
-          }
-         }
         }
        }
       }
       FrameWidgetClass LeaderboardCard2 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 804 116
-       size 376 112
+       position 832 116
+       size 388 112
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardCard2Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0.16 0.09 0.04 0.92
+         color 0.115 0.127 0.155 0.96
          position 0 0
-         size 376 112
+         size 388 112
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -841,10 +1754,11 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         ImageWidgetClass LeaderboardCard2Glow {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.55 0.3 0.3
-         position 0 4
-         size 376 88
+         color 0.82 0.53 0.3 0.22
+         position 0 2
+         size 388 67.2
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -855,20 +1769,59 @@ FrameWidgetClass LeaderboardRoot {
          "no wrap" 1
          stretch 1
         }
-        PanelWidgetClass LeaderboardCard2Bar {
+        PanelWidgetClass LeaderboardCard2Line {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.55 0.3 1
+         color 0.82 0.53 0.3 1
          position 0 0
-         size 376 4
+         size 388 2
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          style rover_sim_colorable
         }
-        TextWidgetClass LeaderboardCard2Rank {
+        FrameWidgetClass LeaderboardCard2Own {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.55 0.3 1
+         position 0 0
+         size 388 112
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         {
+          PanelWidgetClass LeaderboardCard2OwnTint {
+           inheritalpha 1
+           ignorepointer 1
+           color 0.56 0.43 0.02 0.22
+           position 0 2
+           size 388 110
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+          PanelWidgetClass LeaderboardCard2OwnBar {
+           inheritalpha 1
+           ignorepointer 1
+           color 1 0.77 0 1
+           position 0 2
+           size 3 110
+           hexactpos 1
+           vexactpos 1
+           hexactsize 1
+           vexactsize 1
+           style rover_sim_colorable
+          }
+         }
+        }
+        TextWidgetClass LeaderboardCard2Rank {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.82 0.53 0.3 1
          position 14 26
          size 64 64
          hexactpos 1
@@ -879,16 +1832,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardCard2Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 88 14
-         size 272 32
+         size 284 32
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -896,16 +1848,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard2Points {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.55 0.3 1
+         color 0.82 0.53 0.3 1
          position 88 52
-         size 88 30
+         size 90 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -913,16 +1864,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard2PointsLabel {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 88 82
-         size 88 20
+         size 90 20
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -930,16 +1880,15 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_POINTS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard2Kills {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
-         position 180 52
-         size 88 30
+         color 0.95 0.95 0.95 1
+         position 184 52
+         size 90 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -947,16 +1896,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard2KillsLabel {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 180 82
-         size 88 20
+         color 0.58 0.6 0.635 1
+         position 184 82
+         size 90 20
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -964,16 +1912,15 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_KILLS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard2Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
-         position 272 52
-         size 88 30
+         color 0.95 0.95 0.95 1
+         position 280 52
+         size 90 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -981,16 +1928,15 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardCard2WinsLabel {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 272 82
-         size 88 20
+         color 0.58 0.6 0.635 1
+         position 280 82
+         size 90 20
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -998,75 +1944,18 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_WINS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
-        }
-        FrameWidgetClass LeaderboardCard2Own {
-         visible 0
-         ignorepointer 1
-         position 0 0
-         size 376 112
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         {
-          PanelWidgetClass LeaderboardCard2OwnTop {
-           ignorepointer 1
-           color 1 0.77 0 1
-           position 0 0
-           size 376 3
-           hexactpos 1
-           vexactpos 1
-           hexactsize 1
-           vexactsize 1
-           style rover_sim_colorable
-          }
-          PanelWidgetClass LeaderboardCard2OwnBottom {
-           ignorepointer 1
-           color 1 0.77 0 1
-           position 0 109
-           size 376 3
-           hexactpos 1
-           vexactpos 1
-           hexactsize 1
-           vexactsize 1
-           style rover_sim_colorable
-          }
-          PanelWidgetClass LeaderboardCard2OwnLeft {
-           ignorepointer 1
-           color 1 0.77 0 1
-           position 0 0
-           size 3 112
-           hexactpos 1
-           vexactpos 1
-           hexactsize 1
-           vexactsize 1
-           style rover_sim_colorable
-          }
-          PanelWidgetClass LeaderboardCard2OwnRight {
-           ignorepointer 1
-           color 1 0.77 0 1
-           position 373 0
-           size 3 112
-           hexactpos 1
-           vexactpos 1
-           hexactsize 1
-           vexactsize 1
-           style rover_sim_colorable
-          }
-         }
         }
        }
       }
      }
     }
     FrameWidgetClass LeaderboardTable {
+     inheritalpha 1
      ignorepointer 1
      position 0 0
-     size 1200 710
+     size 1240 710
      hexactpos 1
      vexactpos 1
      hexactsize 1
@@ -1074,36 +1963,21 @@ FrameWidgetClass LeaderboardRoot {
      {
       FrameWidgetClass LeaderboardHead0 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 244
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
-        TextWidgetClass LeaderboardHead0Rank {
-         ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 8 1
-         size 40 24
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         text "#"
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" center
-         "text valign" center
-        }
         TextWidgetClass LeaderboardHead0Name {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 60 1
-         size 232 24
+         color 0.58 0.6 0.635 1
+         position 60 2
+         size 216 22
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1111,16 +1985,15 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_PLAYER"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardHead0Points {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 300 1
-         size 84 24
+         color 0.58 0.6 0.635 1
+         position 284 2
+         size 88 22
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1128,16 +2001,15 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_POINTS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardHead0Kills {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 388 1
-         size 80 24
+         color 0.58 0.6 0.635 1
+         position 380 2
+         size 84 22
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1145,16 +2017,15 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_KILLS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardHead0Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 468 1
-         size 92 24
+         color 0.58 0.6 0.635 1
+         position 472 2
+         size 108 22
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1162,16 +2033,15 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_WINS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         PanelWidgetClass LeaderboardHead0Line {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 0.28
+         color 0.24 0.255 0.29 0.95
          position 0 26
-         size 572 2
+         size 592 2
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1182,36 +2052,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardHead1 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 244
-       size 572 30
+       position 628 244
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
-        TextWidgetClass LeaderboardHead1Rank {
-         ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 8 1
-         size 40 24
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         text "#"
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" center
-         "text valign" center
-        }
         TextWidgetClass LeaderboardHead1Name {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 60 1
-         size 232 24
+         color 0.58 0.6 0.635 1
+         position 60 2
+         size 216 22
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1219,16 +2074,15 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_PLAYER"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardHead1Points {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 300 1
-         size 84 24
+         color 0.58 0.6 0.635 1
+         position 284 2
+         size 88 22
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1236,16 +2090,15 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_POINTS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardHead1Kills {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 388 1
-         size 80 24
+         color 0.58 0.6 0.635 1
+         position 380 2
+         size 84 22
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1253,16 +2106,15 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_KILLS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardHead1Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
-         position 468 1
-         size 92 24
+         color 0.58 0.6 0.635 1
+         position 472 2
+         size 108 22
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1270,16 +2122,104 @@ FrameWidgetClass LeaderboardRoot {
          text "#STR_BR_LEADERBOARD_COL_WINS"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         PanelWidgetClass LeaderboardHead1Line {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 0.28
+         color 0.24 0.255 0.29 0.95
          position 0 26
-         size 572 2
+         size 592 2
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style rover_sim_colorable
+        }
+       }
+      }
+      FrameWidgetClass LeaderboardHead2 {
+       visible 0
+       inheritalpha 1
+       ignorepointer 1
+       position 324 244
+       size 592 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       {
+        TextWidgetClass LeaderboardHead2Name {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.58 0.6 0.635 1
+         position 60 2
+         size 216 22
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         text "#STR_BR_LEADERBOARD_COL_PLAYER"
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" left
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardHead2Points {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.58 0.6 0.635 1
+         position 284 2
+         size 88 22
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         text "#STR_BR_LEADERBOARD_COL_POINTS"
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardHead2Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.58 0.6 0.635 1
+         position 380 2
+         size 84 22
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         text "#STR_BR_LEADERBOARD_COL_KILLS"
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardHead2Wins {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.58 0.6 0.635 1
+         position 472 2
+         size 108 22
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         text "#STR_BR_LEADERBOARD_COL_WINS"
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        PanelWidgetClass LeaderboardHead2Line {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.24 0.255 0.29 0.95
+         position 0 26
+         size 592 2
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1290,19 +2230,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow0 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 274
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow0Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1311,10 +2254,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow0Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1322,27 +2266,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow0Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "4"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow0Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1350,57 +2293,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow0Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow0Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow0Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow0Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -1408,19 +2346,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow1 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 304
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow1Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.4
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1429,10 +2369,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow1Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1440,27 +2381,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow1Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "5"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow1Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1468,57 +2408,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow1Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow1Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow1Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow1Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -1526,19 +2461,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow2 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 334
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow2Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1547,10 +2485,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow2Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1558,27 +2497,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow2Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "6"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow2Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1586,57 +2524,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow2Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow2Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow2Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow2Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -1644,19 +2577,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow3 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 364
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow3Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.4
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1665,10 +2600,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow3Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1676,27 +2612,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow3Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "7"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow3Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1704,57 +2639,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow3Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow3Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow3Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow3Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -1762,19 +2692,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow4 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 394
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow4Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1783,10 +2716,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow4Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1794,27 +2728,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow4Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "8"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow4Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1822,57 +2755,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow4Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow4Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow4Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow4Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -1880,19 +2808,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow5 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 424
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow5Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.4
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1901,10 +2831,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow5Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1912,27 +2843,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow5Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "9"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow5Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -1940,57 +2870,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow5Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow5Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow5Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow5Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -1998,19 +2923,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow6 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 454
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow6Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2019,10 +2947,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow6Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2030,27 +2959,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow6Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "10"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow6Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2058,57 +2986,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow6Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow6Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow6Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow6Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -2116,19 +3039,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow7 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 484
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow7Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.4
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2137,10 +3062,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow7Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2148,27 +3074,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow7Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "11"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow7Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2176,57 +3101,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow7Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow7Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow7Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow7Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -2234,19 +3154,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow8 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 514
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow8Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2255,10 +3178,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow8Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2266,27 +3190,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow8Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "12"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow8Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2294,57 +3217,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow8Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow8Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow8Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow8Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -2352,19 +3270,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow9 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 544
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow9Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.4
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2373,10 +3293,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow9Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2384,27 +3305,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow9Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "13"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow9Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2412,57 +3332,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow9Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow9Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow9Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow9Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -2470,19 +3385,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow10 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 574
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow10Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2491,10 +3409,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow10Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2502,27 +3421,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow10Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "14"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow10Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2530,57 +3448,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow10Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow10Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow10Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow10Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -2588,19 +3501,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow11 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 604
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow11Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.4
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2609,10 +3524,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow11Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2620,27 +3536,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow11Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "15"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow11Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2648,57 +3563,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow11Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow11Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow11Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow11Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -2706,19 +3616,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow12 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 634
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow12Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2727,10 +3640,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow12Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2738,27 +3652,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow12Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "16"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow12Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2766,57 +3679,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow12Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow12Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow12Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow12Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -2824,19 +3732,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow13 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
        position 20 664
-       size 572 30
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow13Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.4
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2845,10 +3755,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow13Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2856,27 +3767,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow13Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "17"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow13Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2884,57 +3794,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow13Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow13Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow13Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow13Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -2942,19 +3847,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow14 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 274
-       size 572 30
+       position 628 274
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow14Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2963,10 +3871,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow14Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -2974,27 +3883,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow14Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "18"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow14Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3002,57 +3910,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow14Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow14Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow14Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow14Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -3060,19 +3963,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow15 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 304
-       size 572 30
+       position 628 304
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow15Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.4
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3081,10 +3986,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow15Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3092,27 +3998,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow15Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "19"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow15Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3120,57 +4025,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow15Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow15Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow15Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow15Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -3178,19 +4078,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow16 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 334
-       size 572 30
+       position 628 334
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow16Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3199,10 +4102,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow16Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3210,27 +4114,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow16Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "20"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow16Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3238,57 +4141,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow16Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow16Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow16Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow16Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -3296,19 +4194,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow17 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 364
-       size 572 30
+       position 628 364
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow17Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.4
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3317,10 +4217,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow17Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3328,27 +4229,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow17Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "21"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow17Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3356,57 +4256,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow17Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow17Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow17Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow17Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -3414,19 +4309,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow18 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 394
-       size 572 30
+       position 628 394
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow18Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3435,10 +4333,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow18Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3446,27 +4345,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow18Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "22"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow18Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3474,57 +4372,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow18Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow18Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow18Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow18Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -3532,19 +4425,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow19 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 424
-       size 572 30
+       position 628 424
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow19Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.4
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3553,10 +4448,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow19Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3564,27 +4460,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow19Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "23"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow19Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3592,57 +4487,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow19Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow19Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow19Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow19Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -3650,19 +4540,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow20 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 454
-       size 572 30
+       position 628 454
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow20Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3671,10 +4564,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow20Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3682,27 +4576,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow20Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "24"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow20Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3710,57 +4603,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow20Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow20Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow20Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow20Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -3768,19 +4656,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow21 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 484
-       size 572 30
+       position 628 484
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow21Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.4
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3789,10 +4679,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow21Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3800,27 +4691,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow21Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "25"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow21Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3828,57 +4718,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow21Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow21Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow21Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow21Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -3886,19 +4771,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow22 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 514
-       size 572 30
+       position 628 514
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow22Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3907,10 +4795,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow22Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3918,27 +4807,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow22Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "26"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow22Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -3946,57 +4834,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow22Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow22Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow22Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow22Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -4004,19 +4887,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow23 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 544
-       size 572 30
+       position 628 544
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow23Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.4
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -4025,10 +4910,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow23Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -4036,27 +4922,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow23Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "27"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow23Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -4064,57 +4949,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow23Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow23Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow23Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow23Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -4122,19 +5002,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow24 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 574
-       size 572 30
+       position 628 574
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow24Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -4143,10 +5026,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow24Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -4154,27 +5038,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow24Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "28"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow24Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -4182,57 +5065,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow24Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow24Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow24Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow24Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -4240,19 +5118,21 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow25 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 604
-       size 572 30
+       position 628 604
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow25Back {
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.4
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -4261,10 +5141,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow25Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -4272,27 +5153,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow25Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "29"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow25Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -4300,57 +5180,52 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow25Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow25Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow25Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow25Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
@@ -4358,19 +5233,22 @@ FrameWidgetClass LeaderboardRoot {
       }
       FrameWidgetClass LeaderboardRow26 {
        visible 0
+       inheritalpha 1
        ignorepointer 1
-       position 608 634
-       size 572 30
+       position 628 634
+       size 592 30
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        {
         PanelWidgetClass LeaderboardRow26Back {
+         visible 0
+         inheritalpha 1
          ignorepointer 1
-         color 0 0 0 0.22
+         color 0.3 0.32 0.36 0.2
          position 0 0
-         size 572 30
+         size 592 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -4379,10 +5257,11 @@ FrameWidgetClass LeaderboardRoot {
         }
         PanelWidgetClass LeaderboardRow26Own {
          visible 0
+         inheritalpha 1
          ignorepointer 1
          color 1 0.77 0 1
          position 0 0
-         size 4 30
+         size 3 30
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -4390,27 +5269,26 @@ FrameWidgetClass LeaderboardRoot {
          style rover_sim_colorable
         }
         TextWidgetClass LeaderboardRow26Rank {
+         inheritalpha 1
          ignorepointer 1
-         color 0.62 0.62 0.62 1
+         color 0.58 0.6 0.635 1
          position 8 1
          size 40 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         text "30"
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" center
          "text valign" center
         }
         TextWidgetClass LeaderboardRow26Name {
+         inheritalpha 1
          ignorepointer 1
-         color 1 1 1 1
+         color 0.95 0.95 0.95 1
          position 60 1
-         size 232 28
+         size 216 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
@@ -4418,57 +5296,630 @@ FrameWidgetClass LeaderboardRoot {
          style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" left
          "text valign" center
         }
         TextWidgetClass LeaderboardRow26Points {
+         inheritalpha 1
          ignorepointer 1
          color 1 1 1 1
-         position 300 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow26Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
          size 84 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         style Bold
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
-         "text halign" right
-         "text valign" center
-        }
-        TextWidgetClass LeaderboardRow26Kills {
-         ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 388 1
-         size 80 28
-         hexactpos 1
-         vexactpos 1
-         hexactsize 1
-         vexactsize 1
-         font "gui/fonts/etelkatextpro"
-         "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
          "text halign" right
          "text valign" center
         }
         TextWidgetClass LeaderboardRow26Wins {
+         inheritalpha 1
          ignorepointer 1
-         color 0.86 0.86 0.86 1
-         position 468 1
-         size 92 28
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
          hexactpos 1
          vexactpos 1
          hexactsize 1
          vexactsize 1
          font "gui/fonts/etelkatextpro"
          "exact text" 0
-         "outline size" 1
-         "outline color" 0 0 0 1
+         "text halign" right
+         "text valign" center
+        }
+       }
+      }
+      FrameWidgetClass LeaderboardRow27 {
+       visible 0
+       inheritalpha 1
+       ignorepointer 1
+       position 324 274
+       size 592 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       {
+        PanelWidgetClass LeaderboardRow27Back {
+         visible 0
+         inheritalpha 1
+         ignorepointer 1
+         color 0.3 0.32 0.36 0.2
+         position 0 0
+         size 592 30
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style rover_sim_colorable
+        }
+        PanelWidgetClass LeaderboardRow27Own {
+         visible 0
+         inheritalpha 1
+         ignorepointer 1
+         color 1 0.77 0 1
+         position 0 0
+         size 3 30
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style rover_sim_colorable
+        }
+        TextWidgetClass LeaderboardRow27Rank {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.58 0.6 0.635 1
+         position 8 1
+         size 40 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" center
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow27Name {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.95 0.95 0.95 1
+         position 60 1
+         size 216 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" left
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow27Points {
+         inheritalpha 1
+         ignorepointer 1
+         color 1 1 1 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow27Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
+         size 84 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow27Wins {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+       }
+      }
+      FrameWidgetClass LeaderboardRow28 {
+       visible 0
+       inheritalpha 1
+       ignorepointer 1
+       position 324 304
+       size 592 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       {
+        PanelWidgetClass LeaderboardRow28Back {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.3 0.32 0.36 0.2
+         position 0 0
+         size 592 30
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style rover_sim_colorable
+        }
+        PanelWidgetClass LeaderboardRow28Own {
+         visible 0
+         inheritalpha 1
+         ignorepointer 1
+         color 1 0.77 0 1
+         position 0 0
+         size 3 30
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style rover_sim_colorable
+        }
+        TextWidgetClass LeaderboardRow28Rank {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.58 0.6 0.635 1
+         position 8 1
+         size 40 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" center
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow28Name {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.95 0.95 0.95 1
+         position 60 1
+         size 216 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" left
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow28Points {
+         inheritalpha 1
+         ignorepointer 1
+         color 1 1 1 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow28Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
+         size 84 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow28Wins {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+       }
+      }
+      FrameWidgetClass LeaderboardRow29 {
+       visible 0
+       inheritalpha 1
+       ignorepointer 1
+       position 324 334
+       size 592 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       {
+        PanelWidgetClass LeaderboardRow29Back {
+         visible 0
+         inheritalpha 1
+         ignorepointer 1
+         color 0.3 0.32 0.36 0.2
+         position 0 0
+         size 592 30
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style rover_sim_colorable
+        }
+        PanelWidgetClass LeaderboardRow29Own {
+         visible 0
+         inheritalpha 1
+         ignorepointer 1
+         color 1 0.77 0 1
+         position 0 0
+         size 3 30
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style rover_sim_colorable
+        }
+        TextWidgetClass LeaderboardRow29Rank {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.58 0.6 0.635 1
+         position 8 1
+         size 40 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" center
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow29Name {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.95 0.95 0.95 1
+         position 60 1
+         size 216 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" left
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow29Points {
+         inheritalpha 1
+         ignorepointer 1
+         color 1 1 1 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow29Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
+         size 84 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow29Wins {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+       }
+      }
+      FrameWidgetClass LeaderboardRow30 {
+       visible 0
+       inheritalpha 1
+       ignorepointer 1
+       position 324 364
+       size 592 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       {
+        PanelWidgetClass LeaderboardRow30Back {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.3 0.32 0.36 0.2
+         position 0 0
+         size 592 30
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style rover_sim_colorable
+        }
+        PanelWidgetClass LeaderboardRow30Own {
+         visible 0
+         inheritalpha 1
+         ignorepointer 1
+         color 1 0.77 0 1
+         position 0 0
+         size 3 30
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style rover_sim_colorable
+        }
+        TextWidgetClass LeaderboardRow30Rank {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.58 0.6 0.635 1
+         position 8 1
+         size 40 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" center
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow30Name {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.95 0.95 0.95 1
+         position 60 1
+         size 216 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" left
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow30Points {
+         inheritalpha 1
+         ignorepointer 1
+         color 1 1 1 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow30Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
+         size 84 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow30Wins {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+       }
+      }
+      FrameWidgetClass LeaderboardRow31 {
+       visible 0
+       inheritalpha 1
+       ignorepointer 1
+       position 324 394
+       size 592 30
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       {
+        PanelWidgetClass LeaderboardRow31Back {
+         visible 0
+         inheritalpha 1
+         ignorepointer 1
+         color 0.3 0.32 0.36 0.2
+         position 0 0
+         size 592 30
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style rover_sim_colorable
+        }
+        PanelWidgetClass LeaderboardRow31Own {
+         visible 0
+         inheritalpha 1
+         ignorepointer 1
+         color 1 0.77 0 1
+         position 0 0
+         size 3 30
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style rover_sim_colorable
+        }
+        TextWidgetClass LeaderboardRow31Rank {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.58 0.6 0.635 1
+         position 8 1
+         size 40 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" center
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow31Name {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.95 0.95 0.95 1
+         position 60 1
+         size 216 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" left
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow31Points {
+         inheritalpha 1
+         ignorepointer 1
+         color 1 1 1 1
+         position 284 1
+         size 88 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow31Kills {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 380 1
+         size 84 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass LeaderboardRow31Wins {
+         inheritalpha 1
+         ignorepointer 1
+         color 0.72 0.735 0.76 1
+         position 472 1
+         size 108 28
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
          "text halign" right
          "text valign" center
         }
@@ -4478,19 +5929,21 @@ FrameWidgetClass LeaderboardRoot {
     }
     FrameWidgetClass LeaderboardMessage {
      visible 0
+     inheritalpha 1
      ignorepointer 1
      position 0 74
-     size 1200 150
+     size 1240 150
      hexactpos 1
      vexactpos 1
      hexactsize 1
      vexactsize 1
      {
       TextWidgetClass LeaderboardMessageTitle {
+       inheritalpha 1
        ignorepointer 1
-       color 1 1 1 1
+       color 0.95 0.95 0.95 1
        position 20 40
-       size 1160 36
+       size 1200 36
        hexactpos 1
        vexactpos 1
        hexactsize 1
@@ -4498,24 +5951,21 @@ FrameWidgetClass LeaderboardRoot {
        style Bold
        font "gui/fonts/etelkatextpro"
        "exact text" 0
-       "outline size" 1
-       "outline color" 0 0 0 1
        "text halign" center
        "text valign" center
       }
       TextWidgetClass LeaderboardMessageHint {
+       inheritalpha 1
        ignorepointer 1
-       color 0.62 0.62 0.62 1
+       color 0.58 0.6 0.635 1
        position 20 84
-       size 1160 24
+       size 1200 24
        hexactpos 1
        vexactpos 1
        hexactsize 1
        vexactsize 1
        font "gui/fonts/etelkatextpro"
        "exact text" 0
-       "outline size" 1
-       "outline color" 0 0 0 1
        "text halign" center
        "text valign" center
       }
