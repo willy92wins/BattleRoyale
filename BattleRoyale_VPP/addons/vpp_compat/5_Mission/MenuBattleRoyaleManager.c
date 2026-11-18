@@ -45,7 +45,7 @@ class MenuBattleRoyaleManager: AdminHudSubMenu
 
     private void NextState()
     {
-        GetRPCManager().SendRPC( RPC_DAYZBRSERVER_NAMESPACE, "NextState", NULL, true);
+        GetRPCManager().SendRPC( RPC_DAYZBRSERVER_NAMESPACE, "VPPNextState", NULL, true);
     }
 };
 #endif
