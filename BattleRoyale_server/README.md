@@ -230,6 +230,31 @@ exit.
 The setting is ignored while `enable_vigrid_api` or `use_autolock` is on: their match id and server lock
 belong to one server run.
 
+### Discord message when a match ends
+
+Set `"match_end_webhook_url"` in `<profiles>/Vigrid-BattleRoyale/server_settings.json` to the URL of a
+Discord webhook (channel settings > Integrations > Webhooks) and the server posts a message to that channel
+at the end of every match. `"match_end_message"` is the text, with these placeholders:
+
+- `{winner}`: the winner's name; when a team wins, the names of its players still alive, comma separated;
+- `{kills}`: the winner's kills in the match, the count the HUD shows (a team's kills added together);
+- `{players}`: the players at the start of the match;
+- `{duration}`: the minutes from the start of the match to the win.
+
+`"match_end_message_no_winner"` is posted instead when nobody wins (the last players died together or left
+the server); leave it empty to post nothing then. For example:
+
+```json
+"match_end_webhook_url": "https://discord.com/api/webhooks/...",
+"match_end_message": "**{winner}** won the match with {kills} kills ({players} players, {duration} min)",
+"match_end_message_no_winner": ""
+```
+
+Keep the URL private: whoever has it can post to the channel. The server never sends it to the players nor
+writes it to its logs. Names and mentions in the message ping nobody, and Discord refuses messages over 2000
+characters. A server that ran an earlier version gets the three fields, with an empty URL, added to its
+`server_settings.json` on its first start.
+
 ## 6. BattleRoyale settings
 
 On the first start the mod writes its settings to `<profiles>\Vigrid-BattleRoyale\`

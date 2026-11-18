@@ -966,6 +966,11 @@ class BattleRoyaleState: Timeable
 		if (victim && victim.GetIdentity() && victim.GetIdentity().GetPlainId() == identity.GetPlainId())
 			return;
 
+		// The same count, kept by the server for the match end webhook
+		BattleRoyaleServer br_server = BattleRoyaleServer.GetInstance();
+		if (br_server)
+			br_server.AddMatchKill(identity.GetPlainId());
+
 		GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "AddPlayerKill", new Param1<int>(1), true, identity, killer);
 	}
 
