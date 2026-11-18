@@ -17,8 +17,8 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected static const float NEAR_PLANE_ORBIT = 0.07;
 	//! Seconds between two refreshes of the hidden head, so that a helmet put on meanwhile is hidden too
 	protected static const float HEAD_REFRESH_SECONDS = 1.0;
-	//! Smoothing times, in seconds, of the first person view: its angles follow the watched player's aim, which reaches
-	//! this client in steps, and its place and field of view move between the eyes and the sights
+	//! Smoothing times, in seconds, of the first person view: from the eyes its angles follow the watched player's aim,
+	//! which reaches this client in steps, and the view moves over between the eyes and the sights
 	protected static const float VIEW_SMOOTH_TIME = 0.08;
 	protected static const float SIGHTS_SMOOTH_TIME = 0.1;
 
@@ -31,19 +31,26 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected string m_HeadBoneTargetType;
 	protected Human m_HeadBoneTarget;
 
-	//! First person view as shown: angles, place relative to the eyes and field of view, smoothed towards where the
-	//! watched player looks. Taken at once when the watched player changes (m_ViewTarget)
+	//! First person view: the watched player (a new one is taken at once), what it looks through (EBRSpectateSights),
+	//! the angles from the eyes smoothed towards its aim, and the view as shown
 	protected Human m_ViewTarget;
+	protected int m_ViewSights;
 	protected float m_ViewYaw;
 	protected float m_ViewPitch;
-	protected vector m_ViewOffset;
-	protected float m_ViewFOV;
 	protected float m_ViewYawVelocity[1];
 	protected float m_ViewPitchVelocity[1];
-	protected float m_ViewOffsetVelocityX[1];
-	protected float m_ViewOffsetVelocityY[1];
-	protected float m_ViewOffsetVelocityZ[1];
-	protected float m_ViewFOVVelocity[1];
+	protected vector m_ShownOffset;
+	protected float m_ShownYaw;
+	protected float m_ShownPitch;
+	protected float m_ShownFOV;
+	//! Gap between the view shown and the new one when the watched player switches between the eyes and the sights,
+	//! closed as the weight goes from 1 to 0. Through the sights the view is otherwise their own, with no delay
+	protected vector m_SwitchOffset;
+	protected float m_SwitchYaw;
+	protected float m_SwitchPitch;
+	protected float m_SwitchFOV;
+	protected float m_SwitchWeight;
+	protected float m_SwitchWeightVelocity[1];
 
 	//! Optic of the watched player shown as its owner sees it, and every entity of the watched player's clothing hidden
 	//! for it, until LeaveOptics
@@ -214,8 +221,10 @@ class BattleRoyaleSpectatorCamera: Camera
 		vector angles;
 		float fov;
 		float nearPlane;
+		int sights = BattleRoyaleRPC.s_SpectateSights;
 		if (!FollowSights(target, position, angles, fov, nearPlane))
 		{
+			sights = EBRSpectateSights.NONE;
 			LeaveOptics();
 
 			// As the vanilla first person camera does (DayZPlayerCamera1stPerson), the head bone gives the position and
@@ -226,48 +235,71 @@ class BattleRoyaleSpectatorCamera: Camera
 			nearPlane = NEAR_PLANE_EYES;
 		}
 
-		SmoothView(target, position - eyes, angles, fov, timeSlice);
-		SetPosition(eyes + m_ViewOffset);
-		SetOrientation(Vector(m_ViewYaw, m_ViewPitch, 0));
-		SetFOV(m_ViewFOV);
+		SmoothView(target, sights, position - eyes, angles, fov, timeSlice);
+		SetPosition(eyes + m_ShownOffset);
+		SetOrientation(Vector(m_ShownYaw, m_ShownPitch, 0));
+		SetFOV(m_ShownFOV);
 		SetNearPlane(nearPlane);
 
 		// Third person starts behind the player when switching
-		m_OrbitYaw = m_ViewYaw;
+		m_OrbitYaw = m_ShownYaw;
 	}
 
-	//! Moves the view shown towards the one wanted: its angles, its place relative to the eyes and its field of view. A
+	//! Works out the view shown from the one wanted (its place relative to the eyes, angles and field of view): from the
+	//! eyes the angles are smoothed, through the sights the view is theirs, and a switch between the two moves over. A
 	//! new watched player is taken at once
-	protected void SmoothView(Human target, vector offset, vector angles, float fov, float timeSlice)
+	protected void SmoothView(Human target, int sights, vector offset, vector angles, float fov, float timeSlice)
 	{
 		float yaw = SignedAngle(angles[0]);
 		float pitch = SignedAngle(angles[1]);
 		if (target != m_ViewTarget)
 		{
 			m_ViewTarget = target;
+			m_ViewSights = sights;
 			m_ViewYaw = yaw;
 			m_ViewPitch = pitch;
-			m_ViewOffset = offset;
-			m_ViewFOV = fov;
 			m_ViewYawVelocity[0] = 0;
 			m_ViewPitchVelocity[0] = 0;
-			m_ViewOffsetVelocityX[0] = 0;
-			m_ViewOffsetVelocityY[0] = 0;
-			m_ViewOffsetVelocityZ[0] = 0;
-			m_ViewFOVVelocity[0] = 0;
-			return;
+			m_SwitchWeight = 0;
+			m_SwitchWeightVelocity[0] = 0;
+		}
+		else if (sights == EBRSpectateSights.NONE)
+		{
+			// The yaw goes the short way round
+			float yawGoal = m_ViewYaw + SignedAngle(yaw - m_ViewYaw);
+			m_ViewYaw = SignedAngle(Math.SmoothCD(m_ViewYaw, yawGoal, m_ViewYawVelocity, VIEW_SMOOTH_TIME, 10000, timeSlice));
+			m_ViewPitch = Math.SmoothCD(m_ViewPitch, pitch, m_ViewPitchVelocity, VIEW_SMOOTH_TIME, 10000, timeSlice);
+		}
+		else
+		{
+			// Back at the eyes the smoothing starts from the sights' angles
+			m_ViewYaw = yaw;
+			m_ViewPitch = pitch;
+			m_ViewYawVelocity[0] = 0;
+			m_ViewPitchVelocity[0] = 0;
 		}
 
-		// The yaw goes the short way round
-		float yawGoal = m_ViewYaw + SignedAngle(yaw - m_ViewYaw);
-		m_ViewYaw = SignedAngle(Math.SmoothCD(m_ViewYaw, yawGoal, m_ViewYawVelocity, VIEW_SMOOTH_TIME, 10000, timeSlice));
-		m_ViewPitch = Math.SmoothCD(m_ViewPitch, pitch, m_ViewPitchVelocity, VIEW_SMOOTH_TIME, 10000, timeSlice);
-		m_ViewFOV = Math.SmoothCD(m_ViewFOV, fov, m_ViewFOVVelocity, SIGHTS_SMOOTH_TIME, 1000, timeSlice);
+		if (sights != m_ViewSights)
+		{
+			m_ViewSights = sights;
+			m_SwitchOffset = m_ShownOffset - offset;
+			m_SwitchYaw = SignedAngle(m_ShownYaw - m_ViewYaw);
+			m_SwitchPitch = m_ShownPitch - m_ViewPitch;
+			m_SwitchFOV = m_ShownFOV - fov;
+			m_SwitchWeight = 1;
+			m_SwitchWeightVelocity[0] = 0;
+		}
+		else if (m_SwitchWeight > 0)
+		{
+			m_SwitchWeight = Math.SmoothCD(m_SwitchWeight, 0, m_SwitchWeightVelocity, SIGHTS_SMOOTH_TIME, 1000, timeSlice);
+			if (m_SwitchWeight < 0.001)
+				m_SwitchWeight = 0;
+		}
 
-		float x = Math.SmoothCD(m_ViewOffset[0], offset[0], m_ViewOffsetVelocityX, SIGHTS_SMOOTH_TIME, 1000, timeSlice);
-		float y = Math.SmoothCD(m_ViewOffset[1], offset[1], m_ViewOffsetVelocityY, SIGHTS_SMOOTH_TIME, 1000, timeSlice);
-		float z = Math.SmoothCD(m_ViewOffset[2], offset[2], m_ViewOffsetVelocityZ, SIGHTS_SMOOTH_TIME, 1000, timeSlice);
-		m_ViewOffset = Vector(x, y, z);
+		m_ShownOffset = offset + m_SwitchOffset * m_SwitchWeight;
+		m_ShownYaw = SignedAngle(m_ViewYaw + m_SwitchYaw * m_SwitchWeight);
+		m_ShownPitch = m_ViewPitch + m_SwitchPitch * m_SwitchWeight;
+		m_ShownFOV = fov + m_SwitchFOV * m_SwitchWeight;
 	}
 
 	//! The angle in degrees between -180 and 180
