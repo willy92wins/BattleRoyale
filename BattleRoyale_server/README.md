@@ -257,6 +257,58 @@ message, and writes `Match end webhook sent` to its script log once Discord has 
 waits up to 10 more seconds for a message still on its way. A server that ran an earlier version gets the three
 fields, with an empty URL, added to its `server_settings.json` on its first start.
 
+### Leaderboard
+
+Players score points in every match: for each kill, and for their final position. The points are kept in
+`<profiles>/Vigrid-BattleRoyale/leaderboard.json`, next to `server_settings.json`, and the settings are in
+that same `server_settings.json`:
+
+```json
+"leaderboard_points_first": 10,
+"leaderboard_points_step": 2,
+"leaderboard_points_per_kill": 1,
+"leaderboard_wipe": "monthly",
+"leaderboard_webhook_url": ""
+```
+
+- `"leaderboard_points_first"` is what 1st place gets, `"leaderboard_points_step"` how much less each
+  later place gets (never below 0), and `"leaderboard_points_per_kill"` what each kill adds. With 10
+  and 2 the first five places get 10, 8, 6, 4, 2 points, plus 1 per kill with the default kill value.
+- A kill is the one the kill counter of the HUD counts. In teams, every player gets the points of the
+  position they held when they left the match (died or disconnected); the winners share 1st place.
+- `"leaderboard_wipe"` is `"monthly"` by default: the board starts over on the 1st of the month.
+  `"weekly"` starts over on Monday, `"yearly"` on 1 January, always by the server's local date. The
+  board that ends is kept next to it as `leaderboard_<period>.json`, and a `leaderboard.json` that
+  cannot be read is copied to `leaderboard.broken.json` instead of being overwritten.
+- Press T in game to show or hide the panel with the top 30 (position, name, points, kills, wins).
+  The key can be changed in the game's control settings, in the BATTLE ROYALE group. The panel takes
+  no input: the player keeps playing with it open.
+  It names the season and the time it has left, and a player outside the top 30 sees their own place
+  under the table.
+- `"leaderboard_webhook_url"` is a Discord webhook like the one above; empty (the default) posts
+  nothing. After a match, the server posts the top 30 there only if it changed since the last post
+  Discord accepted. Keep the URL private, as with the match end one.
+
+A server that ran an earlier version gets the new fields, with the defaults above, added to its
+`server_settings.json` on its first start.
+
+Each of the three point settings must be between 0 and 1000; a value outside that range is logged
+and its default is used. Saving is recoverable rather than atomic, and no write or copy is trusted
+until it has been read back: the new board is written to `leaderboard.json.new` and read back first,
+and only a `leaderboard.json` already known to be good (it loaded whole, or the last save read it
+back whole) is copied to `leaderboard.json.bak` and read back, so an unreadable main file never
+overwrites the backup. Then `leaderboard.json.new` is copied over `leaderboard.json` and read back;
+if that fails, the verified `leaderboard.json.new` is used on the next load. On load the first of
+`leaderboard.json`, `leaderboard.json.new` and `leaderboard.json.bak` that reads whole is used; when
+that is `leaderboard.json.new` or `leaderboard.json.bak`, the unreadable `leaderboard.json` is first
+copied to `leaderboard.broken.json` (or the next free `leaderboard.broken` name), then the recovered
+board is copied onto `leaderboard.json` and read back, so it lives in two places before any later
+save. When no file reads whole, every unreadable file is copied to a `leaderboard.broken` name and
+the board starts empty, or, if a copy fails, nothing is saved for the rest of that run. At a period
+change the board in memory is written straight to its `leaderboard_<period>.json` archive and read
+back before it is emptied; if that fails, the old board is kept and the match that just ended is not
+scored into it.
+
 ## 6. BattleRoyale settings
 
 On the first start the mod writes its settings to `<profiles>\Vigrid-BattleRoyale\`

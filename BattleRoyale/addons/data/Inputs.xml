@@ -10,6 +10,7 @@
             <input name="UADayZBRToggleCompass" loc="BR Compass Show/Hide" />
             <input name="UADayZBRToggleSilentMode" loc="STR_BR_INPUT_SILENT_MODE" />
             <input name="UADayZBRSpectate" loc="STR_BR_INPUT_SPECTATE" />
+            <input name="UADayZBRToggleLeaderboard" loc="STR_BR_INPUT_LEADERBOARD" />
         </actions>
 
         <sorting name="dayzbr" loc="BATTLE ROYALE">
@@ -21,6 +22,7 @@
             <input name="UADayZBRToggleCompass" />
             <input name="UADayZBRToggleSilentMode" />
             <input name="UADayZBRSpectate" />
+            <input name="UADayZBRToggleLeaderboard" />
         </sorting>
     </inputs>
     <preset>
@@ -44,6 +46,9 @@
         </input>
         <input name="UADayZBRSpectate">
             <btn name="kV" />
+        </input>
+        <input name="UADayZBRToggleLeaderboard">
+            <btn name="kT" />
         </input>
     </preset>
 </modded_inputs>

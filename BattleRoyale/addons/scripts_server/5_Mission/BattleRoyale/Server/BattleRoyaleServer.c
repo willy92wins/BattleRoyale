@@ -20,6 +20,13 @@ class BattleRoyaleServer: BattleRoyaleBase
     protected float m_MatchStartTime;
     protected ref map<string, int> m_MatchKills = new map<string, int>;
 
+    //! The match in progress, for the leaderboard: participants (plain id to name) and the final position
+    //! of each one who left it, both noted as the match runs and scored when it ends
+    protected ref map<string, string> m_MatchParticipants = new map<string, string>;
+    protected ref map<string, int> m_MatchPositions = new map<string, int>;
+    //! identity id -> tick time of the last accepted leaderboard request
+    protected ref map<string, float> m_LastLeaderboardRequest;
+
     void BattleRoyaleServer()
     {
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "PlayerReadyUp", this);
@@ -27,6 +34,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "SpectateCycle", this);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "SpectatorToLobby", this);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "WaitingToSpectator", this);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "RequestLeaderboard", this);
 #ifdef VPPADMINTOOLS
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "NextState", this, SingleplayerExecutionType.Server);
 #endif
@@ -89,6 +97,10 @@ class BattleRoyaleServer: BattleRoyaleBase
         BattleRoyaleSpawnsData spawnsData = config_data.GetSpawnsData();
         if (spawnsData)
             ActionBase.BR_SetLobbyArea(spawnsData.spawn_point, spawnsData.radius);
+
+        // The leaderboard of the current period is read before the first match can score into it
+        BRLeaderboard.Get().Load();
+        BRLeaderboard.Get().EnsurePeriod(m_ServerData.leaderboard_wipe);
 
         BRMatchDebris.s_Enabled = m_ServerData.UsesSerialMatches();
         if (BRMatchDebris.s_Enabled)
@@ -751,6 +763,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 					GetCurrentState().Activate(); //activate new state
 					NotifyStatsWebhook(GetCurrentState());
 					NotifyMatchEndWebhook(GetCurrentState());
+					NotifyLeaderboard(GetCurrentState());
 				}
 				else
 				{
@@ -1139,6 +1152,22 @@ class BattleRoyaleServer: BattleRoyaleBase
                 m_MatchStartPlayers = state.GetPlayers().Count();
             m_MatchStartTime = GetGame().GetTickTime();
             m_MatchKills.Clear();
+
+            // The leaderboard scores everyone who starts the match, under the name they start it with
+            m_MatchParticipants.Clear();
+            m_MatchPositions.Clear();
+            if (m_LastLeaderboardRequest)
+                m_LastLeaderboardRequest.Clear();
+            array<PlayerBase> starters = state.GetPlayers();
+            if (starters)
+            {
+                for (int p = 0; p < starters.Count(); p++)
+                {
+                    PlayerBase participant = starters[p];
+                    if (participant && participant.GetIdentity())
+                        m_MatchParticipants.Set(participant.GetIdentity().GetPlainId(), participant.GetIdentity().GetName());
+                }
+            }
             return;
         }
 
@@ -1179,6 +1208,167 @@ class BattleRoyaleServer: BattleRoyaleBase
         BRMatchEndWebhook.Send(serverData.match_end_webhook_url, BRMatchEndWebhook.BuildMessage(messageFormat, winners, kills, m_MatchStartPlayers, minutes));
     }
 
+    //! Notes the final position of a participant who just left the match: the state has already removed
+    //! them, so GetBRPosition still holds the count from before the removal, themselves included
+    protected void NoteMatchPosition(PlayerBase player)
+    {
+        if (!player || !m_States)
+            return;
+
+        if (i_CurrentStateIndex <= 2 || i_CurrentStateIndex >= m_States.Count() - 2)
+            return;
+
+        string steamid = player.player_steamid;
+        if (steamid == "" || !m_MatchParticipants.Contains(steamid) || m_MatchPositions.Contains(steamid))
+            return;
+
+        int position = player.GetBRPosition();
+        if (position > 0)
+            m_MatchPositions.Set(steamid, position);
+    }
+
+    //! Scores the finished match into the leaderboard when the win state is entered, and posts the top 30
+    //! to the leaderboard webhook when it changed since the last post Discord accepted
+    protected void NotifyLeaderboard(BattleRoyaleState state)
+    {
+        if (!state || state.GetName() != "Win State")
+            return;
+
+        BattleRoyaleServerData serverData = BattleRoyaleConfig.GetConfig().GetServerData();
+        if (!serverData)
+            return;
+
+        // Whoever is left in the win state won: in a team, every member of the winning team. Only this
+        // set counts a win; a participant who died last keeps position 1 points without a win
+        array<string> winnerIds = new array<string>;
+        array<PlayerBase> winners = state.GetPlayers();
+        if (winners)
+        {
+            for (int w = 0; w < winners.Count(); w++)
+            {
+                PlayerBase winner = winners[w];
+                if (winner && winner.GetIdentity() && m_MatchParticipants.Contains(winner.GetIdentity().GetPlainId()))
+                {
+                    winnerIds.Insert(winner.GetIdentity().GetPlainId());
+                    m_MatchPositions.Set(winner.GetIdentity().GetPlainId(), 1);
+                }
+            }
+        }
+
+        BRLeaderboard leaderboard = BRLeaderboard.Get();
+        if (!leaderboard.EnsurePeriod(serverData.leaderboard_wipe))
+        {
+            Error("[Leaderboard] The finished match was not applied to the leaderboard because its period could not be rotated; the standings of the previous period were kept unchanged");
+            return;
+        }
+
+        if (m_MatchParticipants.Count() > 0)
+        {
+            array<string> resultIds = new array<string>;
+            array<string> resultNames = new array<string>;
+            array<int> resultPoints = new array<int>;
+            array<int> resultKills = new array<int>;
+            array<bool> resultWon = new array<bool>;
+
+            foreach (string plainId, string participantName : m_MatchParticipants)
+            {
+                int matchKills = 0;
+                m_MatchKills.Find(plainId, matchKills);
+
+                int position = 0;
+                m_MatchPositions.Find(plainId, position);
+
+                int points = 0;
+                if (serverData.leaderboard_points_per_kill > 0 && matchKills > int.MAX / serverData.leaderboard_points_per_kill)
+                    points = int.MAX;
+                else
+                    points = matchKills * serverData.leaderboard_points_per_kill;
+
+                if (position >= 1)
+                {
+                    int positionPoints = Math.Max(0, serverData.leaderboard_points_first - serverData.leaderboard_points_step * (position - 1));
+                    if (points > int.MAX - positionPoints)
+                        points = int.MAX;
+                    else
+                        points = points + positionPoints;
+                }
+
+                resultIds.Insert(plainId);
+                resultNames.Insert(participantName);
+                resultPoints.Insert(points);
+                resultKills.Insert(matchKills);
+                resultWon.Insert(winnerIds.Find(plainId) >= 0);
+            }
+
+            leaderboard.ApplyMatch(resultIds, resultNames, resultPoints, resultKills, resultWon);
+        }
+
+        if (serverData.leaderboard_webhook_url != "")
+        {
+            string topText = leaderboard.BuildTopText(BRLeaderboard.TOP_COUNT, serverData.leaderboard_wipe);
+            if (topText != "" && topText != leaderboard.GetLastPosted())
+                BRDiscordWebhook.Post(serverData.leaderboard_webhook_url, topText, new BRLeaderboardWebhookCallback(topText));
+        }
+    }
+
+    //! A client asks for the leaderboard: the cached top 30 goes back to that client alone, at most
+    //! one answer every 2 s per identity. No plain ids and no webhook URL leave the server
+    void RequestLeaderboard(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server || !sender)
+            return;
+
+        string requestId = sender.GetId();
+        float requestNow = GetGame().GetTickTime();
+        if (!m_LastLeaderboardRequest)
+            m_LastLeaderboardRequest = new map<string, float>;
+        if (m_LastLeaderboardRequest.Contains(requestId) && requestNow - m_LastLeaderboardRequest.Get(requestId) < 2.0)
+            return;
+        m_LastLeaderboardRequest.Set(requestId, requestNow);
+
+        BattleRoyaleServerData lbServerData = BattleRoyaleConfig.GetConfig().GetServerData();
+        if (!lbServerData)
+            return;
+
+        BRLeaderboard lb = BRLeaderboard.Get();
+        // One coherent clock reading for the whole answer: the rotation check, the season
+        // and the counter below all share it, so they cannot straddle midnight
+        int nowYear;
+        int nowMonth;
+        int nowDay;
+        int nowHour;
+        int nowMinute;
+        int nowSecond;
+        BRLeaderboard.CaptureNow(nowYear, nowMonth, nowDay, nowHour, nowMinute, nowSecond);
+        lb.EnsurePeriodForDate(lbServerData.leaderboard_wipe, nowYear, nowMonth, nowDay);
+
+        // The requester's own standing in the full sorted list: one linear scan, O(players), no sort
+        int selfRank;
+        int selfPoints;
+        int selfKills;
+        int selfWins;
+        lb.FindStanding(sender.GetPlainId(), selfRank, selfPoints, selfKills, selfWins);
+        array<int> lbSelf = new array<int>;
+        lbSelf.Insert(selfRank);
+        lbSelf.Insert(selfPoints);
+        lbSelf.Insert(selfKills);
+        lbSelf.Insert(selfWins);
+
+        // The season and the counter come from the period stored in the leaderboard (which
+        // stays on the previous period when rotation failed), never from today alone, so
+        // self, the table, the label, the season and the counter name the same period
+        string seasonStart;
+        string seasonEnd;
+        int lbSecondsLeft;
+        BRLeaderboard.SeasonForPeriod(lb.GetPeriod(), nowYear, nowMonth, nowDay, nowHour, nowMinute, nowSecond, seasonStart, seasonEnd, lbSecondsLeft);
+        array<string> lbSeason = new array<string>;
+        lbSeason.Insert(seasonStart);
+        lbSeason.Insert(seasonEnd);
+
+        Param9<string, string, array<string>, array<int>, array<int>, array<int>, array<int>, array<string>, int> lbData = new Param9<string, string, array<string>, array<int>, array<int>, array<int>, array<int>, array<string>, int>(lbServerData.leaderboard_wipe, BRLeaderboard.PeriodLabel(lb.GetPeriod()), lb.GetTopNames(), lb.GetTopPoints(), lb.GetTopKills(), lb.GetTopWins(), lbSelf, lbSeason, lbSecondsLeft);
+        GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "LeaderboardData", lbData, true, sender);
+    }
+
     void OnPlayerDisconnect(PlayerBase player, PlayerIdentity identity)
     {
 		if ( GetCurrentState().ContainsPlayer(player) )
@@ -1194,6 +1384,9 @@ class BattleRoyaleServer: BattleRoyaleBase
 
                         PlayerBase killer = PlayerBase.Cast( player.last_unconscious_source );
                         GetCurrentState().OnPlayerKilled( player, killer );
+                        // The state already removed the player, so this is the only chance to note
+                        // their position: the later death and disconnect no longer find them
+                        NoteMatchPosition(player);
                     } else {
                         BattleRoyaleUtils.Info("Player " + player.BR_GetPlayerName() + " disconnected while unconscious, but the last damage source is not a player.");
                     }
@@ -1219,6 +1412,8 @@ class BattleRoyaleServer: BattleRoyaleBase
             CancelLateJoinKick(identity.GetPlainId());
             if (m_LastLobbyRequest)
                 m_LastLobbyRequest.Remove(identity.GetId());
+            if (m_LastLeaderboardRequest)
+                m_LastLeaderboardRequest.Remove(identity.GetId());
         }
 
         if(GetCurrentState().ContainsPlayer(player))
@@ -1228,6 +1423,7 @@ class BattleRoyaleServer: BattleRoyaleBase
                 GetCurrentState().OnPlayerDisconnected(player);
 
             GetCurrentState().RemovePlayer(player);
+            NoteMatchPosition(player);
         }
 
         // Also when the state already removed the player (killed while unconscious on disconnect)
@@ -1256,6 +1452,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 
             //remove player from the state (this would take place in on-disconnect, but some players would choose not to disconnect)
             GetCurrentState().RemovePlayer(killed);
+            NoteMatchPosition(killed);
 
             // Dead players of a running match watch the ones still alive; with spectating off they wait in the lobby
             if (m_Spectators && IsSpectatingPhase())
