@@ -40,6 +40,12 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected float m_PivotHeight;
 	protected float m_PivotHeightVelocity[1];
 	protected static const float PIVOT_SMOOTH_TIME = 0.25;
+	//! Distance of the orbit from its centre, as far as obstacles let it be, going back out over ORBIT_OUT_SMOOTH_TIME
+	protected static const float ORBIT_DISTANCE = 3.0;
+	protected static const float ORBIT_OUT_SMOOTH_TIME = 0.3;
+	protected Human m_OrbitDistanceTarget;
+	protected float m_OrbitDistance;
+	protected float m_OrbitDistanceVelocity[1];
 	protected int m_HeadBoneIndex = -1;
 	protected string m_HeadBoneTargetType;
 	protected Human m_HeadBoneTarget;
@@ -592,31 +598,29 @@ class BattleRoyaleSpectatorCamera: Camera
 		vector pivot = target.GetPosition() + Vector(0, m_PivotHeight, 0);
 		vector angles = Vector(m_OrbitYaw, m_OrbitPitch, 0);
 		vector forward = angles.AnglesToVector();
-		vector desired = pivot - forward * 3.0;
+		vector desired = pivot - forward * ORBIT_DISTANCE;
 
-		// Keep the camera in front of walls and terrain between it and the player. While the height eases to a new
-		// stance, an obstacle in the way of the eased orbit only is skipped: the orbit takes the new stance's at once
+		// Keep the camera in front of walls and terrain between it and the player: it comes in at once and goes back
+		// out smoothly, so that an obstacle met for a moment does not throw it in and out
 		vector hitPosition;
 		vector hitNormal;
 		float hitFraction;
 		Object hitObject;
+		float distance = ORBIT_DISTANCE;
 		if (DayZPhysics.RayCastBullet(pivot, desired, BlockingLayers(), target, hitObject, hitPosition, hitNormal, hitFraction))
+			distance = Math.Max(vector.Distance(pivot, hitPosition) - 0.2, 0);
+
+		if (target != m_OrbitDistanceTarget || distance < m_OrbitDistance)
 		{
-			vector stanceHit = hitPosition;
-			float stanceHeight = PivotHeight(target);
-			vector stancePivot = target.GetPosition() + Vector(0, stanceHeight, 0);
-			vector stanceDesired = stancePivot - forward * 3.0;
-			if (Math.AbsFloat(stanceHeight - m_PivotHeight) > 0.01 && !DayZPhysics.RayCastBullet(stancePivot, stanceDesired, BlockingLayers(), target, hitObject, hitPosition, hitNormal, hitFraction))
-			{
-				m_PivotHeight = stanceHeight;
-				m_PivotHeightVelocity[0] = 0;
-				desired = stanceDesired;
-			}
-			else
-			{
-				desired = stanceHit + forward * 0.2;
-			}
+			m_OrbitDistanceTarget = target;
+			m_OrbitDistance = distance;
+			m_OrbitDistanceVelocity[0] = 0;
 		}
+		else
+		{
+			m_OrbitDistance = Math.SmoothCD(m_OrbitDistance, distance, m_OrbitDistanceVelocity, ORBIT_OUT_SMOOTH_TIME, 1000, timeSlice);
+		}
+		desired = pivot - forward * m_OrbitDistance;
 
 		SetPosition(desired);
 		SetOrientation(angles);
