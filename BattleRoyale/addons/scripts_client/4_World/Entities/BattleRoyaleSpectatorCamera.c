@@ -267,8 +267,10 @@ class BattleRoyaleSpectatorCamera: Camera
 			vector hitNormal;
 			float hitFraction;
 			Object hitObject;
+			// Along the move, and from the view ahead to its near plane
 			vector rayEnd = shown + moved.Normalized() * NEAR_PLANE_EYES;
-			if (DayZPhysics.RayCastBullet(headEyes, rayEnd, BlockingLayers(), target, hitObject, hitPosition, hitNormal, hitFraction))
+			vector ahead = shown + Vector(m_ShownYaw, m_ShownPitch, 0).AnglesToVector() * NEAR_PLANE_EYES;
+			if (DayZPhysics.RayCastBullet(headEyes, rayEnd, BlockingLayers(), target, hitObject, hitPosition, hitNormal, hitFraction) || DayZPhysics.RayCastBullet(shown, ahead, BlockingLayers(), target, hitObject, hitPosition, hitNormal, hitFraction))
 			{
 				shown = headEyes;
 				m_ShownOffset = headEyes - eyes;
@@ -592,13 +594,29 @@ class BattleRoyaleSpectatorCamera: Camera
 		vector forward = angles.AnglesToVector();
 		vector desired = pivot - forward * 3.0;
 
-		// Keep the camera in front of walls and terrain between it and the player
+		// Keep the camera in front of walls and terrain between it and the player. While the height eases to a new
+		// stance, an obstacle in the way of the eased orbit only is skipped: the orbit takes the new stance's at once
 		vector hitPosition;
 		vector hitNormal;
 		float hitFraction;
 		Object hitObject;
 		if (DayZPhysics.RayCastBullet(pivot, desired, BlockingLayers(), target, hitObject, hitPosition, hitNormal, hitFraction))
-			desired = hitPosition + forward * 0.2;
+		{
+			vector stanceHit = hitPosition;
+			float stanceHeight = PivotHeight(target);
+			vector stancePivot = target.GetPosition() + Vector(0, stanceHeight, 0);
+			vector stanceDesired = stancePivot - forward * 3.0;
+			if (Math.AbsFloat(stanceHeight - m_PivotHeight) > 0.01 && !DayZPhysics.RayCastBullet(stancePivot, stanceDesired, BlockingLayers(), target, hitObject, hitPosition, hitNormal, hitFraction))
+			{
+				m_PivotHeight = stanceHeight;
+				m_PivotHeightVelocity[0] = 0;
+				desired = stanceDesired;
+			}
+			else
+			{
+				desired = stanceHit + forward * 0.2;
+			}
+		}
 
 		SetPosition(desired);
 		SetOrientation(angles);
