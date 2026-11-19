@@ -6,7 +6,8 @@
 //! player's own. Third person orbits behind the player with the mouse. The vanilla person view key switches between them.
 class BattleRoyaleSpectatorCamera: Camera
 {
-	static bool s_ThirdPerson;
+	//! Spectating starts in third person; the vanilla person view key switches to first person and back
+	static bool s_ThirdPerson = true;
 
 	//! Eyes in the head bone's frame (x up, y forward), where the vanilla first person camera sits (DayZPlayerCamera1stPerson)
 	protected static const float EYE_UP = 0.04;
@@ -18,8 +19,10 @@ class BattleRoyaleSpectatorCamera: Camera
 	//! Seconds between two refreshes of the hidden head, so that a helmet put on meanwhile is hidden too
 	protected static const float HEAD_REFRESH_SECONDS = 1.0;
 	//! Smoothing times, in seconds, of the first person view: from the eyes its angles follow the watched player's aim,
-	//! which reaches this client in steps, and the view moves over between the eyes and the sights
-	protected static const float VIEW_SMOOTH_TIME = 0.08;
+	//! which reaches this client in steps, the eyes follow the head without its bobbing, and the view moves over between
+	//! the eyes and the sights
+	protected static const float VIEW_SMOOTH_TIME = 0.15;
+	protected static const float EYES_SMOOTH_TIME = 0.2;
 	protected static const float SIGHTS_SMOOTH_TIME = 0.1;
 
 	protected float m_UpdateAccumulator;
@@ -51,6 +54,11 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected float m_SwitchFOV;
 	protected float m_SwitchWeight;
 	protected float m_SwitchWeightVelocity[1];
+	//! Eyes relative to the watched player's position, smoothed so that the view does not bob with the head
+	protected vector m_EyesOffset;
+	protected float m_EyesVelocityX[1];
+	protected float m_EyesVelocityY[1];
+	protected float m_EyesVelocityZ[1];
 
 	//! Optic of the watched player shown as its owner sees it, and every entity of the watched player's clothing hidden
 	//! for it, until LeaveOptics
@@ -215,7 +223,7 @@ class BattleRoyaleSpectatorCamera: Camera
 
 		vector head[4];
 		target.GetBoneTransformWS(m_HeadBoneIndex, head);
-		vector eyes = head[3] + head[0] * EYE_UP + head[1] * EYE_FORWARD;
+		vector eyes = StableEyes(target, head[3] + head[0] * EYE_UP + head[1] * EYE_FORWARD, timeSlice);
 
 		vector position;
 		vector angles;
@@ -243,6 +251,28 @@ class BattleRoyaleSpectatorCamera: Camera
 
 		// Third person starts behind the player when switching
 		m_OrbitYaw = m_ShownYaw;
+	}
+
+	//! The eyes without the head's bobbing: their place relative to the watched player's position is smoothed. A new
+	//! watched player is taken at once (SmoothView changes m_ViewTarget after this)
+	protected vector StableEyes(Human target, vector eyes, float timeSlice)
+	{
+		vector origin = target.GetPosition();
+		vector offset = eyes - origin;
+		if (target != m_ViewTarget)
+		{
+			m_EyesOffset = offset;
+			m_EyesVelocityX[0] = 0;
+			m_EyesVelocityY[0] = 0;
+			m_EyesVelocityZ[0] = 0;
+			return eyes;
+		}
+
+		float x = Math.SmoothCD(m_EyesOffset[0], offset[0], m_EyesVelocityX, EYES_SMOOTH_TIME, 1000, timeSlice);
+		float y = Math.SmoothCD(m_EyesOffset[1], offset[1], m_EyesVelocityY, EYES_SMOOTH_TIME, 1000, timeSlice);
+		float z = Math.SmoothCD(m_EyesOffset[2], offset[2], m_EyesVelocityZ, EYES_SMOOTH_TIME, 1000, timeSlice);
+		m_EyesOffset = Vector(x, y, z);
+		return origin + m_EyesOffset;
 	}
 
 	//! Works out the view shown from the one wanted (its place relative to the eyes, angles and field of view): from the
