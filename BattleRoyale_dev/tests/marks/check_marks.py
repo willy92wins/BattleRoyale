@@ -4,19 +4,24 @@ Timestamps come from parse_timings.iter_script_lines (LINE_TS_RE: HH:MM:SS.mmm
 at the start of a line). This file does not change that parser.
 
 Spec JSON: {"marks": [{"name": "...", "contains": "substring",
-  "after": "other-name", "delay_seconds": 60, "tolerance_seconds": 1}]}
+  "after": "other-name", "delay_seconds": 60, "tolerance_seconds": 1,
+  "occurrence": "unique"}]}
 "after" is optional. When set, this mark's stamp must sit within
 delay_seconds +/- tolerance_seconds of that earlier mark.
+"occurrence" is "unique" (default), "first" or "last". A needle that appears
+more than once is an error unless the spec names first or last.
+Times are compared in whole milliseconds. A tolerance that is not a finite
+number, and a spec with no marks, are errors.
 
     python -I BattleRoyale_dev/tests/marks/check_marks.py --log <script.log> --spec <spec.json>
 
 Exit 0 when every mark is present, in order, and inside its window.
-Exit 1 when one is missing, out of order, or outside the window. The failing
-mark name is printed.
+Exit 1 otherwise. The failing mark name and the reason are printed.
 """
 
 import argparse
 import json
+import math
 import os
 import sys
 
@@ -36,42 +41,79 @@ def load_events(path):
     return events
 
 
+def _delta_ms(later, earlier):
+    # parse_timings datetimes already follow a midnight crossing. The log resolution is 1 ms.
+    return int(round((later - earlier).total_seconds() * 1000.0))
+
+
+def _finite_number(value):
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        try:
+            value = float(value)
+        except ValueError:
+            return None
+    if isinstance(value, (int, float)) and math.isfinite(value):
+        return float(value)
+    return None
+
+
 def check(events, spec):
-    marks = spec.get("marks") or []
+    if not isinstance(spec, dict):
+        return "empty spec"
+    marks = spec.get("marks")
+    if not marks:
+        return "empty spec"
     found = {}
     cursor = 0
+    previous = None
     for mark in marks:
-        name = mark["name"]
-        needle = mark["contains"]
-        hit = None
-        for index in range(cursor, len(events)):
+        name = mark.get("name", "?")
+        needle = mark.get("contains")
+        if not needle:
+            return "missing needle: %s" % name
+        occurrence = mark.get("occurrence", "unique")
+        if occurrence not in ("unique", "first", "last"):
+            return "bad occurrence: %s" % name
+        hits = []
+        for index in range(len(events)):
             _number, stamp, text = events[index]
             if needle in text:
-                hit = (index, stamp, text)
-                break
-        if hit is None:
-            earlier = None
-            for index in range(0, cursor):
-                if needle in events[index][2]:
-                    earlier = index
-                    break
-            if earlier is not None:
-                return "out of order: %s" % name
+                hits.append((index, stamp))
+        if not hits:
             return "missing: %s" % name
-        index, stamp, _text = hit
+        if occurrence == "unique" and len(hits) != 1:
+            return "ambiguous: %s" % name
+        if occurrence == "last":
+            index, stamp = hits[-1]
+        elif occurrence == "first":
+            index, stamp = hits[0]
+        else:
+            index, stamp = hits[0]
+        if index < cursor:
+            return "out of order: %s" % name
         if stamp is None:
             return "missing timestamp: %s" % name
+        if previous is not None and stamp < previous:
+            return "out of time order: %s" % name
         cursor = index + 1
         found[name] = stamp
+        previous = stamp
         if "after" in mark:
             origin = found.get(mark["after"])
             if origin is None:
                 return "missing reference: %s" % name
-            delay = float(mark.get("delay_seconds", 0))
-            tolerance = float(mark.get("tolerance_seconds", 0))
-            delta = (stamp - origin).total_seconds()
-            if abs(delta - delay) > tolerance:
-                return "out of time: %s (delta %s s, want %s +/- %s)" % (name, delta, delay, tolerance)
+            delay = _finite_number(mark.get("delay_seconds", 0))
+            tolerance = _finite_number(mark.get("tolerance_seconds", 0))
+            if delay is None or tolerance is None:
+                return "non-finite tolerance: %s" % name
+            # Whole milliseconds. 60.100 s against 60 +/- 0.1 s is 100 ms, on the boundary, and passes.
+            delta_ms = _delta_ms(stamp, origin)
+            delay_ms = int(round(delay * 1000.0))
+            tolerance_ms = int(round(tolerance * 1000.0))
+            if abs(delta_ms - delay_ms) > tolerance_ms:
+                return "out of time: %s (delta %s ms, want %s +/- %s ms)" % (name, delta_ms, delay_ms, tolerance_ms)
     return None
 
 

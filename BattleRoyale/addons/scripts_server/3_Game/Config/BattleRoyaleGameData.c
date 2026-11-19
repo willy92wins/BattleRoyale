@@ -111,6 +111,36 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 			if (!JsonFileLoader<BattleRoyaleGameData>.LoadFile(GetMissionPath(), this, errorMessage))
 				ErrorEx(errorMessage);
 		}
+		// A mission file is applied onto the already-upgraded object and may carry an older version.
+		// The effective object stays on version 3; the profile was already saved by Upgrade().
+		if (version < 3)
+			version = 3;
+	}
+
+	// Mission file text, so a rejected value can name the file that set it.
+	// Reading it here keeps the extra state off the serialized fields.
+	protected string ReadMissionText()
+	{
+		string path = GetMissionPath();
+		string raw = "";
+		if (path == "" || !FileExist(path))
+			return raw;
+		FileHandle handle = OpenFile(path, FileMode.READ);
+		if (!handle)
+			return raw;
+		string line;
+		while (FGets(handle, line) > 0)
+			raw = raw + line + " ";
+		CloseFile(handle);
+		return raw;
+	}
+
+	protected string SettingFile(string missionText, string field)
+	{
+		string needle = "\"" + field + "\"";
+		if (missionText != "" && missionText.Contains(needle))
+			return "mission:" + GetMissionPath();
+		return "profile:" + GetProfilePath();
 	}
 
 	override void Save()
@@ -150,111 +180,119 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 	override void Validate()
 	{
 		BattleRoyaleGameData defaults = new BattleRoyaleGameData;
+		string missionText = ReadMissionText();
 
 		// The client leaves 15 s after its death unless spectating has started by then
 		if (spectator_delay_seconds < 0 || spectator_delay_seconds > 10)
 		{
-			LogInvalidSetting("general_settings.json", "spectator_delay_seconds", spectator_delay_seconds.ToString(), "must be between 0 and 10");
+			LogInvalidSetting(SettingFile(missionText, "spectator_delay_seconds"), "spectator_delay_seconds", spectator_delay_seconds.ToString(), "must be between 0 and 10");
 			spectator_delay_seconds = defaults.spectator_delay_seconds;
 		}
 
 		if (time_until_teleport_unlock < 0)
 		{
-			LogInvalidSetting("general_settings.json", "time_until_teleport_unlock", time_until_teleport_unlock.ToString(), "must not be negative");
+			LogInvalidSetting(SettingFile(missionText, "time_until_teleport_unlock"), "time_until_teleport_unlock", time_until_teleport_unlock.ToString(), "must not be negative");
 			time_until_teleport_unlock = defaults.time_until_teleport_unlock;
 		}
 
 		// The first zone starts (60 * round_duration_minutes) / 2 seconds after the start match state, which then stops the unlock timer
 		if (round_duration_minutes < 1 || (60 * round_duration_minutes) / 2 <= time_until_teleport_unlock)
 		{
-			LogInvalidSetting("general_settings.json", "round_duration_minutes / time_until_teleport_unlock", round_duration_minutes.ToString() + " / " + time_until_teleport_unlock.ToString(), "round_duration_minutes >= 1 and (60 * round_duration_minutes) / 2 > time_until_teleport_unlock");
+			LogInvalidSetting(SettingFile(missionText, "round_duration_minutes"), "round_duration_minutes / time_until_teleport_unlock", round_duration_minutes.ToString() + " / " + time_until_teleport_unlock.ToString(), "round_duration_minutes >= 1 and (60 * round_duration_minutes) / 2 > time_until_teleport_unlock");
 			round_duration_minutes = defaults.round_duration_minutes;
 			time_until_teleport_unlock = defaults.time_until_teleport_unlock;
 		}
 
 		if (spawn_selection_duration < 1)
 		{
-			LogInvalidSetting("general_settings.json", "spawn_selection_duration", spawn_selection_duration.ToString(), "must be positive");
+			LogInvalidSetting(SettingFile(missionText, "spawn_selection_duration"), "spawn_selection_duration", spawn_selection_duration.ToString(), "must be positive");
 			spawn_selection_duration = defaults.spawn_selection_duration;
 		}
 
 		if (spawn_selection_extra_time < 0)
 		{
-			LogInvalidSetting("general_settings.json", "spawn_selection_extra_time", spawn_selection_extra_time.ToString(), "must not be negative");
+			LogInvalidSetting(SettingFile(missionText, "spawn_selection_extra_time"), "spawn_selection_extra_time", spawn_selection_extra_time.ToString(), "must not be negative");
 			spawn_selection_extra_time = defaults.spawn_selection_extra_time;
 		}
 
 		if (spawn_selection_radius <= 0)
 		{
-			LogInvalidSetting("general_settings.json", "spawn_selection_radius", spawn_selection_radius.ToString(), "must be positive");
+			LogInvalidSetting(SettingFile(missionText, "spawn_selection_radius"), "spawn_selection_radius", spawn_selection_radius.ToString(), "must be positive");
 			spawn_selection_radius = defaults.spawn_selection_radius;
 		}
 
 		if (debug_heal_tick_seconds < 1)
 		{
-			LogInvalidSetting("general_settings.json", "debug_heal_tick_seconds", debug_heal_tick_seconds.ToString(), "must be positive");
+			LogInvalidSetting(SettingFile(missionText, "debug_heal_tick_seconds"), "debug_heal_tick_seconds", debug_heal_tick_seconds.ToString(), "must be positive");
 			debug_heal_tick_seconds = defaults.debug_heal_tick_seconds;
 		}
 
 		if (zone_damage_tick_seconds < 1)
 		{
-			LogInvalidSetting("general_settings.json", "zone_damage_tick_seconds", zone_damage_tick_seconds.ToString(), "must be positive");
+			LogInvalidSetting(SettingFile(missionText, "zone_damage_tick_seconds"), "zone_damage_tick_seconds", zone_damage_tick_seconds.ToString(), "must be positive");
 			zone_damage_tick_seconds = defaults.zone_damage_tick_seconds;
 		}
 
 		if (plane_speed_mps < 40 || plane_speed_mps > 200)
 		{
-			LogInvalidSetting("general_settings.json", "plane_speed_mps", plane_speed_mps.ToString(), "must be between 40 and 200");
+			LogInvalidSetting(SettingFile(missionText, "plane_speed_mps"), "plane_speed_mps", plane_speed_mps.ToString(), "must be between 40 and 200");
 			plane_speed_mps = defaults.plane_speed_mps;
 		}
 
-		if (plane_min_altitude_m < 400 || plane_min_altitude_m > 2000)
-		{
-			LogInvalidSetting("general_settings.json", "plane_min_altitude_m", plane_min_altitude_m.ToString(), "must be between 400 and 2000");
-			plane_min_altitude_m = defaults.plane_min_altitude_m;
-		}
-
-		if (plane_max_altitude_m < 400 || plane_max_altitude_m > 2500)
-		{
-			LogInvalidSetting("general_settings.json", "plane_max_altitude_m", plane_max_altitude_m.ToString(), "must be between 400 and 2500");
-			plane_max_altitude_m = defaults.plane_max_altitude_m;
-		}
-
-		// One log resets both. Range checks above already ran, so a pair that is merely inverted logs once.
+		// An inverted pair, including one side outside its own range (3000/1000), is one log and both defaults.
+		// Per-field range logs run only when min < max, so they cannot hide the pair.
 		if (plane_min_altitude_m >= plane_max_altitude_m)
 		{
-			LogInvalidSetting("general_settings.json", "plane_min_altitude_m / plane_max_altitude_m", plane_min_altitude_m.ToString() + " / " + plane_max_altitude_m.ToString(), "plane_min_altitude_m must be lower than plane_max_altitude_m");
+			string pairFile = SettingFile(missionText, "plane_min_altitude_m");
+			if (missionText != "" && missionText.Contains("\"plane_max_altitude_m\""))
+				pairFile = SettingFile(missionText, "plane_max_altitude_m");
+			LogInvalidSetting(pairFile, "plane_min_altitude_m / plane_max_altitude_m", plane_min_altitude_m.ToString() + " / " + plane_max_altitude_m.ToString(), "plane_min_altitude_m must be lower than plane_max_altitude_m");
 			plane_min_altitude_m = defaults.plane_min_altitude_m;
 			plane_max_altitude_m = defaults.plane_max_altitude_m;
+		}
+		else
+		{
+			if (plane_min_altitude_m < 400 || plane_min_altitude_m > 2000)
+			{
+				LogInvalidSetting(SettingFile(missionText, "plane_min_altitude_m"), "plane_min_altitude_m", plane_min_altitude_m.ToString(), "must be between 400 and 2000");
+				plane_min_altitude_m = defaults.plane_min_altitude_m;
+			}
+
+			if (plane_max_altitude_m < 400 || plane_max_altitude_m > 2500)
+			{
+				LogInvalidSetting(SettingFile(missionText, "plane_max_altitude_m"), "plane_max_altitude_m", plane_max_altitude_m.ToString(), "must be between 400 and 2500");
+				plane_max_altitude_m = defaults.plane_max_altitude_m;
+			}
 		}
 
 		if (plane_edge_margin_m < 100 || plane_edge_margin_m > 3000)
 		{
-			LogInvalidSetting("general_settings.json", "plane_edge_margin_m", plane_edge_margin_m.ToString(), "must be between 100 and 3000");
+			LogInvalidSetting(SettingFile(missionText, "plane_edge_margin_m"), "plane_edge_margin_m", plane_edge_margin_m.ToString(), "must be between 100 and 3000");
 			plane_edge_margin_m = defaults.plane_edge_margin_m;
 		}
 
 		if (plane_path_max_zone_distance < 0 || plane_path_max_zone_distance > 3)
 		{
-			LogInvalidSetting("general_settings.json", "plane_path_max_zone_distance", plane_path_max_zone_distance.ToString(), "must be between 0 and 3");
+			LogInvalidSetting(SettingFile(missionText, "plane_path_max_zone_distance"), "plane_path_max_zone_distance", plane_path_max_zone_distance.ToString(), "must be between 0 and 3");
 			plane_path_max_zone_distance = defaults.plane_path_max_zone_distance;
 		}
 
+		// Equality with min - 100 is rejected. Enforce float is binary32; the mirror rounds the same way.
 		if (parachute_auto_open_agl_m < 30 || parachute_auto_open_agl_m > 500 || parachute_auto_open_agl_m >= plane_min_altitude_m - 100)
 		{
-			LogInvalidSetting("general_settings.json", "parachute_auto_open_agl_m", parachute_auto_open_agl_m.ToString(), "must be between 30 and 500 and lower than plane_min_altitude_m - 100");
+			LogInvalidSetting(SettingFile(missionText, "parachute_auto_open_agl_m"), "parachute_auto_open_agl_m", parachute_auto_open_agl_m.ToString(), "must be between 30 and 500 and lower than plane_min_altitude_m - 100");
 			parachute_auto_open_agl_m = defaults.parachute_auto_open_agl_m;
 		}
 
 		if (first_zone_reveal_delay_seconds < 0 || first_zone_reveal_delay_seconds > 600)
 		{
-			LogInvalidSetting("general_settings.json", "first_zone_reveal_delay_seconds", first_zone_reveal_delay_seconds.ToString(), "must be between 0 and 600");
+			LogInvalidSetting(SettingFile(missionText, "first_zone_reveal_delay_seconds"), "first_zone_reveal_delay_seconds", first_zone_reveal_delay_seconds.ToString(), "must be between 0 and 600");
 			first_zone_reveal_delay_seconds = defaults.first_zone_reveal_delay_seconds;
 		}
 
 		if (first_zone_extra_seconds < 0 || first_zone_extra_seconds > 1800)
 		{
-			LogInvalidSetting("general_settings.json", "first_zone_extra_seconds", first_zone_extra_seconds.ToString(), "must be between 0 and 1800");
+			LogInvalidSetting(SettingFile(missionText, "first_zone_extra_seconds"), "first_zone_extra_seconds", first_zone_extra_seconds.ToString(), "must be between 0 and 1800");
 			first_zone_extra_seconds = defaults.first_zone_extra_seconds;
 		}
 	}
