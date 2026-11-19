@@ -17,5 +17,6 @@ for pbo in $(ls "$A"); do
   ls "$A/$pbo" | grep -qi -E "^scripts$|^[0-9]_" || [ -d "$A/$pbo/Scripts" ] || [ -d "$A/$pbo/scripts" ] || [[ "$pbo" == scripts_* ]] || continue
   lint "$A/$pbo" "$pbo"
 done
-# Separate mod that requires VPPAdminTools (already in X) and the client scripts.
+# Separate mod that requires VPPAdminTools (already in X), the client scripts and the server scripts.
+X+=(--external-scripts "$A/scripts_server")
 lint "$ROOT/BattleRoyale_VPP/addons/vpp_compat" vpp_compat

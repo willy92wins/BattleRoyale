@@ -157,3 +157,6 @@
 "STR_BR_SPECGEAR_GEAR","Equipment","Equipment","Equipment","Equipment","Equipment","Equipment","Equipment","Equipment","Equipo","Equipment","Equipment","Equipment","Equipment","Equipment"
 "STR_BR_SPECGEAR_CARGO","Cargo","Cargo","Cargo","Cargo","Cargo","Cargo","Cargo","Cargo","Contenido","Cargo","Cargo","Cargo","Cargo","Cargo"
 "STR_BR_SPECGEAR_CLOSE_HINT","%1: close","%1: close","%1: close","%1: close","%1: close","%1: close","%1: close","%1: close","%1: cerrar","%1: close","%1: close","%1: close","%1: close","%1: close"
+"STR_BR_HUD_PAUSED","PAUSED","PAUSED","PAUSED","PAUSED","PAUSED","PAUSED","PAUSED","PAUSED","PAUSADO","PAUSED","PAUSED","PAUSED","PAUSED","PAUSED"
+"STR_BR_MATCH_FROZEN","Match paused by an admin.","Match paused by an admin.","Match paused by an admin.","Match paused by an admin.","Match paused by an admin.","Match paused by an admin.","Match paused by an admin.","Match paused by an admin.","Partida en pausa por un admin.","Match paused by an admin.","Match paused by an admin.","Match paused by an admin.","Match paused by an admin.","Match paused by an admin."
+"STR_BR_MATCH_RESUMED","Match resumed.","Match resumed.","Match resumed.","Match resumed.","Match resumed.","Match resumed.","Match resumed.","Match resumed.","Partida reanudada.","Match resumed.","Match resumed.","Match resumed.","Match resumed.","Match resumed."

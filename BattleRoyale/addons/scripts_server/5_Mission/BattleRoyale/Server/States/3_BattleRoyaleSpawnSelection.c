@@ -103,14 +103,15 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
 
     override void Deactivate()
     {
-        // Stop the spawn selection timer if it's running
-        if (m_SpawnSelectionTimer && m_SpawnSelectionTimer.IsRunning())
+        // Stop the spawn selection timer unconditionally
+        if (m_SpawnSelectionTimer)
 		{
 			m_SpawnSelectionTimer.Stop();
 		}
 
-		// Remove the RPC listener
+		// Remove the RPC listener and any pending CallLater callbacks before leaving the state
 		GetRPCManager().RemoveRPC( RPC_DAYZBRSERVER_NAMESPACE, "OnPlayerSpawnSelected" );
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).RemoveByName(this, "DisableInput");
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(this.BroadcastHeatMap);
 
 		// Send RPC to all players to hide spawn selection UI
@@ -183,6 +184,18 @@ class BattleRoyaleSpawnSelection: BattleRoyaleState
     override string GetName()
     {
         return "Spawn Selection State";
+    }
+
+    override int GetAdminPhaseEnum()
+    {
+        return EBRMatchPhase.SPAWN_SELECTION;
+    }
+
+    override int GetPhaseSecondsLeft()
+    {
+        if (m_SpawnSelectionTimer && m_SpawnSelectionTimer.IsRunning())
+            return Math.Ceil(m_SpawnSelectionTimer.GetRemaining());
+        return -1;
     }
 
     void EnableInput()

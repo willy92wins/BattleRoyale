@@ -47,6 +47,48 @@ class BattleRoyaleStartMatch: BattleRoyaleState
         return "Start Match State";
     }
 
+    override bool CanFreeze()
+    {
+        return true;
+    }
+
+    override int GetAdminPhaseEnum()
+    {
+        return EBRMatchPhase.STARTING;
+    }
+
+    override bool IsMatchDecided()
+    {
+        return IsActive() && GetPlayers().Count() <= 1;
+    }
+
+    override int GetPhaseSecondsLeft()
+    {
+        if (m_UnlockTimer && IsTimerActiveOrPaused(m_UnlockTimer))
+            return Math.Ceil(m_UnlockTimer.GetRemaining());
+        return 0;
+    }
+
+    override int GetCountdownSecondsLeft()
+    {
+        if (m_ZoneStartTimer && IsTimerActiveOrPaused(m_ZoneStartTimer))
+            return Math.Ceil(m_ZoneStartTimer.GetRemaining());
+        return -1;
+    }
+
+    override int GetAdminTimeLeft()
+    {
+        return GetCountdownSecondsLeft();
+    }
+
+    override protected void SendResumeSync()
+    {
+        BroadcastMatchPhase(EBRMatchPhase.STARTING, GetPhaseSecondsLeft());
+        int cdSec = GetCountdownSecondsLeft();
+        if (cdSec >= 0)
+            GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetCountdownSeconds", new Param1<int>(cdSec), true);
+    }
+
     override void Activate()
     {
         super.Activate();
@@ -135,6 +177,7 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 
 	void MessageUnlock(int seconds_till)
 	{
+		LogPanelCallback("MessageUnlock");
 		if(seconds_till > 1)
 			MessagePlayersUntranslated("STR_BR_STARTING_IN_SECONDS", seconds_till.ToString());
 		else
@@ -143,6 +186,7 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 
     void UnlockPlayers()
     {
+        LogPanelCallback("UnlockPlayers");
         a_PlayerList.InsertAll( m_Players );
 
         //enable player input on clients (we'll do this on server in another thread)
@@ -153,6 +197,7 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 
     void ShowFirstZone()
     {
+        LogPanelCallback("ShowFirstZone");
         // Show first circle
         BattleRoyaleUtils.Trace("[BattleRoyaleStartMatch] Show first circle");
         BattleRoyaleZone m_Zone = new BattleRoyaleZone;
@@ -205,6 +250,7 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 
     void StartZoning()
     {
+        LogPanelCallback("StartZoning");
         Deactivate();
     }
 

@@ -20,6 +20,7 @@ class BattleRoyaleRPC
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "NotificationMessage", this );
 
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetMatchPhase", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetMatchFrozen", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "KillFeedEvent", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "MatchInProgress", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SpectateTarget", this );
@@ -189,6 +190,9 @@ class BattleRoyaleRPC
 		winner_screen = false;
 		match_phase = -1;
 		match_phase_end_time = -1;
+		match_frozen = false;
+		frozen_phase_seconds = -1;
+		frozen_countdown_seconds = -1;
 		kill_feed_serial = 0;
 		waiting = false;
 	}
@@ -368,6 +372,9 @@ class BattleRoyaleRPC
 		}
 		if ( type == CallType.Client )
 		{
+			if ( match_frozen )
+				return;
+
 			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
 				BattleRoyaleUtils.Trace(string.Format("StartZoneShrink: %1 %2 -> %3 %4 in %5 s, %6 s gone", data.param1, data.param2, data.param3, data.param4, data.param5, data.param6));
 			zone_shrink_from_center = data.param1;
@@ -550,9 +557,58 @@ class BattleRoyaleRPC
 		}
 	}
 
+	// Frozen match snapshot: halts all client countdowns and local shrink until unfrozen
+
+	bool match_frozen = false;
+	int frozen_phase_seconds = -1;
+	int frozen_countdown_seconds = -1;
+	int frozen_serial = 0;
+
+	void SetMatchFrozen(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param5<bool, int, int, vector, float> data;
+		if ( !ctx.Read( data ) )
+		{
+			Error("FAILED TO READ SETMATCHFROZEN RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+		{
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("SetMatchFrozen: %1 %2 %3 %4 %5", data.param1, data.param2, data.param3, data.param4, data.param5));
+			match_frozen = data.param1;
+			frozen_serial++;
+			if ( match_frozen )
+			{
+				frozen_phase_seconds = data.param2;
+				frozen_countdown_seconds = data.param3;
+				zone_shrinking = false;
+				if ( data.param5 > 0.0 )
+				{
+					current_play_area_center = data.param4;
+					current_play_area_radius = data.param5;
+					current_play_area_received = true;
+				}
+				if ( data.param3 >= 0 )
+				{
+					countdown_seconds = data.param3;
+					countdown_serial++;
+				}
+			}
+			else
+			{
+				frozen_phase_seconds = -1;
+				frozen_countdown_seconds = -1;
+			}
+		}
+	}
+
 	//! Seconds left in the current match phase, -1 if unknown
 	int GetMatchPhaseSecondsLeft()
 	{
+		if ( match_frozen )
+			return frozen_phase_seconds;
+
 		if ( match_phase_end_time < 0 )
 			return -1;
 

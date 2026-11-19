@@ -232,12 +232,12 @@ modded class MissionGameplay
 	}
 
 	//! label is one of BattleRoyaleHud.PHASE_LABEL_*, seconds is -1 when there is no timer to show
-	void UpdateMatchPhase(int label, int seconds)
+	void UpdateMatchPhase(int label, int seconds, bool frozen = false)
 	{
 		if (!m_BattleRoyaleHud)
 			return;
 
-		m_BattleRoyaleHud.SetMatchPhase( label, seconds );
+		m_BattleRoyaleHud.SetMatchPhase( label, seconds, frozen );
 	}
 
 	void UpdateZoneDamage(bool taking_damage)
