@@ -280,9 +280,10 @@ class BattleRoyaleClient: BattleRoyaleBase
 			br_previous_fade_state = fade_state;
 		}
 
-		// Input enable/disable; a waiting player keeps its controls, and a later SetInput(false) still undoes a lock already applied
+		// Input enable/disable; a waiting player keeps its controls, and a later SetInput(false) still undoes a lock already applied.
+		// A spectator is left alone: enabling the input turns the voice back on, and the server keeps a spectator's voice off
 		bool input_state = br_rpc.input_state && !br_rpc.waiting;
-		if( br_previous_input_state != input_state )
+		if( br_previous_input_state != input_state && !BattleRoyaleRPC.s_Spectating )
 		{
 			player.DisableInput( input_state );
 			br_previous_input_state = input_state;
