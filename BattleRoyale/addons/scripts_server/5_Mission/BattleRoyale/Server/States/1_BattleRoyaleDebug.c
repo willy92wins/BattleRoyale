@@ -60,11 +60,45 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
         return EBRMatchPhase.LOBBY;
     }
 
-    //! The lobby ends on players, readiness, votes or autostart as well as the minimum wait, so no single time is its end:
-    //! the panel shows none
+    //! Seconds until the lobby ends with the players and votes it has now, -1 when it cannot end yet.
+    //! Mirrors IsComplete (no vote system) and CheckReadyState (vote and autostart).
     override int GetAdminTimeLeft()
     {
-        return -1;
+        float waitRem = f_MinWaitingTime - GetWaitingTime();
+        if (waitRem < 0)
+            waitRem = 0;
+
+        int players = GetPlayers().Count();
+        if (!b_UseVoteSystem)
+        {
+            if (players < i_MinPlayers)
+                return -1;
+            return Math.Ceil(waitRem);
+        }
+
+        if (players <= 1)
+            return -1;
+
+        float best = -1;
+        if (IsVoteReady())
+            best = waitRem;
+
+        int readyCount = GetReadyCount();
+        int maxPlayers = GetGame().ServerConfigGetInt("maxPlayers");
+        if (b_AutoStartGame && readyCount > 1 && maxPlayers > 0 && f_AutoStartDelay > 0)
+        {
+            //! Autostart when readyCount >= maxPlayers * (1 - elapsed / delay), checked after the minimum wait
+            float autoAt = i_FirstPlayerTick + f_AutoStartDelay * (1.0 - (readyCount * 1.0) / maxPlayers);
+            float autoRem = autoAt - GetStateClock();
+            if (autoRem < waitRem)
+                autoRem = waitRem;
+            if (best < 0 || autoRem < best)
+                best = autoRem;
+        }
+
+        if (best < 0)
+            return -1;
+        return Math.Ceil(best);
     }
 
     override int GetPhaseSecondsLeft()
