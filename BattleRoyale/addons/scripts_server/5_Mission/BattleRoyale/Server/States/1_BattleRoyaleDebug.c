@@ -64,6 +64,11 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
     //! Mirrors IsComplete (no vote system) and CheckReadyState (vote and autostart).
     override int GetAdminTimeLeft()
     {
+#ifdef Carim
+        //! Carim also needs a second group, and counting groups (here or through IsVoteReady) would change what
+        //! IsComplete reads: no estimate
+        return -1;
+#endif
         float waitRem = f_MinWaitingTime - GetWaitingTime();
         if (waitRem < 0)
             waitRem = 0;
@@ -78,10 +83,6 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
         {
             if (players < i_MinPlayers)
                 return -1;
-#ifdef Carim
-            //! Carim also needs a second group; counting groups here would change what IsComplete reads, so no estimate
-            return -1;
-#endif
             return Math.Ceil(waitRem);
         }
 
