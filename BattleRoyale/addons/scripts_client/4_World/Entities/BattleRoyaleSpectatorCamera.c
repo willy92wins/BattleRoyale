@@ -171,6 +171,7 @@ class BattleRoyaleSpectatorCamera: Camera
 		{
 			m_ViewTarget = null;
 			m_OrbitTarget = null;
+			m_OrbitDistanceTarget = null;
 			LeaveOptics();
 			ShowHead();
 			SetFOV(GetDayZGame().GetUserFOV());
@@ -292,6 +293,8 @@ class BattleRoyaleSpectatorCamera: Camera
 		m_OrbitTarget = target;
 		m_PivotHeight = PivotHeight(target);
 		m_PivotHeightVelocity[0] = 0;
+		// Back in third person the orbit takes the distance free then
+		m_OrbitDistanceTarget = null;
 	}
 
 	//! The eyes without the head's bobbing: their place relative to the watched player's position is smoothed. A new
