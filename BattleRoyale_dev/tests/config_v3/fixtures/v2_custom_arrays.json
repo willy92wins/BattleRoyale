@@ -1,0 +1,45 @@
+{
+  "version": 2,
+  "admins_steamid64": [
+    "123456789123456789"
+  ],
+  "num_zones": 7,
+  "round_duration_minutes": 5,
+  "enable_spawn_selection_menu": true,
+  "spawn_selection_duration": 30,
+  "spawn_selection_extra_time": 2,
+  "spawn_selection_radius": 50,
+  "show_spawn_heatmap": true,
+  "time_until_teleport_unlock": 10,
+  "enable_unstuck": true,
+  "enable_spectator": true,
+  "spectator_delay_seconds": 5,
+  "enable_waiting_room": true,
+  "zone_notification_minutes": [
+    1,
+    2
+  ],
+  "zone_notification_seconds": [
+    30,
+    10
+  ],
+  "debug_heal_tick_seconds": 5,
+  "zone_damage_tick_seconds": 5,
+  "zone_damage_delta": 0.1,
+  "enable_zone_damage": true,
+  "hide_players_endgame": false,
+  "show_first_zone_at_start": true,
+  "artillery_sound": true,
+  "airdrop_enabled": true,
+  "airdrop_ignore_last_zones": 3,
+  "player_starting_clothes": [
+    "TShirt_Blue"
+  ],
+  "player_starting_items": [
+    "Apple",
+    "Pear"
+  ],
+  "player_starting_items_shortcut": [
+    1
+  ]
+}

@@ -1,7 +1,7 @@
 #ifdef SERVER
 class BattleRoyaleGameData: BattleRoyaleDataBase
 {
-	int version = 2;  // Config version
+	int version = 3;  // Config version
 
 	// Allowed admins - Are immune to kick and can go outside the play area
 	ref array<string> admins_steamid64 = {
@@ -40,6 +40,17 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
     bool show_first_zone_at_start = true;  // Show the first zone at the start of the game
 
     bool artillery_sound = true;  // Play the artillery sound when the zone shrinks
+
+	// Plane deployment. Read by the flight-path generator; no match state reads these yet.
+	bool enable_plane_deployment = true;
+	float plane_speed_mps = 100;  // metres per second, 40..200
+	float plane_min_altitude_m = 800;  // AMSL, 400..2000, must stay below plane_max_altitude_m
+	float plane_max_altitude_m = 1100;  // AMSL, 400..2500
+	float plane_edge_margin_m = 600;  // inset from the world border, 100..3000
+	float plane_path_max_zone_distance = 1.0;  // max distance from the first-zone centre, in multiples of that radius; 0 = no limit (0..3)
+	float parachute_auto_open_agl_m = 150;  // 30..500 and below plane_min_altitude_m - 100
+	int first_zone_reveal_delay_seconds = 60;  // seconds after the plane finishes its run (0..600)
+	int first_zone_extra_seconds = 180;  // added to the first-zone countdown at reveal (0..1800)
 
 	// Airdrop settings: ignored since 1.3.0 (the airdrop was removed); kept so older JSON files load
     bool airdrop_enabled = true;  // Enable airdrops
@@ -111,7 +122,8 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 
 	override void Upgrade()
 	{
-		// Future upgrades will be handled here
+		// Each step is its own if. A v1 file becomes v2 and then falls through into v3
+		// on the same load. else-if would leave that file at version 2.
 		if (version == 1)
 		{
 			// Set default shortcut for the first item (HuntingKnife) if not set
@@ -124,6 +136,13 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 
 			version = 2;
 			Save();  // Save the upgraded config
+		}
+
+		if (version == 2)
+		{
+			// New keys are absent in v2 files; JsonFileLoader leaves the declared defaults in place
+			version = 3;
+			Save();
 		}
 	}
 
@@ -181,6 +200,62 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 		{
 			LogInvalidSetting("general_settings.json", "zone_damage_tick_seconds", zone_damage_tick_seconds.ToString(), "must be positive");
 			zone_damage_tick_seconds = defaults.zone_damage_tick_seconds;
+		}
+
+		if (plane_speed_mps < 40 || plane_speed_mps > 200)
+		{
+			LogInvalidSetting("general_settings.json", "plane_speed_mps", plane_speed_mps.ToString(), "must be between 40 and 200");
+			plane_speed_mps = defaults.plane_speed_mps;
+		}
+
+		if (plane_min_altitude_m < 400 || plane_min_altitude_m > 2000)
+		{
+			LogInvalidSetting("general_settings.json", "plane_min_altitude_m", plane_min_altitude_m.ToString(), "must be between 400 and 2000");
+			plane_min_altitude_m = defaults.plane_min_altitude_m;
+		}
+
+		if (plane_max_altitude_m < 400 || plane_max_altitude_m > 2500)
+		{
+			LogInvalidSetting("general_settings.json", "plane_max_altitude_m", plane_max_altitude_m.ToString(), "must be between 400 and 2500");
+			plane_max_altitude_m = defaults.plane_max_altitude_m;
+		}
+
+		// One log resets both. Range checks above already ran, so a pair that is merely inverted logs once.
+		if (plane_min_altitude_m >= plane_max_altitude_m)
+		{
+			LogInvalidSetting("general_settings.json", "plane_min_altitude_m / plane_max_altitude_m", plane_min_altitude_m.ToString() + " / " + plane_max_altitude_m.ToString(), "plane_min_altitude_m must be lower than plane_max_altitude_m");
+			plane_min_altitude_m = defaults.plane_min_altitude_m;
+			plane_max_altitude_m = defaults.plane_max_altitude_m;
+		}
+
+		if (plane_edge_margin_m < 100 || plane_edge_margin_m > 3000)
+		{
+			LogInvalidSetting("general_settings.json", "plane_edge_margin_m", plane_edge_margin_m.ToString(), "must be between 100 and 3000");
+			plane_edge_margin_m = defaults.plane_edge_margin_m;
+		}
+
+		if (plane_path_max_zone_distance < 0 || plane_path_max_zone_distance > 3)
+		{
+			LogInvalidSetting("general_settings.json", "plane_path_max_zone_distance", plane_path_max_zone_distance.ToString(), "must be between 0 and 3");
+			plane_path_max_zone_distance = defaults.plane_path_max_zone_distance;
+		}
+
+		if (parachute_auto_open_agl_m < 30 || parachute_auto_open_agl_m > 500 || parachute_auto_open_agl_m >= plane_min_altitude_m - 100)
+		{
+			LogInvalidSetting("general_settings.json", "parachute_auto_open_agl_m", parachute_auto_open_agl_m.ToString(), "must be between 30 and 500 and lower than plane_min_altitude_m - 100");
+			parachute_auto_open_agl_m = defaults.parachute_auto_open_agl_m;
+		}
+
+		if (first_zone_reveal_delay_seconds < 0 || first_zone_reveal_delay_seconds > 600)
+		{
+			LogInvalidSetting("general_settings.json", "first_zone_reveal_delay_seconds", first_zone_reveal_delay_seconds.ToString(), "must be between 0 and 600");
+			first_zone_reveal_delay_seconds = defaults.first_zone_reveal_delay_seconds;
+		}
+
+		if (first_zone_extra_seconds < 0 || first_zone_extra_seconds > 1800)
+		{
+			LogInvalidSetting("general_settings.json", "first_zone_extra_seconds", first_zone_extra_seconds.ToString(), "must be between 0 and 1800");
+			first_zone_extra_seconds = defaults.first_zone_extra_seconds;
 		}
 	}
 };
