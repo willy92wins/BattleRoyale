@@ -433,6 +433,8 @@ class BattleRoyaleSpectators
 		// The spectator's voice would come from the anchor, under the watched player: it stays silent, as vanilla
 		// silences a body that dies. The next character the identity gets is a new body with its voice on
 		GetGame().EnableVoN(anchor, false);
+		// A player who died while the start locked it (DisableInput mutes everyone for it) still hears the others
+		GetGame().MuteAllPlayers(identity.GetPlainId(), false);
 		if (previous && previous != anchor)
 			GetGame().ObjectDelete(previous);
 
