@@ -160,6 +160,7 @@ class BattleRoyaleSpectatorCamera: Camera
 		else
 		{
 			m_ViewTarget = null;
+			m_OrbitTarget = null;
 			LeaveOptics();
 			ShowHead();
 			SetFOV(GetDayZGame().GetUserFOV());
@@ -229,7 +230,8 @@ class BattleRoyaleSpectatorCamera: Camera
 
 		vector head[4];
 		target.GetBoneTransformWS(m_HeadBoneIndex, head);
-		vector eyes = StableEyes(target, head[3] + head[0] * EYE_UP + head[1] * EYE_FORWARD, timeSlice);
+		vector headEyes = head[3] + head[0] * EYE_UP + head[1] * EYE_FORWARD;
+		vector eyes = StableEyes(target, headEyes, timeSlice);
 
 		vector position;
 		vector angles;
@@ -250,7 +252,16 @@ class BattleRoyaleSpectatorCamera: Camera
 		}
 
 		SmoothView(target, sights, position - eyes, angles, fov, timeSlice);
-		SetPosition(eyes + m_ShownOffset);
+		// From the eyes, what the smoothing moves the view by never takes it through a wall, a roof or cover. Not through
+		// the sights, which sit behind the weapon in the hands (the ray would stop on it)
+		vector shown = eyes + m_ShownOffset;
+		vector hitPosition;
+		vector hitNormal;
+		float hitFraction;
+		Object hitObject;
+		if (sights == EBRSpectateSights.NONE && vector.DistanceSq(shown, headEyes) > 0.000001 && DayZPhysics.RayCastBullet(headEyes, shown, BlockingLayers(), target, hitObject, hitPosition, hitNormal, hitFraction))
+			shown = headEyes;
+		SetPosition(shown);
 		SetOrientation(Vector(m_ShownYaw, m_ShownPitch, 0));
 		SetFOV(m_ShownFOV);
 		SetNearPlane(nearPlane);
@@ -555,7 +566,7 @@ class BattleRoyaleSpectatorCamera: Camera
 			m_OrbitYaw = target.GetOrientation()[0];
 		}
 
-		vector pivot = target.GetPosition() + "0 1.6 0";
+		vector pivot = target.GetPosition() + Vector(0, PivotHeight(target), 0);
 		vector angles = Vector(m_OrbitYaw, m_OrbitPitch, 0);
 		vector forward = angles.AnglesToVector();
 		vector desired = pivot - forward * 3.0;
@@ -565,12 +576,30 @@ class BattleRoyaleSpectatorCamera: Camera
 		vector hitNormal;
 		float hitFraction;
 		Object hitObject;
-		PhxInteractionLayers layers = PhxInteractionLayers.BUILDING | PhxInteractionLayers.VEHICLE | PhxInteractionLayers.TERRAIN | PhxInteractionLayers.ITEM_LARGE;
-		if (DayZPhysics.RayCastBullet(pivot, desired, layers, target, hitObject, hitPosition, hitNormal, hitFraction))
+		if (DayZPhysics.RayCastBullet(pivot, desired, BlockingLayers(), target, hitObject, hitPosition, hitNormal, hitFraction))
 			desired = hitPosition + forward * 0.2;
 
 		SetPosition(desired);
 		SetOrientation(angles);
+	}
+
+	//! What the camera must not pass through: walls, vehicles, terrain and large items
+	protected static PhxInteractionLayers BlockingLayers()
+	{
+		return PhxInteractionLayers.BUILDING | PhxInteractionLayers.VEHICLE | PhxInteractionLayers.TERRAIN | PhxInteractionLayers.ITEM_LARGE;
+	}
+
+	//! Height of the orbit's centre above the watched player's position, by its stance: about its chest
+	protected static float PivotHeight(Human target)
+	{
+		HumanMovementState movement = new HumanMovementState();
+		target.GetMovementState(movement);
+		int stance = movement.m_iStanceIdx;
+		if (stance == DayZPlayerConstants.STANCEIDX_PRONE || stance == DayZPlayerConstants.STANCEIDX_RAISEDPRONE)
+			return 0.5;
+		if (stance == DayZPlayerConstants.STANCEIDX_CROUCH || stance == DayZPlayerConstants.STANCEIDX_RAISEDCROUCH)
+			return 1.1;
+		return 1.6;
 	}
 #endif
 }
