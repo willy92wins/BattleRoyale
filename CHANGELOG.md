@@ -56,6 +56,8 @@
   spectator's screen. It looked along any weapon in the hands, also a lowered one: with the rifle at the hip or across
   the body while running, the view turned to the ground or sideways, as if it came from the weapon, and it bobbed
   while the watched player ran.
+- HUD: notifications are silent and white (warnings and errors keep their colour), the zone arrow drops its black edge,
+  the top-right icons and counters get a soft drop shadow, and the kill counter uses a new skull icon.
 
 ### Fixed
 - Spectators could talk in direct voice to the player they watched, unseen. Their voice is now off while they

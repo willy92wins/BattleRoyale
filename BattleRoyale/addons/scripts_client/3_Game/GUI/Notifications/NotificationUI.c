@@ -62,8 +62,7 @@ class BR_NotificationRow
 //! (click to dismiss), so a notification over the inventory or the map swallows the clicks meant for what is under it.
 //! Each notification is drawn as a kill feed row, mirrored for the left side: a dark band that hugs the text, the icon,
 //! the text in the font of the kill feed and a thin accent on the left edge; the text wraps short of what is centred
-//! at the top. Battle royale notifications show their message alone, with their colour on the icon and the accent,
-//! and play a short vanilla sound.
+//! at the top. Battle royale notifications show their message alone, with their colour on the icon and the accent.
 modded class NotificationUI
 {
 	//! Top left corner of the notification stack, as fractions of the screen: the corner of the BattleRoyale HUD
@@ -186,9 +185,6 @@ modded class NotificationUI
 					vanilla_icon.SetColor(data.GetColor());
 			}
 		}
-
-		if (is_br)
-			BR_PlayNotificationSound();
 	}
 
 	//! A removed row fades out with vanilla (Update, notificationui.c:196-227), which deletes its widget at the end; until
@@ -606,26 +602,5 @@ modded class NotificationUI
 		if (text_w <= 0 && text != "")
 			return -1;
 		return text_w;
-	}
-
-	//! Tick time of the last notification sound; notifications closer than BR_MSG_SOUND_GAP play one sound
-	protected static float s_BR_LastSoundTime = -1000;
-	protected static const float BR_MSG_SOUND_GAP = 1.0;
-
-	//! Plays the notification sound in gameplay only (a player exists), at most once per BR_MSG_SOUND_GAP seconds,
-	//! and never in silent mode
-	protected void BR_PlayNotificationSound()
-	{
-		if (!GetGame().GetPlayer() || BattleRoyaleSilentMode.IsActive())
-			return;
-
-		float now = GetGame().GetTickTime();
-		if (now - s_BR_LastSoundTime < BR_MSG_SOUND_GAP)
-			return;
-		s_BR_LastSoundTime = now;
-
-		EffectSound sound = SEffectManager.PlaySound(DAYZBR_MSG_SOUND, GetGame().GetCurrentCameraPosition());
-		if (sound)
-			sound.SetAutodestroy(true);
 	}
 }
