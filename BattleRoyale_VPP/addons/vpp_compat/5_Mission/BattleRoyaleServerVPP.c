@@ -17,17 +17,14 @@ modded class BattleRoyaleServer
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "VPPNextState", this, SingleplayerExecutionType.Server);
     }
 
-    //! Next state from the VPP menu. VPP decides the permission, whatever the core authorizer was compiled with.
+    //! Next state from the VPP menu. The modded BRAdminAuthorizer below consults VPP and throttles the deny log.
     void VPPNextState(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
     {
         if (type != CallType.Server || !sender)
             return;
 
-        if (!GetPermissionManager().VerifyPermission(sender.GetPlainId(), "BattleRoyale:Next"))
-        {
-            BattleRoyaleUtils.Warn("VPP NextState denied: steamid=" + sender.GetPlainId());
+        if (!BRAdminAuthorizer.IsAllowed(sender, "Next"))
             return;
-        }
 
         BattleRoyaleUtils.Trace("BattleRoyaleManager VPPNextState");
         BRAdminController.Next();
