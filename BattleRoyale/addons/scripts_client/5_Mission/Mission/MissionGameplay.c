@@ -412,7 +412,7 @@ modded class MissionGameplay
 			m_BattleRoyaleHud.UpdateSilentMode( BattleRoyaleSilentMode.IsActive() && BattleRoyaleCompass.IsHudShown( m_Hud ) );
 	}
 
-	//! Short notification of the new state; switching on plays no sound, the mode is already on
+	//! Short notification of the new state
 	protected void BR_NotifySilentMode(bool active)
 	{
 		string key = "#STR_BR_SILENT_MODE_OFF";

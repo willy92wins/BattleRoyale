@@ -42,10 +42,16 @@ class BattleRoyaleHud
     protected TextWidget m_GroupTextWidget;
     protected TextWidget m_DistanceTextWidget;
     protected TextWidget m_KillTextWidget;
+    //! Black copies drawn 2 px right and down of the counters: their font draws no text shadow of its own
+    protected TextWidget m_PlayerTextShadow;
+    protected TextWidget m_GroupTextShadow;
+    protected TextWidget m_DistanceTextShadow;
+    protected TextWidget m_KillTextShadow;
     protected TextWidget m_PhaseTextWidget;
     protected TextWidget m_ZoneDamageTextWidget;
 
     protected ImageWidget m_DistanceZoneArrow;
+    protected ImageWidget m_DistanceZoneArrowShadow;
 
     protected bool is_shown;
 
@@ -81,10 +87,15 @@ class BattleRoyaleHud
         m_GroupTextWidget = TextWidget.Cast( m_GroupCountPanel.FindAnyWidget( "GroupText" ) );
         m_DistanceTextWidget = TextWidget.Cast( m_ZoneDistancePanel.FindAnyWidget( "DistanceText" ) );
         m_KillTextWidget = TextWidget.Cast( m_KillCountPanel.FindAnyWidget( "KillCountText" ) );
+        m_PlayerTextShadow = TextWidget.Cast( m_PlayerCountPanel.FindAnyWidget( "PlayerTextShadow" ) );
+        m_GroupTextShadow = TextWidget.Cast( m_GroupCountPanel.FindAnyWidget( "GroupTextShadow" ) );
+        m_DistanceTextShadow = TextWidget.Cast( m_ZoneDistancePanel.FindAnyWidget( "DistanceTextShadow" ) );
+        m_KillTextShadow = TextWidget.Cast( m_KillCountPanel.FindAnyWidget( "KillCountTextShadow" ) );
         m_PhaseTextWidget = TextWidget.Cast( m_Root.FindAnyWidget( "PhaseText" ) );
         m_ZoneDamageTextWidget = TextWidget.Cast( m_Root.FindAnyWidget( "ZoneDamageText" ) );
 
         m_DistanceZoneArrow = ImageWidget.Cast( m_Root.FindAnyWidget( "ZoneIcon" ) );
+        m_DistanceZoneArrowShadow = ImageWidget.Cast( m_Root.FindAnyWidget( "ZoneIconShadow" ) );
 
         m_PlayerCountPanel.Show( false );
         m_GroupCountPanel.Show( false );
@@ -334,7 +345,10 @@ class BattleRoyaleHud
         if ( Math.AbsFloat( angle - m_LastArrowAngle ) >= 0.5 )
         {
             m_LastArrowAngle = angle;
-            m_DistanceZoneArrow.SetRotation( 0, 0, angle + ZONE_ARROW_ICON_OFFSET );
+            float arrow_angle = angle + ZONE_ARROW_ICON_OFFSET;
+            m_DistanceZoneArrow.SetRotation( 0, 0, arrow_angle );
+            if ( m_DistanceZoneArrowShadow )
+                m_DistanceZoneArrowShadow.SetRotation( 0, 0, arrow_angle );
         }
 
         // -1 stands for inside the zone, where the arrow shows no text; otherwise whole metres to the zone
@@ -346,9 +360,9 @@ class BattleRoyaleHud
         {
             m_LastDistanceMeters = meters;
             if ( isInsideZone )
-                m_DistanceTextWidget.SetText( "" );
+                SetShadowedText( m_DistanceTextWidget, m_DistanceTextShadow, "" );
             else
-                m_DistanceTextWidget.SetText( meters.ToString() + "m");
+                SetShadowedText( m_DistanceTextWidget, m_DistanceTextShadow, meters.ToString() + "m" );
         }
     }
 
@@ -382,20 +396,22 @@ class BattleRoyaleHud
 
         //BattleRoyaleUtils.Trace(string.Format("SetCount: %1 %2", nb_players, nb_groups));
 
-        m_PlayerTextWidget.SetText( nb_players.ToString() );
+        SetShadowedText( m_PlayerTextWidget, m_PlayerTextShadow, nb_players.ToString() );
 
         if ( nb_groups == -1 )
         {
-            m_GroupTextWidget.SetText( "???" );
+            SetShadowedText( m_GroupTextWidget, m_GroupTextShadow, "???" );
         }
         else if ( nb_groups == -2 )
 		{
             m_GroupCountPanel.Show( false );
             m_GroupTextWidget.Show( false );
+            if ( m_GroupTextShadow )
+                m_GroupTextShadow.Show( false );
 		}
         else
         {
-            m_GroupTextWidget.SetText( nb_groups.ToString() );
+            SetShadowedText( m_GroupTextWidget, m_GroupTextShadow, nb_groups.ToString() );
             m_GroupCountPanel.Show( true );
             //m_GroupCountPanel.Show(nb_groups > 0);
         }
@@ -408,7 +424,15 @@ class BattleRoyaleHud
             Error("Called SetKillCount but widget is null!");
             return;
         }
-        m_KillTextWidget.SetText( count.ToString() );
+        SetShadowedText( m_KillTextWidget, m_KillTextShadow, count.ToString() );
+    }
+
+    //! Sets a counter's text and the same text on its black shadow copy, when the layout has one
+    protected void SetShadowedText( TextWidget text, TextWidget shadow, string value )
+    {
+        text.SetText( value );
+        if ( shadow )
+            shadow.SetText( value );
     }
 
     //! The phase text shows the countdown; the HUD keeps it only to rate how hard the zone is to reach

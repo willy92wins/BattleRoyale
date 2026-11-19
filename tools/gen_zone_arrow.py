@@ -1,8 +1,8 @@
 """Generate the HUD arrow that points at the zone (an original texture, drawn here, no third-party art).
 
 A notched arrowhead pointing up, with the proportions of the map's player arrow (BR_DrawPlayerArrow in MapMenu.c):
-half height H, half width 0.75 H, notch 0.5 H behind the centre. White fill with a dark outline, so it reads on bright and
-dark ground. Rendered at 128x128 with 4x4 supersampling into a 32-bit TGA, then converted with DayZ Tools' ImageToPAA.
+half height H, half width 0.75 H, notch 0.5 H behind the centre. White fill, no dark outline; the HUD draws its shadow.
+Rendered at 128x128 with 4x4 supersampling into a 32-bit TGA, then converted with DayZ Tools' ImageToPAA.
 The _ca suffix makes ImageToPAA keep the full alpha channel.
 
 Usage: python -I tools/gen_zone_arrow.py <output_ca.paa>
@@ -17,10 +17,7 @@ SUBSAMPLES = 4
 HALF_H = 56.0
 HALF_W = HALF_H * 0.75
 NOTCH = HALF_H * 0.5
-OUTLINE_IN = 7.0     # outline width inside the shape, in texels
-OUTLINE_OUT = 1.5    # outline width outside the shape, in texels
 FILL = (255, 255, 255, 255)
-BORDER = (20, 20, 20, 235)
 IMAGE_TO_PAA = "C:/Program Files (x86)/Steam/steamapps/common/DayZ Tools/Bin/ImageToPAA/ImageToPAA.exe"
 
 CENTRE = SIZE / 2.0
@@ -43,43 +40,18 @@ def inside(x, y):
     return result
 
 
-def edge_distance(x, y):
-    best = 1e9
-    count = len(POLYGON)
-    for i in range(count):
-        x1, y1 = POLYGON[i]
-        x2, y2 = POLYGON[(i + 1) % count]
-        dx, dy = x2 - x1, y2 - y1
-        t = max(0.0, min(1.0, ((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy)))
-        px, py = x1 + t * dx - x, y1 + t * dy - y
-        best = min(best, (px * px + py * py) ** 0.5)
-    return best
-
-
 def texel(col, row):
-    # Premultiplied average of the subsamples
-    acc = [0.0, 0.0, 0.0, 0.0]
+    hits = 0
     for sy in range(SUBSAMPLES):
         for sx in range(SUBSAMPLES):
             x = col + (sx + 0.5) / SUBSAMPLES
             y = row + (sy + 0.5) / SUBSAMPLES
-            distance = edge_distance(x, y)
             if inside(x, y):
-                colour = BORDER if distance < OUTLINE_IN else FILL
-            elif distance < OUTLINE_OUT:
-                colour = BORDER
-            else:
-                continue
-            alpha = colour[3] / 255.0
-            acc[0] += colour[0] * alpha
-            acc[1] += colour[1] * alpha
-            acc[2] += colour[2] * alpha
-            acc[3] += alpha
-    n = SUBSAMPLES * SUBSAMPLES
-    alpha = acc[3] / n
-    if alpha <= 0:
+                hits += 1
+    if hits == 0:
         return (0, 0, 0, 0)
-    return tuple(int(round(acc[i] / acc[3])) for i in range(3)) + (int(round(alpha * 255)),)
+    alpha = int(round(hits * 255.0 / (SUBSAMPLES * SUBSAMPLES)))
+    return (FILL[0], FILL[1], FILL[2], alpha)
 
 
 def main():
