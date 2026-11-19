@@ -79,8 +79,8 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
             if (players < i_MinPlayers)
                 return -1;
 #ifdef Carim
-            if (GetGroupsCount() <= 1)
-                return -1;
+            //! Carim also needs a second group; counting groups here would change what IsComplete reads, so no estimate
+            return -1;
 #endif
             return Math.Ceil(waitRem);
         }
