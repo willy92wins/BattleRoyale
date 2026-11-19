@@ -36,6 +36,10 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected float m_OrbitPitch = -15;
 	//! Watched player the orbit is around: a new one starts the orbit behind it
 	protected Human m_OrbitTarget;
+	//! Height of the orbit's centre, smoothed towards the watched player's stance (PivotHeight)
+	protected float m_PivotHeight;
+	protected float m_PivotHeightVelocity[1];
+	protected static const float PIVOT_SMOOTH_TIME = 0.25;
 	protected int m_HeadBoneIndex = -1;
 	protected string m_HeadBoneTargetType;
 	protected Human m_HeadBoneTarget;
@@ -152,7 +156,7 @@ class BattleRoyaleSpectatorCamera: Camera
 			if (m_ThirdPerson)
 			{
 				m_ViewTarget = null;
-				FollowThirdPerson(target);
+				FollowThirdPerson(target, timeSlice);
 			}
 			else
 				FollowFirstPerson(target, timeSlice);
@@ -252,15 +256,24 @@ class BattleRoyaleSpectatorCamera: Camera
 		}
 
 		SmoothView(target, sights, position - eyes, angles, fov, timeSlice);
-		// From the eyes, what the smoothing moves the view by never takes it through a wall, a roof or cover. Not through
-		// the sights, which sit behind the weapon in the hands (the ray would stop on it)
+		// From the eyes, what the smoothing moves the view by never takes it through a wall, a roof or cover, near plane
+		// included. Not through the sights, which sit behind the weapon in the hands (the ray would stop on it). The view
+		// shown is kept, so that a switch to the sights starts from it
 		vector shown = eyes + m_ShownOffset;
-		vector hitPosition;
-		vector hitNormal;
-		float hitFraction;
-		Object hitObject;
-		if (sights == EBRSpectateSights.NONE && vector.DistanceSq(shown, headEyes) > 0.000001 && DayZPhysics.RayCastBullet(headEyes, shown, BlockingLayers(), target, hitObject, hitPosition, hitNormal, hitFraction))
-			shown = headEyes;
+		vector moved = shown - headEyes;
+		if (sights == EBRSpectateSights.NONE && moved.LengthSq() > 0.000001)
+		{
+			vector hitPosition;
+			vector hitNormal;
+			float hitFraction;
+			Object hitObject;
+			vector rayEnd = shown + moved.Normalized() * NEAR_PLANE_EYES;
+			if (DayZPhysics.RayCastBullet(headEyes, rayEnd, BlockingLayers(), target, hitObject, hitPosition, hitNormal, hitFraction))
+			{
+				shown = headEyes;
+				m_ShownOffset = headEyes - eyes;
+			}
+		}
 		SetPosition(shown);
 		SetOrientation(Vector(m_ShownYaw, m_ShownPitch, 0));
 		SetFOV(m_ShownFOV);
@@ -269,6 +282,8 @@ class BattleRoyaleSpectatorCamera: Camera
 		// Third person starts behind the player when switching
 		m_OrbitYaw = m_ShownYaw;
 		m_OrbitTarget = target;
+		m_PivotHeight = PivotHeight(target);
+		m_PivotHeightVelocity[0] = 0;
 	}
 
 	//! The eyes without the head's bobbing: their place relative to the watched player's position is smoothed. A new
@@ -552,7 +567,7 @@ class BattleRoyaleSpectatorCamera: Camera
 		hidden.Clear();
 	}
 
-	protected void FollowThirdPerson(Human target)
+	protected void FollowThirdPerson(Human target, float timeSlice)
 	{
 		LeaveOptics();
 		ShowHead();
@@ -564,9 +579,15 @@ class BattleRoyaleSpectatorCamera: Camera
 		{
 			m_OrbitTarget = target;
 			m_OrbitYaw = target.GetOrientation()[0];
+			m_PivotHeight = PivotHeight(target);
+			m_PivotHeightVelocity[0] = 0;
+		}
+		else
+		{
+			m_PivotHeight = Math.SmoothCD(m_PivotHeight, PivotHeight(target), m_PivotHeightVelocity, PIVOT_SMOOTH_TIME, 1000, timeSlice);
 		}
 
-		vector pivot = target.GetPosition() + Vector(0, PivotHeight(target), 0);
+		vector pivot = target.GetPosition() + Vector(0, m_PivotHeight, 0);
 		vector angles = Vector(m_OrbitYaw, m_OrbitPitch, 0);
 		vector forward = angles.AnglesToVector();
 		vector desired = pivot - forward * 3.0;
