@@ -23,6 +23,9 @@ class BattleRoyaleRound: BattleRoyaleState
     protected bool b_Shrinking;  //!< from the start of the closing until the lock
     protected bool b_ShrinkStopped;  //!< the round ended during its closing: the circle stays at f_ShrinkStopTime
     protected float f_ShrinkStopTime;
+    protected bool b_HasCustomShrinkFrom;  //!< set when AdjustTime re-anchors an active shrink to the current circle
+    protected vector v_ShrinkFromCenter;
+    protected float f_ShrinkFromRadius;
 
 #ifdef Carim
     int i_MaxPartySize;
@@ -77,6 +80,9 @@ class BattleRoyaleRound: BattleRoyaleState
         f_ShrinkDuration = 0;
         f_ShrinkStartTime = 0;
         f_ShrinkStopTime = 0;
+        b_HasCustomShrinkFrom = false;
+        v_ShrinkFromCenter = "0 0 0";
+        f_ShrinkFromRadius = 0.0;
         m_Zone = new BattleRoyaleZone;
 
         if(GetPreviousZone())
@@ -115,6 +121,284 @@ class BattleRoyaleRound: BattleRoyaleState
         return "Gameplay State (" + zone_num + ")";
     }
 
+    override bool CanFreeze()
+    {
+        return true;
+    }
+
+    override bool CanAdjustTime()
+    {
+        return true;
+    }
+
+    override int GetAdminPhaseEnum()
+    {
+        return EBRMatchPhase.ROUND;
+    }
+
+    override int GetAdminZoneNumber()
+    {
+        if (m_Zone)
+            return m_Zone.GetZoneNumber();
+        return 0;
+    }
+
+    override float GetAdminZoneRadius()
+    {
+        vector c;
+        float r;
+        if (b_Shrinking && !b_ZoneLocked)
+        {
+            GetShrinkCircle(GetShrinkClock(), c, r);
+            return r;
+        }
+        if (GetZone() && GetZone().GetArea())
+            return GetZone().GetArea().GetRadius();
+        return 0.0;
+    }
+
+    override bool IsMatchDecided()
+    {
+        if (!IsActive())
+            return false;
+#ifdef Carim
+        return GetPlayers().Count() <= 1 || GetGroupsCount() <= 1;
+#else
+        return GetPlayers().Count() <= 1;
+#endif
+    }
+
+    override int GetPhaseSecondsLeft()
+    {
+        if (m_RoundTimeUpTimer && IsTimerActiveOrPaused(m_RoundTimeUpTimer))
+            return Math.Ceil(m_RoundTimeUpTimer.GetRemaining());
+        return -1;
+    }
+
+    override int GetCountdownSecondsLeft()
+    {
+        if (b_ZoneLocked)
+            return GetPhaseSecondsLeft();
+        if (b_Shrinking && m_NewZoneLockTimer && IsTimerActiveOrPaused(m_NewZoneLockTimer))
+            return Math.Ceil(m_NewZoneLockTimer.GetRemaining());
+        if (m_ShrinkTimer && IsTimerActiveOrPaused(m_ShrinkTimer))
+            return Math.Ceil(m_ShrinkTimer.GetRemaining());
+        if (m_NewZoneLockTimer && IsTimerActiveOrPaused(m_NewZoneLockTimer))
+            return Math.Ceil(m_NewZoneLockTimer.GetRemaining());
+        return GetPhaseSecondsLeft();
+    }
+
+    override bool GetCurrentCircle(out vector center, out float radius)
+    {
+        center = "0 0 0";
+        radius = 0.0;
+        if (b_ZoneLocked)
+        {
+            if (GetZone() && GetZone().GetArea())
+            {
+                center = GetZone().GetArea().GetCenter();
+                radius = GetZone().GetArea().GetRadius();
+                return true;
+            }
+            return false;
+        }
+        if (b_ShrinkStopped)
+        {
+            GetShrinkCircle(f_ShrinkStopTime, center, radius);
+            return true;
+        }
+        if (b_Shrinking)
+        {
+            GetShrinkCircle(GetShrinkClock(), center, radius);
+            return true;
+        }
+        BattleRoyaleZone previous_zone = GetPreviousZone();
+        if (previous_zone && previous_zone.GetArea() && GetDynamicStartingZone(i_NumStartingPlayers) < zone_num)
+        {
+            center = previous_zone.GetArea().GetCenter();
+            radius = previous_zone.GetArea().GetRadius();
+            return true;
+        }
+        return false;
+    }
+
+    override bool AdjustTime(int deltaSeconds, out string reasonKey)
+    {
+        if (!IsActive() || !m_RoundTimeUpTimer || !IsTimerActiveOrPaused(m_RoundTimeUpTimer))
+        {
+            reasonKey = "STR_BR_PANEL_ERR_NO_TIMER";
+            return false;
+        }
+
+        bool frozen = IsFrozen();
+        float endRem = m_RoundTimeUpTimer.GetRemaining();
+        float lockRem = 0.0;
+        float shrinkRem = 0.0;
+        bool hasLock = !b_ZoneLocked && m_NewZoneLockTimer && IsTimerActiveOrPaused(m_NewZoneLockTimer);
+        bool hasShrink = !b_ZoneLocked && !b_Shrinking && m_ShrinkTimer && IsTimerActiveOrPaused(m_ShrinkTimer);
+        float nearestRem = endRem;
+        float actualDelta = deltaSeconds;
+        float newEndRem = 0.0;
+        float newLockRem = 0.0;
+        float newShrinkRem = 0.0;
+        float noticeTarget = 0.0;
+        float nowClock = 0.0;
+        float curRadius = 0.0;
+        vector curCenter = "0 0 0";
+        int postLockSec = 0;
+        int countdownSec = 0;
+
+        if (!b_ZoneLocked)
+        {
+            if (!hasLock)
+            {
+                reasonKey = "STR_BR_PANEL_ERR_NO_TIMER";
+                return false;
+            }
+            lockRem = m_NewZoneLockTimer.GetRemaining();
+            nearestRem = lockRem;
+            if (hasShrink)
+            {
+                shrinkRem = m_ShrinkTimer.GetRemaining();
+                nearestRem = shrinkRem;
+            }
+        }
+
+        if (deltaSeconds < 0)
+        {
+            if (nearestRem <= 30.0)
+            {
+                reasonKey = "STR_BR_PANEL_ERR_TIME_FLOOR";
+                return false;
+            }
+            if (nearestRem + actualDelta < 30.0)
+                actualDelta = 30.0 - nearestRem;
+            if (Math.AbsFloat(actualDelta) < 1.0)
+            {
+                reasonKey = "STR_BR_PANEL_ERR_TIME_FLOOR";
+                return false;
+            }
+        }
+
+        if (b_ZoneLocked)
+        {
+            newEndRem = endRem + actualDelta;
+            m_RoundTimeUpTimer.Stop();
+            RemoveTimer(m_RoundTimeUpTimer);
+            m_RoundTimeUpTimer = CreateRoundTimer(newEndRem, "OnRoundTimeUp", NULL, frozen);
+            RebuildMessageTimers(false, 0.0, newEndRem, frozen);
+
+            if (frozen)
+            {
+                s_MatchPhaseSeconds = Math.Ceil(newEndRem);
+                SendFrozenSnapshotTo(null);
+            }
+            else
+            {
+                BroadcastMatchPhase(EBRMatchPhase.ROUND, Math.Ceil(newEndRem));
+                GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetCountdownSeconds", new Param1<int>(Math.Ceil(newEndRem)), true);
+            }
+        }
+        else if (b_Shrinking)
+        {
+            nowClock = GetStateClock();
+            GetShrinkCircle(nowClock, curCenter, curRadius);
+            newLockRem = lockRem + actualDelta;
+            newEndRem = endRem + actualDelta;
+            postLockSec = Math.Round(newEndRem - newLockRem);
+            if (postLockSec < 0)
+                postLockSec = 0;
+
+            b_HasCustomShrinkFrom = true;
+            v_ShrinkFromCenter = curCenter;
+            f_ShrinkFromRadius = curRadius;
+            f_ShrinkStartTime = nowClock;
+            f_ShrinkDuration = newLockRem;
+
+            m_NewZoneLockTimer.Stop();
+            RemoveTimer(m_NewZoneLockTimer);
+            m_NewZoneLockTimer = CreateRoundTimer(newLockRem, "LockNewZone", new Param1<int>(postLockSec), frozen);
+
+            m_RoundTimeUpTimer.Stop();
+            RemoveTimer(m_RoundTimeUpTimer);
+            m_RoundTimeUpTimer = CreateRoundTimer(newEndRem, "OnRoundTimeUp", NULL, frozen);
+
+            RebuildMessageTimers(false, 0.0, newEndRem, frozen);
+
+            if (frozen)
+            {
+                s_MatchPhaseSeconds = Math.Ceil(newEndRem);
+                SendFrozenSnapshotTo(null);
+            }
+            else
+            {
+                SendShrinkTo(null);
+                BroadcastMatchPhase(EBRMatchPhase.ROUND, Math.Ceil(newEndRem));
+                GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetCountdownSeconds", new Param1<int>(Math.Ceil(newLockRem)), true);
+            }
+        }
+        else
+        {
+            newLockRem = lockRem + actualDelta;
+            newEndRem = endRem + actualDelta;
+            postLockSec = Math.Round(newEndRem - newLockRem);
+            if (postLockSec < 0)
+                postLockSec = 0;
+
+            noticeTarget = newLockRem;
+            if (hasShrink)
+            {
+                newShrinkRem = shrinkRem + actualDelta;
+                f_ShrinkStartTime = GetStateClock() + newShrinkRem;
+                m_ShrinkTimer.Stop();
+                RemoveTimer(m_ShrinkTimer);
+                m_ShrinkTimer = CreateRoundTimer(newShrinkRem, "StartShrink", NULL, frozen);
+                noticeTarget = newShrinkRem;
+            }
+
+            m_NewZoneLockTimer.Stop();
+            RemoveTimer(m_NewZoneLockTimer);
+            m_NewZoneLockTimer = CreateRoundTimer(newLockRem, "LockNewZone", new Param1<int>(postLockSec), frozen);
+
+            m_RoundTimeUpTimer.Stop();
+            RemoveTimer(m_RoundTimeUpTimer);
+            m_RoundTimeUpTimer = CreateRoundTimer(newEndRem, "OnRoundTimeUp", NULL, frozen);
+
+            RebuildMessageTimers(true, noticeTarget, newEndRem, frozen);
+            countdownSec = Math.Ceil(noticeTarget);
+
+            if (frozen)
+            {
+                s_MatchPhaseSeconds = Math.Ceil(newEndRem);
+                SendFrozenSnapshotTo(null);
+            }
+            else
+            {
+                BroadcastMatchPhase(EBRMatchPhase.ROUND, Math.Ceil(newEndRem));
+                GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetCountdownSeconds", new Param1<int>(countdownSec), true);
+            }
+        }
+
+#ifdef DIAG_DEVELOPER
+        Print("[BRPanel] AdjustTime state=" + GetName() + " delta=" + actualDelta.ToString() + " locked=" + b_ZoneLocked.ToString() + " shrinking=" + b_Shrinking.ToString() + " oldShrink=" + shrinkRem.ToString() + " newShrink=" + newShrinkRem.ToString() + " oldLock=" + lockRem.ToString() + " newLock=" + newLockRem.ToString() + " oldEnd=" + endRem.ToString() + " newEnd=" + newEndRem.ToString());
+#endif
+        return true;
+    }
+
+    override protected void SendResumeSync()
+    {
+        if (b_Shrinking && !b_ZoneLocked && f_ShrinkDuration > 0 && GetStateClock() >= f_ShrinkStartTime)
+            SendShrinkTo(null);
+
+        int phaseSec = GetPhaseSecondsLeft();
+        if (phaseSec >= 0)
+            BroadcastMatchPhase(EBRMatchPhase.ROUND, phaseSec);
+
+        int cdSec = GetCountdownSecondsLeft();
+        if (cdSec >= 0)
+            GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetCountdownSeconds", new Param1<int>(cdSec), true);
+    }
+
     override void Activate()
     {
         //we just activated this round (players not yet transfered from previous state)
@@ -142,7 +426,7 @@ class BattleRoyaleRound: BattleRoyaleState
                 time_till_end = time_till_lock + time_between_lock_and_end;
             }
             f_ShrinkDuration = (time_till_lock - time_till_shrink) / 1000.0;
-            f_ShrinkStartTime = GetGame().GetTickTime() + time_till_shrink / 1000.0;
+            f_ShrinkStartTime = GetStateClock() + time_till_shrink / 1000.0;
         }
 
         BattleRoyaleUtils.Trace(GetName() + " Activate with a duration of " + time_till_end / 1000 + " seconds with a lock at " + time_till_lock / 1000 + " seconds (so " + time_between_lock_and_end / 1000 + " seconds after lock before end), closing from " + time_till_shrink / 1000 + " seconds for " + f_ShrinkDuration + " seconds !");
@@ -286,18 +570,18 @@ class BattleRoyaleRound: BattleRoyaleState
 
     override void Deactivate()
     {
-        if ( m_ShrinkTimer && m_ShrinkTimer.IsRunning() )
+        if ( m_ShrinkTimer )
             m_ShrinkTimer.Stop();
 
-        if ( m_NewZoneLockTimer && m_NewZoneLockTimer.IsRunning() )
+        if ( m_NewZoneLockTimer )
             m_NewZoneLockTimer.Stop();
 
-        if ( m_RoundTimeUpTimer && m_RoundTimeUpTimer.IsRunning() )
+        if ( m_RoundTimeUpTimer )
             m_RoundTimeUpTimer.Stop();
 
         for(int i = 0; i < m_MessageTimers.Count(); i++)
         {
-            if ( m_MessageTimers[i] && m_MessageTimers[i].IsRunning() )
+            if ( m_MessageTimers[i] )
                 m_MessageTimers[i].Stop();
         }
 
@@ -306,7 +590,7 @@ class BattleRoyaleRound: BattleRoyaleState
         if (b_Shrinking && !b_ZoneLocked && !b_ShrinkStopped)
         {
             b_ShrinkStopped = true;
-            f_ShrinkStopTime = GetGame().GetTickTime();
+            f_ShrinkStopTime = GetStateClock();
             vector stop_center;
             float stop_radius;
             GetShrinkCircle(f_ShrinkStopTime, stop_center, stop_radius);
@@ -482,53 +766,143 @@ class BattleRoyaleRound: BattleRoyaleState
         return travel / f_ShrinkSpeed;
     }
 
+    protected Timer CreateRoundTimer(float duration, string fnName, Param params, bool paused)
+    {
+        if (paused)
+            return AddPausedTimer(duration, this, fnName, params, false);
+        return AddTimer(duration, this, fnName, params, false);
+    }
+
+    protected void RebuildMessageTimers(bool includePreShrink, float preShrinkRem, float endRem, bool paused)
+    {
+        int i;
+        for (i = 0; i < m_MessageTimers.Count(); i++)
+        {
+            if (m_MessageTimers[i])
+            {
+                m_MessageTimers[i].Stop();
+                RemoveTimer(m_MessageTimers[i]);
+            }
+        }
+        m_MessageTimers.Clear();
+
+        int min;
+        int sec;
+        float val;
+        if (includePreShrink && GetDynamicStartingZone(i_NumStartingPlayers) < zone_num)
+        {
+            string notify_minutes = "NotifyTimeTillLockMinutes";
+            string notify_seconds = "NotifyTimeTillLockSeconds";
+            if (f_ShrinkDuration > 0)
+            {
+                notify_minutes = "NotifyTimeTillShrinkMinutes";
+                notify_seconds = "NotifyTimeTillShrinkSeconds";
+            }
+
+            for (i = 0; i < lock_notif_min.Count(); i++)
+            {
+                min = lock_notif_min[i];
+                val = preShrinkRem - (min * 60.0);
+                if (val > 0)
+                    m_MessageTimers.Insert(CreateRoundTimer(val, notify_minutes, new Param1<int>(min), paused));
+            }
+            for (i = 0; i < lock_notif_sec.Count(); i++)
+            {
+                sec = lock_notif_sec[i];
+                val = preShrinkRem - sec;
+                if (val > 0)
+                    m_MessageTimers.Insert(CreateRoundTimer(val, notify_seconds, new Param1<int>(sec), paused));
+            }
+        }
+
+        string endMinutesFn = "NotifyTimeTillNewZoneMinutes";
+        string endSecondsFn = "NotifyTimeTillNewZoneSeconds";
+        if (m_Zone.GetZoneNumber() >= i_NumZones)
+        {
+            endMinutesFn = "NotifyTimeTillNoZoneMinutes";
+            endSecondsFn = "NotifyTimeTillNoZoneSeconds";
+        }
+
+        for (i = 0; i < lock_notif_min.Count(); i++)
+        {
+            min = lock_notif_min[i];
+            val = endRem - (min * 60.0);
+            if (val > 0)
+                m_MessageTimers.Insert(CreateRoundTimer(val, endMinutesFn, new Param1<int>(min), paused));
+        }
+        for (i = 0; i < lock_notif_sec.Count(); i++)
+        {
+            sec = lock_notif_sec[i];
+            val = endRem - sec;
+            if (val > 0)
+                m_MessageTimers.Insert(CreateRoundTimer(val, endSecondsFn, new Param1<int>(sec), paused));
+        }
+    }
+
+    protected void GetShrinkFromArea(out vector from_center, out float from_radius)
+    {
+        if (b_HasCustomShrinkFrom)
+        {
+            from_center = v_ShrinkFromCenter;
+            from_radius = f_ShrinkFromRadius;
+            return;
+        }
+        BattleRoyalePlayArea from_area = GetPreviousZone().GetArea();
+        from_center = from_area.GetCenter();
+        from_radius = from_area.GetRadius();
+    }
+
     //! The zone starts closing: from now on the damage follows the circle of the instant, and every client draws it
     void StartShrink()
     {
+        LogPanelCallback("StartShrink");
         BattleRoyaleZone previous_zone = GetPreviousZone();
         if (b_ZoneLocked || f_ShrinkDuration <= 0 || !previous_zone || !previous_zone.GetArea() || !GetZone() || !GetZone().GetArea())
             return;
 
         // f_ShrinkStartTime stays the planned start: a late timer gives the clients the seconds really gone
         b_Shrinking = true;
-        float late_seconds = GetGame().GetTickTime() - f_ShrinkStartTime;
+        float late_seconds = GetStateClock() - f_ShrinkStartTime;
         BattleRoyaleUtils.Trace(GetName() + " closing starts, " + f_ShrinkDuration + " seconds, " + late_seconds + " seconds after its planned start");
         SendShrinkTo(null);
     }
 
-    //! Tick time of the closing circle in force: now, or the instant the round ended during its closing
+    //! State clock of the closing circle in force: now, or the instant the round ended during its closing
     protected float GetShrinkClock()
     {
         if (b_ShrinkStopped)
             return f_ShrinkStopTime;
 
-        return GetGame().GetTickTime();
+        return GetStateClock();
     }
 
-    //! Circle of the closing at tick time now, from its planned start; the lerp factor stays within [0, 1]
+    //! Circle of the closing at state clock now, from its planned start; the lerp factor stays within [0, 1]
     protected void GetShrinkCircle(float now, out vector center, out float radius)
     {
-        BattleRoyalePlayArea from_area = GetPreviousZone().GetArea();
+        vector from_center;
+        float from_radius;
+        GetShrinkFromArea(from_center, from_radius);
         BattleRoyalePlayArea to_area = GetZone().GetArea();
 
         float s = 1;
         if (f_ShrinkDuration > 0)
             s = Math.Clamp((now - f_ShrinkStartTime) / f_ShrinkDuration, 0, 1);
 
-        vector from_center = from_area.GetCenter();
         vector to_center = to_area.GetCenter();
         center = from_center + (to_center - from_center) * s;
-        radius = from_area.GetRadius() + (to_area.GetRadius() - from_area.GetRadius()) * s;
+        radius = from_radius + (to_area.GetRadius() - from_radius) * s;
     }
 
     //! StartZoneShrink: start circle, end circle, total duration and seconds already gone since the planned start (more
     //! than 0 when the start timer came late); null identity sends to everyone
     protected void SendShrinkTo(PlayerIdentity identity)
     {
-        BattleRoyalePlayArea from_area = GetPreviousZone().GetArea();
+        vector from_center;
+        float from_radius;
+        GetShrinkFromArea(from_center, from_radius);
         BattleRoyalePlayArea to_area = GetZone().GetArea();
-        float elapsed = Math.Clamp(GetGame().GetTickTime() - f_ShrinkStartTime, 0, f_ShrinkDuration);
-        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "StartZoneShrink", new Param6<vector, float, vector, float, float, float>( from_area.GetCenter(), from_area.GetRadius(), to_area.GetCenter(), to_area.GetRadius(), f_ShrinkDuration, elapsed ), true, identity);
+        float elapsed = Math.Clamp(GetStateClock() - f_ShrinkStartTime, 0, f_ShrinkDuration);
+        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "StartZoneShrink", new Param6<vector, float, vector, float, float, float>( from_center, from_radius, to_area.GetCenter(), to_area.GetRadius(), f_ShrinkDuration, elapsed ), true, identity);
     }
 
     //! Zone state of this round for a client that restarted its mission or joined late: the zone in force, the announced
@@ -577,13 +951,30 @@ class BattleRoyaleRound: BattleRoyaleState
 
         // After the zone in force, which ends a closing on the client
         if (b_Shrinking)
-            SendShrinkTo(identity);
+        {
+            if (IsFrozen())
+            {
+                vector frozen_center;
+                float frozen_radius;
+                GetShrinkCircle(GetShrinkClock(), frozen_center, frozen_radius);
+                GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( frozen_center, frozen_radius ), true, identity);
+            }
+            else
+            {
+                SendShrinkTo(identity);
+            }
+        }
     }
 
     void LockNewZone(int seconds)
     {
+        LogPanelCallback("LockNewZone");
         b_ZoneLocked = true;
         b_Shrinking = false;
+
+        int postLockSec = seconds;
+        if (m_RoundTimeUpTimer && IsTimerActiveOrPaused(m_RoundTimeUpTimer))
+            postLockSec = Math.Ceil(m_RoundTimeUpTimer.GetRemaining());
 
         //send play area to clients
         ref BattleRoyalePlayArea m_PreviousArea = NULL;
@@ -599,18 +990,20 @@ class BattleRoyaleRound: BattleRoyaleState
         //tell the client we don't know the next play area
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", new Param3<vector, float, bool>( m_ThisArea.GetCenter(), m_ThisArea.GetRadius(), b_ArtillerySound ), true);
         //tell the client how much time until the next zone appears
-        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetCountdownSeconds", new Param1<int>( seconds ) , true);
-        BroadcastMatchPhase(EBRMatchPhase.ROUND, seconds);
+        GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetCountdownSeconds", new Param1<int>( postLockSec ) , true);
+        BroadcastMatchPhase(EBRMatchPhase.ROUND, postLockSec);
     }
 
     void OnRoundTimeUp()
     {
+        LogPanelCallback("OnRoundTimeUp");
         Deactivate();
     }
 
 	// Round messaging
 	void NotifyTimeTillLockSeconds(int seconds)
 	{
+		LogPanelCallback("NotifyTimeTillLockSeconds");
 		if(seconds > 1)
 			MessagePlayersUntranslated("STR_BR_CURRENT_ZONE_WILL_LOCK_IN_SECONDS", seconds.ToString());
 		else
@@ -619,6 +1012,7 @@ class BattleRoyaleRound: BattleRoyaleState
 
 	void NotifyTimeTillLockMinutes(int minutes)
 	{
+		LogPanelCallback("NotifyTimeTillLockMinutes");
 		if(minutes > 1)
 			MessagePlayersUntranslated("STR_BR_CURRENT_ZONE_WILL_LOCK_IN_MINUTES", minutes.ToString());
 		else
@@ -627,6 +1021,7 @@ class BattleRoyaleRound: BattleRoyaleState
 
 	void NotifyTimeTillShrinkSeconds(int seconds)
 	{
+		LogPanelCallback("NotifyTimeTillShrinkSeconds");
 		if(seconds > 1)
 			MessagePlayersUntranslated("STR_BR_ZONE_STARTS_CLOSING_IN_SECONDS", seconds.ToString());
 		else
@@ -635,6 +1030,7 @@ class BattleRoyaleRound: BattleRoyaleState
 
 	void NotifyTimeTillShrinkMinutes(int minutes)
 	{
+		LogPanelCallback("NotifyTimeTillShrinkMinutes");
 		if(minutes > 1)
 			MessagePlayersUntranslated("STR_BR_ZONE_STARTS_CLOSING_IN_MINUTES", minutes.ToString());
 		else
@@ -643,6 +1039,7 @@ class BattleRoyaleRound: BattleRoyaleState
 
 	void NotifyTimeTillNewZoneSeconds(int seconds)
 	{
+		LogPanelCallback("NotifyTimeTillNewZoneSeconds");
 		if(seconds > 1)
 			MessagePlayersUntranslated("STR_BR_A_NEW_ZONE_WILL_APPEAR_IN_SECONDS", seconds.ToString());
 		else
@@ -651,6 +1048,7 @@ class BattleRoyaleRound: BattleRoyaleState
 
 	void NotifyTimeTillNewZoneMinutes(int minutes)
 	{
+		LogPanelCallback("NotifyTimeTillNewZoneMinutes");
 		if(minutes > 1)
 			MessagePlayersUntranslated("STR_BR_A_NEW_ZONE_WILL_APPEAR_IN_MINUTES", minutes.ToString());
 		else
@@ -659,6 +1057,7 @@ class BattleRoyaleRound: BattleRoyaleState
 
 	void NotifyTimeTillNoZoneSeconds(int seconds)
 	{
+		LogPanelCallback("NotifyTimeTillNoZoneSeconds");
 		if(seconds > 1)
 			MessagePlayersUntranslated("STR_BR_THE_LAST_ZONE_WILL_APPEAR_IN_SECONDS", seconds.ToString());
 		else
@@ -667,6 +1066,7 @@ class BattleRoyaleRound: BattleRoyaleState
 
 	void NotifyTimeTillNoZoneMinutes(int minutes)
 	{
+		LogPanelCallback("NotifyTimeTillNoZoneMinutes");
 		if(minutes > 1)
 			MessagePlayersUntranslated("STR_BR_THE_LAST_ZONE_WILL_APPEAR_IN_MINUTES", minutes.ToString());
 		else

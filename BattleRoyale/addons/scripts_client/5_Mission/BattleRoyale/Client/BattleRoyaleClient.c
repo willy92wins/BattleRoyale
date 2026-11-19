@@ -536,7 +536,7 @@ class BattleRoyaleClient: BattleRoyaleBase
 				break;
 		}
 
-		gameplay.UpdateMatchPhase( label, seconds );
+		gameplay.UpdateMatchPhase( label, seconds, br_rpc.match_frozen );
     }
 
     protected bool GetZoneDistance(PlayerBase player, BattleRoyalePlayArea play_area, out float distExt, out float distInt, out float angle)
@@ -590,7 +590,7 @@ class BattleRoyaleClient: BattleRoyaleBase
         if (!gameplay)
             return;
 
-        if(i_SecondsRemaining > 0)
+        if(!BattleRoyaleRPC.GetInstance().match_frozen && i_SecondsRemaining > 0)
         {
             i_SecondsRemaining--;
             gameplay.UpdateCountdownTimer(i_SecondsRemaining);

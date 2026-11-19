@@ -11,7 +11,7 @@ modded class BattleRoyaleServer
         super.Init();
 
         //! A permission already registered by the core is only logged as a duplicate by VPP
-        GetPermissionManager().AddPermissionType({ "MenuBattleRoyaleManager", "BattleRoyale:Next", "BattleRoyale:Pause", "BattleRoyale:Resume" });
+        GetPermissionManager().AddPermissionType({ "MenuBattleRoyaleManager", "BattleRoyale:Next", "BattleRoyale:Pause", "BattleRoyale:Resume", "BattleRoyale:ForceStart", "BattleRoyale:AdjustTime", "BattleRoyale:Restart" });
 
         //! A separate RPC name, so it never collides with the core NextState registration
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "VPPNextState", this, SingleplayerExecutionType.Server);
@@ -53,6 +53,36 @@ modded class BRAdminAuthorizer
 
         PermissionManager vpp = GetPermissionManager();
         return vpp && vpp.VerifyPermission(sender.GetPlainId(), "BattleRoyale:" + action, "", false);
+    }
+
+    override protected static bool HasStatusGrant(PlayerIdentity sender)
+    {
+        if (!sender)
+            return false;
+
+        return HasFrameworkStatusGrant(sender);
+    }
+
+    override protected static bool HasFrameworkStatusGrant(PlayerIdentity sender)
+    {
+        if (super.HasFrameworkStatusGrant(sender))
+            return true;
+
+        if (!sender)
+            return false;
+
+        PermissionManager vpp = GetPermissionManager();
+        return vpp && vpp.VerifyPermission(sender.GetPlainId(), "MenuBattleRoyaleManager", "", false);
+    }
+
+    override protected static void NotifyFrameworkDeny(PlayerIdentity sender, string action)
+    {
+        if (!sender)
+            return;
+
+        PermissionManager vpp = GetPermissionManager();
+        if (vpp && vpp.HasUserGroup(sender.GetPlainId()))
+            vpp.NotifyPlayer(sender.GetPlainId(), "#VSTR_ERROR_NO_PERM BattleRoyale:" + action, NotifyTypes.PERMISSION_REJECT);
     }
 };
 #endif

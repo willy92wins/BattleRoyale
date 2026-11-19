@@ -78,7 +78,7 @@ class BattleRoyaleLastRound: BattleRoyaleState
                 time_till_lock = shrink_ms;
             }
             f_ShrinkDuration = (time_till_lock - time_till_shrink) / 1000.0;
-            f_ShrinkStartTime = GetGame().GetTickTime() + time_till_shrink / 1000.0;
+            f_ShrinkStartTime = GetStateClock() + time_till_shrink / 1000.0;
         }
 
         // With a closing the danger starts when the final zone starts closing: the notices count down to that moment
@@ -150,17 +150,17 @@ class BattleRoyaleLastRound: BattleRoyaleState
 
     override void Deactivate()
     {
-        if ( m_ShrinkTimer && m_ShrinkTimer.IsRunning() )
+        if ( m_ShrinkTimer )
             m_ShrinkTimer.Stop();
 
-        if ( m_FinalZoneLockTimer && m_FinalZoneLockTimer.IsRunning() )
+        if ( m_FinalZoneLockTimer )
         {
             m_FinalZoneLockTimer.Stop();
         }
 
         for(int i = 0; i < m_MessageTimers.Count(); i++)
         {
-            if ( m_MessageTimers[i] && m_MessageTimers[i].IsRunning() )
+            if ( m_MessageTimers[i] )
             {
                 m_MessageTimers[i].Stop();
             }
@@ -172,7 +172,7 @@ class BattleRoyaleLastRound: BattleRoyaleState
         if (b_Shrinking && !b_IsZoneLocked && !b_ShrinkStopped && stop_zone && stop_zone.GetArea())
         {
             b_ShrinkStopped = true;
-            f_ShrinkStopTime = GetGame().GetTickTime();
+            f_ShrinkStopTime = GetStateClock();
             GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( stop_zone.GetArea().GetCenter(), GetShrinkRadius(f_ShrinkStopTime) ), true);
         }
 
@@ -197,6 +197,100 @@ class BattleRoyaleLastRound: BattleRoyaleState
 	override string GetName()
 	{
 		return "Last Gameplay State";
+	}
+
+	override bool CanFreeze()
+	{
+		return true;
+	}
+
+	override int GetAdminPhaseEnum()
+	{
+		return EBRMatchPhase.LAST_ROUND;
+	}
+
+	override int GetAdminZoneNumber()
+	{
+		BattleRoyaleZone prev = GetPreviousZone();
+		if (prev)
+			return prev.GetZoneNumber();
+		return 0;
+	}
+
+	override float GetAdminZoneRadius()
+	{
+		if (b_IsZoneLocked)
+			return 0.0;
+		BattleRoyaleZone final_zone = GetPreviousZone();
+		if (!final_zone || !final_zone.GetArea())
+			return 0.0;
+		if (b_ShrinkStopped)
+			return GetShrinkRadius(f_ShrinkStopTime);
+		if (b_Shrinking)
+			return GetShrinkRadius(GetShrinkClock());
+		return final_zone.GetArea().GetRadius();
+	}
+
+	override bool IsMatchDecided()
+	{
+		if (!IsActive())
+			return false;
+#ifdef Carim
+		return GetPlayers().Count() <= 1 || GetGroupsCount() <= 1;
+#else
+		return GetPlayers().Count() <= 1;
+#endif
+	}
+
+	override int GetPhaseSecondsLeft()
+	{
+		if (!b_IsZoneLocked && m_FinalZoneLockTimer && IsTimerActiveOrPaused(m_FinalZoneLockTimer))
+			return Math.Ceil(m_FinalZoneLockTimer.GetRemaining());
+		return -1;
+	}
+
+	override int GetCountdownSecondsLeft()
+	{
+		return GetPhaseSecondsLeft();
+	}
+
+	override bool GetCurrentCircle(out vector center, out float radius)
+	{
+		center = "0 0 0";
+		radius = 0.0;
+		if (b_IsZoneLocked)
+			return false;
+
+		BattleRoyaleZone final_zone = GetPreviousZone();
+		if (!final_zone || !final_zone.GetArea())
+			return false;
+
+		center = final_zone.GetArea().GetCenter();
+		if (b_ShrinkStopped)
+		{
+			radius = GetShrinkRadius(f_ShrinkStopTime);
+			return true;
+		}
+		if (b_Shrinking)
+		{
+			radius = GetShrinkRadius(GetShrinkClock());
+			return true;
+		}
+		radius = final_zone.GetArea().GetRadius();
+		return true;
+	}
+
+	override protected void SendResumeSync()
+	{
+		if (b_Shrinking && !b_IsZoneLocked && f_ShrinkDuration > 0 && GetStateClock() >= f_ShrinkStartTime)
+			SendShrinkTo(null);
+
+		int rem = GetPhaseSecondsLeft();
+		if (rem >= 0)
+		{
+			BroadcastMatchPhase(EBRMatchPhase.LAST_ROUND, rem);
+			GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetCountdownSeconds", new Param1<int>(rem), true);
+		}
 	}
 
 	override bool IsComplete() //return true when this state is complete & ready to transfer to the next state
@@ -275,6 +369,7 @@ class BattleRoyaleLastRound: BattleRoyaleState
 
     void LockFinalZone()
     {
+        LogPanelCallback("LockFinalZone");
         //TODO: this doesn't fucking work | if zone is null, no damage occurs
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( "0 0 0", 0.0 ), true);
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateFuturePlayArea", new Param3<vector, float, bool>( "0 0 0", 0.0, false ), true);
@@ -298,27 +393,28 @@ class BattleRoyaleLastRound: BattleRoyaleState
     //! The final zone starts closing: from now on the damage follows the radius of the instant, and every client draws it
     void StartShrink()
     {
+        LogPanelCallback("StartShrink");
         BattleRoyaleZone final_zone = GetPreviousZone();
         if (b_IsZoneLocked || f_ShrinkDuration <= 0 || !final_zone || !final_zone.GetArea())
             return;
 
         // f_ShrinkStartTime stays the planned start: a late timer gives the clients the seconds really gone
         b_Shrinking = true;
-        float late_seconds = GetGame().GetTickTime() - f_ShrinkStartTime;
+        float late_seconds = GetStateClock() - f_ShrinkStartTime;
         BattleRoyaleUtils.Trace(GetName() + " closing starts, " + f_ShrinkDuration + " seconds, " + late_seconds + " seconds after its planned start");
         SendShrinkTo(null);
     }
 
-    //! Tick time of the closing radius in force: now, or the instant the round ended during its closing
+    //! State clock of the closing radius in force: now, or the instant the round ended during its closing
     protected float GetShrinkClock()
     {
         if (b_ShrinkStopped)
             return f_ShrinkStopTime;
 
-        return GetGame().GetTickTime();
+        return GetStateClock();
     }
 
-    //! Radius of the closing final zone at tick time now, from its planned start
+    //! Radius of the closing final zone at state clock now, from its planned start
     protected float GetShrinkRadius(float now)
     {
         float radius = GetPreviousZone().GetArea().GetRadius();
@@ -334,7 +430,7 @@ class BattleRoyaleLastRound: BattleRoyaleState
     protected void SendShrinkTo(PlayerIdentity identity)
     {
         BattleRoyalePlayArea final_area = GetPreviousZone().GetArea();
-        float elapsed = Math.Clamp(GetGame().GetTickTime() - f_ShrinkStartTime, 0, f_ShrinkDuration);
+        float elapsed = Math.Clamp(GetStateClock() - f_ShrinkStartTime, 0, f_ShrinkDuration);
         GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "StartZoneShrink", new Param6<vector, float, vector, float, float, float>( final_area.GetCenter(), final_area.GetRadius(), final_area.GetCenter(), 0.0, f_ShrinkDuration, elapsed ), true, identity);
     }
 
@@ -372,11 +468,17 @@ class BattleRoyaleLastRound: BattleRoyaleState
 
         // After the zone in force, which ends a closing on the client
         if (b_Shrinking)
-            SendShrinkTo(identity);
+        {
+            if (IsFrozen() && final_zone && final_zone.GetArea())
+                GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>( final_zone.GetArea().GetCenter(), GetShrinkRadius(GetShrinkClock()) ), true, identity);
+            else
+                SendShrinkTo(identity);
+        }
     }
 
     void NotifyTimeTillShrinkSeconds(int seconds)
     {
+        LogPanelCallback("NotifyTimeTillShrinkSeconds");
         if(seconds > 1)
             MessagePlayersUntranslated("STR_BR_ZONE_STARTS_CLOSING_IN_SECONDS", seconds.ToString());
         else
@@ -385,6 +487,7 @@ class BattleRoyaleLastRound: BattleRoyaleState
 
     void NotifyTimeTillShrinkMinutes(int minutes)
     {
+        LogPanelCallback("NotifyTimeTillShrinkMinutes");
         if(minutes > 1)
             MessagePlayersUntranslated("STR_BR_ZONE_STARTS_CLOSING_IN_MINUTES", minutes.ToString());
         else
@@ -405,11 +508,13 @@ class BattleRoyaleLastRound: BattleRoyaleState
     //TODO: both of these need added to battleroyaleconstants & use string replace to append minutes.ToString()
     void NotifyTimeToEndMinutes(int minutes)
     {
+		LogPanelCallback("NotifyTimeToEndMinutes");
 		MessagePlayersUntranslated("STR_BR_ZONE_WILL_DISAPPEAR_MINUTE", minutes.ToString());
     }
 
     void NotifyTimeToEndSeconds(int seconds)
     {
+		LogPanelCallback("NotifyTimeToEndSeconds");
 		MessagePlayersUntranslated("STR_BR_ZONE_WILL_DISAPPEAR_SECOND", seconds.ToString());
     }
 }

@@ -58,6 +58,7 @@ class BattleRoyaleHud
     protected float m_SilentModeRowY;
     protected int m_LastPhaseLabel;
     protected int m_LastPhaseSeconds;
+    protected bool m_LastPhaseFrozen;
 
     void BattleRoyaleHud( Widget root )
     {
@@ -100,6 +101,7 @@ class BattleRoyaleHud
         m_SilentModeRowY = SILENT_MODE_ROW_Y;
         m_LastPhaseLabel = PHASE_LABEL_NONE;
         m_LastPhaseSeconds = -1;
+        m_LastPhaseFrozen = false;
     }
 
     bool Shown()
@@ -418,13 +420,14 @@ class BattleRoyaleHud
     }
 
     //! Shows the phase label and, when seconds >= 0, the time it counts down to
-    void SetMatchPhase(int label, int seconds)
+    void SetMatchPhase(int label, int seconds, bool frozen = false)
     {
-        if ( label == m_LastPhaseLabel && seconds == m_LastPhaseSeconds )
+        if ( label == m_LastPhaseLabel && seconds == m_LastPhaseSeconds && frozen == m_LastPhaseFrozen )
             return;
 
         m_LastPhaseLabel = label;
         m_LastPhaseSeconds = seconds;
+        m_LastPhaseFrozen = frozen;
 
         string key = GetPhaseLabelKey( label );
         if ( key == "" || !m_PhaseTextWidget )
@@ -436,6 +439,8 @@ class BattleRoyaleHud
         string text = Widget.TranslateString( key );
         if ( seconds >= 0 )
             text = text + " " + FormatTime( seconds );
+        if ( frozen )
+            text = text + " (" + Widget.TranslateString( "#STR_BR_HUD_PAUSED" ) + ")";
 
         m_PhaseTextWidget.SetText( text );
         SetVisible( m_PhasePanel, true );

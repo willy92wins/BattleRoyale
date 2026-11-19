@@ -27,6 +27,18 @@ class BattleRoyaleServer: BattleRoyaleBase
     //! identity id -> tick time of the last accepted leaderboard request
     protected ref map<string, float> m_LastLeaderboardRequest;
 
+    //! Admin panel status subscription (lease-based, zero work while empty)
+    static const float ADMIN_SUB_LEASE_SECONDS = 5.0;
+    static const float ADMIN_STATUS_MIN_INTERVAL = 1.0;
+    protected ref map<string, PlayerIdentity> m_AdminSubscribers;
+    protected ref map<string, float> m_AdminSubLeaseUntil;
+    protected ref map<string, float> m_AdminSubLastSent;
+    protected ref map<string, bool> m_AdminSubDirty;
+    protected ref array<string> m_ExpiredAdminSubIds;
+    protected ref map<string, float> m_AdminInboundWindowStart;
+    protected ref map<string, int> m_AdminInboundCount;
+    protected string m_LastAdminStatusSignature;
+
     void BattleRoyaleServer()
     {
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "PlayerReadyUp", this);
@@ -35,6 +47,15 @@ class BattleRoyaleServer: BattleRoyaleBase
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "SpectatorToLobby", this);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "WaitingToSpectator", this);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "RequestLeaderboard", this);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "SubscribeAdminStatus", this, SingleplayerExecutionType.Server);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "UnsubscribeAdminStatus", this, SingleplayerExecutionType.Server);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "RequestAdminStatus", this, SingleplayerExecutionType.Server);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "AdminNextPhase", this, SingleplayerExecutionType.Server);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "AdminFreeze", this, SingleplayerExecutionType.Server);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "AdminResume", this, SingleplayerExecutionType.Server);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "AdminForceStart", this, SingleplayerExecutionType.Server);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "AdminAdjustTime", this, SingleplayerExecutionType.Server);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "AdminRestartMatch", this, SingleplayerExecutionType.Server);
 #ifdef VPPADMINTOOLS
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "NextState", this, SingleplayerExecutionType.Server);
 #endif
@@ -61,7 +82,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         BattleRoyaleUtils.Trace("BattleRoyaleServer() Init()");
 #ifdef VPPADMINTOOLS
-        GetPermissionManager().AddPermissionType({ "MenuBattleRoyaleManager", "BattleRoyale:Next", "BattleRoyale:Pause", "BattleRoyale:Resume" });
+        GetPermissionManager().AddPermissionType({ "MenuBattleRoyaleManager", "BattleRoyale:Next", "BattleRoyale:Pause", "BattleRoyale:Resume", "BattleRoyale:ForceStart", "BattleRoyale:AdjustTime", "BattleRoyale:Restart" });
 #endif
 
         BattleRoyaleConfig config_data = BattleRoyaleConfig.GetConfig();
@@ -92,6 +113,14 @@ class BattleRoyaleServer: BattleRoyaleBase
         m_LateJoinTimers = new map<string, ref Timer>;
         m_Spectators = new BattleRoyaleSpectators;
         m_CharacterTypes = new map<string, string>;
+        m_AdminSubscribers = new map<string, PlayerIdentity>;
+        m_AdminSubLeaseUntil = new map<string, float>;
+        m_AdminSubLastSent = new map<string, float>;
+        m_AdminSubDirty = new map<string, bool>;
+        m_ExpiredAdminSubIds = new array<string>;
+        m_AdminInboundWindowStart = new map<string, float>;
+        m_AdminInboundCount = new map<string, int>;
+        m_LastAdminStatusSignature = "";
 
         // The actions that hurt or hold another player are blocked in the lobby (BRProtectedPlayerActions.c)
         BattleRoyaleSpawnsData spawnsData = config_data.GetSpawnsData();
@@ -193,20 +222,43 @@ class BattleRoyaleServer: BattleRoyaleBase
     protected ref BRMatchTurnover m_Turnover;
     //! A match ended while the previous turnover was still cleaning: served when that turnover ends
     protected bool m_TurnoverPending;
+    //! Preserves the abort reason when a turnover request is deferred behind an active cleanup
+    protected bool m_TurnoverPendingAborted;
     //! The current turnover aborted and the server is exiting: a pending request is dropped with it
     protected bool m_TurnoverAborted;
+    //! Set by AbortMatch until the next match lobby opens: skips match count, restart forecast and end webhooks
+    protected bool m_AbortedByAdmin;
+    //! True while a Prepare worker thread is still executing, even if the watchdog already ended Prepare
+    protected bool m_PrepareWorkerRunning;
     //! identity id -> character class of the last body, so a spectator returns to the lobby with the same look
     protected ref map<string, string> m_CharacterTypes;
 
+    void SetPrepareWorkerRunning(bool running)
+    {
+        m_PrepareWorkerRunning = running;
+        MarkAdminStatusDirty();
+    }
+
+    bool IsPrepareWorkerRunning()
+    {
+        return m_PrepareWorkerRunning || Turnover_IsPrepareRunning();
+    }
+
+    bool IsAbortedByAdmin()
+    {
+        return m_AbortedByAdmin;
+    }
+
     //! Called by the restart state when a match is over: true when the server stays up and the next match follows,
     //! false when it must exit as without serial matches (setting off, ignored, or the scheduled full restart)
-    bool RequestTurnover()
+    bool RequestTurnover(bool aborted = false)
     {
         if (m_Turnover)
         {
             // A match cannot end before the lobby opens, so this is the clean phase outliving the next
             // match: keep the request instead of dropping it, Update serves it when this turnover ends
             m_TurnoverPending = true;
+            m_TurnoverPendingAborted = aborted;
             return true;
         }
 
@@ -214,11 +266,18 @@ class BattleRoyaleServer: BattleRoyaleBase
         if (!serverData || !serverData.UsesSerialMatches())
             return false;
 
-        s_MatchesEnded++;
-        if (serverData.serial_restart_every_matches > 0 && s_MatchesEnded >= serverData.serial_restart_every_matches)
+        if (!aborted)
         {
-            BattleRoyaleUtils.Info("[Serial] Match " + s_MatchesEnded + " ended: scheduled full restart");
-            return false;
+            s_MatchesEnded++;
+            if (serverData.serial_restart_every_matches > 0 && s_MatchesEnded >= serverData.serial_restart_every_matches)
+            {
+                BattleRoyaleUtils.Info("[Serial] Match " + s_MatchesEnded + " ended: scheduled full restart");
+                return false;
+            }
+        }
+        else
+        {
+            BattleRoyaleUtils.Info("[Serial] Match aborted by admin: returning to lobby without counting toward restart interval");
         }
 
         m_Turnover = new BRMatchTurnover(this, s_MatchesEnded);
@@ -229,11 +288,93 @@ class BattleRoyaleServer: BattleRoyaleBase
     //! reaches serial_restart_every_matches with them. Players are warned in the last round and at the end
     bool WillRestartAfterMatch()
     {
+        if (m_AbortedByAdmin)
+            return false;
+
         if (!BRMatchDebris.s_Enabled)
             return true;
 
         BattleRoyaleServerData serverData = BattleRoyaleConfig.GetConfig().GetServerData();
         return serverData && serverData.serial_restart_every_matches > 0 && s_MatchesEnded + 1 >= serverData.serial_restart_every_matches;
+    }
+
+    bool CanAbortMatch(out string reasonKey)
+    {
+        BattleRoyaleServerData serverData = BattleRoyaleConfig.GetConfig().GetServerData();
+        if (!serverData || !serverData.UsesSerialMatches())
+        {
+            reasonKey = "STR_BR_PANEL_ERR_NO_SERIAL";
+            return false;
+        }
+
+        if (IsPrepareWorkerRunning())
+        {
+            reasonKey = "STR_BR_PANEL_ERR_PREPARE_RUNNING";
+            return false;
+        }
+
+        BattleRoyaleState current = GetCurrentState();
+        if (!current)
+        {
+            reasonKey = "STR_BR_PANEL_ERR_WRONG_PHASE";
+            return false;
+        }
+
+        BattleRoyaleSpawnSelection spawnSel;
+        BattleRoyaleStartMatch startMatch;
+        BattleRoyaleRound roundState;
+        BattleRoyaleLastRound lastRound;
+        bool allowedState = Class.CastTo(spawnSel, current) || Class.CastTo(startMatch, current) || Class.CastTo(roundState, current) || Class.CastTo(lastRound, current);
+        if (!allowedState)
+        {
+            reasonKey = "STR_BR_PANEL_ERR_WRONG_PHASE";
+            return false;
+        }
+
+        return true;
+    }
+
+    //! Aborts the running match without a winner and jumps straight to Restart for serial turnover
+    bool AbortMatch(out string reasonKey)
+    {
+        if (!CanAbortMatch(reasonKey))
+            return false;
+
+        int restartIndex = m_States.Count() - 1;
+        BattleRoyaleRestart restartState = BattleRoyaleRestart.Cast(GetState(restartIndex));
+        if (!restartState)
+        {
+            reasonKey = "STR_BR_PANEL_ERR_FAILED";
+            return false;
+        }
+
+        BattleRoyaleState current = GetCurrentState();
+        m_AbortedByAdmin = true;
+
+        if (current.IsFrozen())
+            current.Unfreeze(true, false);
+
+        if (current.IsActive())
+            current.Deactivate();
+
+        GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetInput", new Param1<bool>(false), true);
+        GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetFade", new Param1<bool>(false), true);
+
+        array<PlayerBase> players = current.RemoveAllPlayers();
+        for (int i = 0; i < players.Count(); i++)
+        {
+            if (players[i])
+            {
+                players[i].DisableInput(false);
+                restartState.AddPlayer(players[i]);
+            }
+        }
+
+        i_CurrentStateIndex = restartIndex;
+        BattleRoyaleUtils.Info("[Admin] Match aborted by admin, entering Restart State");
+        GetCurrentState().Activate();
+        MarkAdminStatusDirty();
+        return true;
     }
 
     bool IsTurnoverRunning()
@@ -288,6 +429,7 @@ class BattleRoyaleServer: BattleRoyaleBase
     //! The states of the finished match are released, not deactivated: their timers stop with them
     void Turnover_BuildNextMatch()
     {
+        m_AbortedByAdmin = false;
         BattleRoyaleState.ResetMatchStatics();
         BattleRoyaleZone.ResetMatch();
 
@@ -301,6 +443,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         GetCurrentState().Activate();
         RandomizeServerEnvironment();
+        MarkAdminStatusDirty();
     }
 
     //! Results of Turnover_ReturnToLobby
@@ -430,6 +573,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         GetCurrentState().SendPlayerCountTo(player.GetIdentity());
         // The map of a waiting player still shows the zones of the match
         SendZoneStateTo(player.GetIdentity());
+        SendFrozenStateTo(player.GetIdentity());
     }
 
     //! A player of the waiting room joins the lobby state with its lobby character, after its client reset its match
@@ -441,6 +585,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         player.owner_id = identity.GetPlainId();
         GetCurrentState().AddPlayer(player);
         BattleRoyaleState.SendMatchPhaseTo(identity);
+        SendFrozenStateTo(identity);
         return player.br_in_current_state && GetCurrentState().ContainsPlayer(player);
     }
 
@@ -706,9 +851,15 @@ class BattleRoyaleServer: BattleRoyaleBase
             // same counting and scheduled-restart decision as a request with no turnover running
             if (m_TurnoverPending)
             {
+                bool pendingAborted = m_TurnoverPendingAborted;
                 m_TurnoverPending = false;
-                if (!m_TurnoverAborted && !RequestTurnover())
+                m_TurnoverPendingAborted = false;
+                if (!m_TurnoverAborted && !RequestTurnover(pendingAborted))
                     GetGame().RequestExit(0);
+            }
+            else
+            {
+                m_TurnoverPendingAborted = false;
             }
             m_TurnoverAborted = false;
         }
@@ -735,7 +886,16 @@ class BattleRoyaleServer: BattleRoyaleBase
         {
         	m_TimeSinceLastTick = 0;
 
-			if (GetCurrentState().IsComplete()) //current state is complete
+			BattleRoyaleState checkState = GetCurrentState();
+			if (checkState && checkState.IsFrozen())
+			{
+				if (checkState.IsMatchDecided())
+					checkState.Unfreeze(true, true);
+				else
+					checkState = null;
+			}
+
+			if (checkState && checkState.IsComplete()) //current state is complete
 			{
 				int next_index = GetNextStateIndex();
 				if(next_index > 0)
@@ -764,6 +924,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 					NotifyStatsWebhook(GetCurrentState());
 					NotifyMatchEndWebhook(GetCurrentState());
 					NotifyLeaderboard(GetCurrentState());
+					MarkAdminStatusDirty();
 				}
 				else
 				{
@@ -771,6 +932,9 @@ class BattleRoyaleServer: BattleRoyaleBase
 				}
 			}
         }
+
+        if (m_AdminSubscribers && m_AdminSubscribers.Count() > 0)
+            TickAdminStatusSubscribers();
     }
 
     //! The client flags a fresh client mission starts without: stay connected after death, and the waiting room
@@ -807,7 +971,19 @@ class BattleRoyaleServer: BattleRoyaleBase
             BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
             GetCurrentState().SendPlayerCountTo(player.GetIdentity());
             SendZoneStateTo(player.GetIdentity());
+            SendFrozenStateTo(player.GetIdentity());
         }
+    }
+
+    //! Sends the frozen snapshot to a late-joining or reconnecting client after the normal phase and zone resync
+    void SendFrozenStateTo(PlayerIdentity identity)
+    {
+        if (!identity)
+            return;
+
+        BattleRoyaleState state = GetCurrentState();
+        if (state && state.IsFrozen())
+            state.SendFrozenSnapshotTo(identity);
     }
 
     //! Zones of the running match for one client that did not get them as they came (connect, reconnect, waiting room,
@@ -883,6 +1059,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 				BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
 				GetCurrentState().SendPlayerCountTo(player.GetIdentity());
 				SendZoneStateTo(player.GetIdentity());
+				SendFrozenStateTo(player.GetIdentity());
 				return; //allow admins to connect during non-debug state
 			}
 
@@ -902,6 +1079,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         // Lobby or lobby countdown, with the seconds left when the countdown already runs
         BattleRoyaleState.SendMatchPhaseTo(player.GetIdentity());
+        SendFrozenStateTo(player.GetIdentity());
 
         if( match_uuid == "" )
         	GetCurrentState().MessagePlayerUntranslated( player, "STR_BR_MM_ERROR_REGISTERING_MATCH");
@@ -1409,11 +1587,24 @@ class BattleRoyaleServer: BattleRoyaleBase
             CancelLateJoinKick(player.player_steamid);
         if (identity)
         {
+            string discId = identity.GetId();
             CancelLateJoinKick(identity.GetPlainId());
             if (m_LastLobbyRequest)
-                m_LastLobbyRequest.Remove(identity.GetId());
+                m_LastLobbyRequest.Remove(discId);
             if (m_LastLeaderboardRequest)
-                m_LastLeaderboardRequest.Remove(identity.GetId());
+                m_LastLeaderboardRequest.Remove(discId);
+            if (m_AdminSubscribers)
+                m_AdminSubscribers.Remove(discId);
+            if (m_AdminSubLeaseUntil)
+                m_AdminSubLeaseUntil.Remove(discId);
+            if (m_AdminSubLastSent)
+                m_AdminSubLastSent.Remove(discId);
+            if (m_AdminSubDirty)
+                m_AdminSubDirty.Remove(discId);
+            if (m_AdminInboundWindowStart)
+                m_AdminInboundWindowStart.Remove(discId);
+            if (m_AdminInboundCount)
+                m_AdminInboundCount.Remove(discId);
         }
 
         if(GetCurrentState().ContainsPlayer(player))
@@ -1724,6 +1915,457 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         BRAdminController.Next();
 #endif
+    }
+
+    //--- Admin panel status subscription & mutation RPCs
+
+    //! Bitmask for AdminStatusUpdate availability flags
+    static const int ADMIN_AVAIL_NEXT = 1;
+    static const int ADMIN_AVAIL_FREEZE = 2;
+    static const int ADMIN_AVAIL_ADJUST = 4;
+    static const int ADMIN_AVAIL_FORCESTART = 8;
+    static const int ADMIN_AVAIL_RESTART = 16;
+
+    //! Limits inbound admin RPCs to 2 per second per sender before VPP or COT is queried
+    protected bool AllowAdminInbound(PlayerIdentity sender)
+    {
+        if (!sender)
+            return false;
+
+        string id = sender.GetId();
+        float now = GetGame().GetTickTime();
+        if (!m_AdminInboundWindowStart)
+            m_AdminInboundWindowStart = new map<string, float>;
+        if (!m_AdminInboundCount)
+            m_AdminInboundCount = new map<string, int>;
+
+        if (!m_AdminInboundWindowStart.Contains(id) || (now - m_AdminInboundWindowStart.Get(id)) >= 1.0)
+        {
+            m_AdminInboundWindowStart.Set(id, now);
+            m_AdminInboundCount.Set(id, 1);
+            return true;
+        }
+
+        int cnt = m_AdminInboundCount.Get(id);
+        if (cnt >= 2)
+            return false;
+
+        m_AdminInboundCount.Set(id, cnt + 1);
+        return true;
+    }
+
+    protected void SendAdminActionResult(PlayerIdentity sender, bool ok, string messageKey, string arg1 = "")
+    {
+        if (!sender)
+            return;
+
+        GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "AdminActionResult", new Param3<bool, string, string>(ok, messageKey, arg1), true, sender);
+    }
+
+    protected int ComputeAdminAvailMask(BattleRoyaleState state)
+    {
+        if (!state || !state.IsActive())
+            return 0;
+
+        BattleRoyalePrepare prepState;
+        BattleRoyaleRestart restartState;
+        if (Class.CastTo(prepState, state) || Class.CastTo(restartState, state))
+            return 0;
+
+        int mask = 0;
+        bool prepWorker = IsPrepareWorkerRunning();
+        if (!prepWorker)
+            mask = mask | ADMIN_AVAIL_NEXT;
+
+        if (state.CanFreeze())
+            mask = mask | ADMIN_AVAIL_FREEZE;
+
+        if (state.CanAdjustTime())
+            mask = mask | ADMIN_AVAIL_ADJUST;
+
+        BattleRoyaleDebug debugState;
+        if (Class.CastTo(debugState, state))
+        {
+            if (debugState.GetPlayers().Count() >= 1 && !IsReturningPlayers())
+                mask = mask | ADMIN_AVAIL_FORCESTART;
+        }
+
+        string dummyReason;
+        if (CanAbortMatch(dummyReason))
+            mask = mask | ADMIN_AVAIL_RESTART;
+
+        return mask;
+    }
+
+    void MarkAdminStatusDirty()
+    {
+        m_LastAdminStatusSignature = "";
+        if (!m_AdminSubscribers || !m_AdminSubDirty || m_AdminSubscribers.Count() == 0)
+            return;
+
+        for (int i = 0; i < m_AdminSubscribers.Count(); i++)
+        {
+            string subId = m_AdminSubscribers.GetKey(i);
+            m_AdminSubDirty.Set(subId, true);
+        }
+    }
+
+    protected void BuildAdminStatusValues(out int phaseEnum, out int stateIdx, out bool frozen, out int timeLeft, out int alive, out int starting, out int zoneNum, out float zoneRadius, out int flagsAndTotal)
+    {
+        BattleRoyaleState state = GetCurrentState();
+        phaseEnum = EBRMatchPhase.LOBBY;
+        stateIdx = i_CurrentStateIndex;
+        frozen = false;
+        timeLeft = -1;
+        alive = 0;
+        starting = BattleRoyaleState.i_NumStartingPlayers;
+        zoneNum = 0;
+        zoneRadius = 0.0;
+        int availMask = 0;
+
+        if (state)
+        {
+            phaseEnum = state.GetAdminPhaseEnum();
+            frozen = state.IsFrozen();
+            timeLeft = state.GetAdminTimeLeft();
+            if (state.GetPlayers())
+                alive = state.GetPlayers().Count();
+            zoneNum = state.GetAdminZoneNumber();
+            zoneRadius = state.GetAdminZoneRadius();
+            availMask = ComputeAdminAvailMask(state);
+        }
+
+        flagsAndTotal = availMask | (i_NumRounds << 8);
+    }
+
+    protected void SendAdminStatusTo(PlayerIdentity identity, int phaseEnum, int stateIdx, bool frozen, int timeLeft, int alive, int starting, int zoneNum, float zoneRadius, int flagsAndTotal)
+    {
+        if (!identity)
+            return;
+
+        GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "AdminStatusUpdate", new Param9<int, int, bool, int, int, int, int, float, int>(phaseEnum, stateIdx, frozen, timeLeft, alive, starting, zoneNum, zoneRadius, flagsAndTotal), true, identity);
+
+#ifdef DIAG_DEVELOPER
+        Print("[BRPanel] StatusSend recipient=" + identity.GetPlainId() + " tick=" + GetGame().GetTickTime().ToString() + " phase=" + phaseEnum.ToString() + " stateIdx=" + stateIdx.ToString() + " frozen=" + frozen.ToString() + " timeLeft=" + timeLeft.ToString() + " alive=" + alive.ToString() + " zone=" + zoneNum.ToString() + " radius=" + Math.Round(zoneRadius).ToString());
+#endif
+    }
+
+    protected void TickAdminStatusSubscribers()
+    {
+        float now = GetGame().GetTickTime();
+        m_ExpiredAdminSubIds.Clear();
+
+        int i;
+        string subId;
+        PlayerIdentity identity;
+        for (i = 0; i < m_AdminSubscribers.Count(); i++)
+        {
+            subId = m_AdminSubscribers.GetKey(i);
+            identity = m_AdminSubscribers.GetElement(i);
+            float leaseUntil = 0.0;
+            if (m_AdminSubLeaseUntil.Contains(subId))
+                leaseUntil = m_AdminSubLeaseUntil.Get(subId);
+
+            if (!identity || now > leaseUntil || !BRAdminAuthorizer.CanViewStatus(identity, false))
+                m_ExpiredAdminSubIds.Insert(subId);
+        }
+
+        for (i = 0; i < m_ExpiredAdminSubIds.Count(); i++)
+        {
+            subId = m_ExpiredAdminSubIds[i];
+            m_AdminSubscribers.Remove(subId);
+            m_AdminSubLeaseUntil.Remove(subId);
+            m_AdminSubDirty.Remove(subId);
+        }
+
+        if (m_AdminSubscribers.Count() == 0)
+            return;
+
+        int phaseEnum;
+        int stateIdx;
+        bool frozen;
+        int timeLeft;
+        int alive;
+        int starting;
+        int zoneNum;
+        float zoneRadius;
+        int flagsAndTotal;
+        BuildAdminStatusValues(phaseEnum, stateIdx, frozen, timeLeft, alive, starting, zoneNum, zoneRadius, flagsAndTotal);
+
+        int roundedRadius = Math.Round(zoneRadius);
+        string sig = phaseEnum.ToString() + "|" + stateIdx.ToString() + "|" + frozen.ToString() + "|" + alive.ToString() + "|" + starting.ToString() + "|" + zoneNum.ToString() + "|" + roundedRadius.ToString() + "|" + flagsAndTotal.ToString();
+        bool sigChanged = (sig != m_LastAdminStatusSignature);
+        if (sigChanged)
+            m_LastAdminStatusSignature = sig;
+
+        bool countdownRunning = (timeLeft >= 0 && !frozen);
+        for (i = 0; i < m_AdminSubscribers.Count(); i++)
+        {
+            subId = m_AdminSubscribers.GetKey(i);
+            identity = m_AdminSubscribers.GetElement(i);
+            if (!identity)
+                continue;
+
+            if (sigChanged)
+                m_AdminSubDirty.Set(subId, true);
+
+            float lastSent = -100.0;
+            if (m_AdminSubLastSent.Contains(subId))
+                lastSent = m_AdminSubLastSent.Get(subId);
+
+            if ((now - lastSent) < ADMIN_STATUS_MIN_INTERVAL)
+                continue;
+
+            bool isDirty = false;
+            if (m_AdminSubDirty.Contains(subId))
+                isDirty = m_AdminSubDirty.Get(subId);
+
+            if (!isDirty && !countdownRunning)
+                continue;
+
+            SendAdminStatusTo(identity, phaseEnum, stateIdx, frozen, timeLeft, alive, starting, zoneNum, zoneRadius, flagsAndTotal);
+            m_AdminSubLastSent.Set(subId, now);
+            m_AdminSubDirty.Set(subId, false);
+        }
+    }
+
+    void SubscribeAdminStatus(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server || !sender)
+            return;
+
+        if (!AllowAdminInbound(sender))
+            return;
+
+        if (!BRAdminAuthorizer.CanViewStatus(sender, true))
+            return;
+
+        string id = sender.GetId();
+        float now = GetGame().GetTickTime();
+        bool isNew = !m_AdminSubscribers.Contains(id);
+        m_AdminSubscribers.Set(id, sender);
+        m_AdminSubLeaseUntil.Set(id, now + ADMIN_SUB_LEASE_SECONDS);
+
+        if (isNew)
+        {
+            m_AdminSubDirty.Set(id, true);
+            float lastSent = -100.0;
+            if (m_AdminSubLastSent.Contains(id))
+                lastSent = m_AdminSubLastSent.Get(id);
+
+            if ((now - lastSent) >= ADMIN_STATUS_MIN_INTERVAL)
+            {
+                int phaseEnum;
+                int stateIdx;
+                bool frozen;
+                int timeLeft;
+                int alive;
+                int starting;
+                int zoneNum;
+                float zoneRadius;
+                int flagsAndTotal;
+                BuildAdminStatusValues(phaseEnum, stateIdx, frozen, timeLeft, alive, starting, zoneNum, zoneRadius, flagsAndTotal);
+                SendAdminStatusTo(sender, phaseEnum, stateIdx, frozen, timeLeft, alive, starting, zoneNum, zoneRadius, flagsAndTotal);
+                m_AdminSubLastSent.Set(id, now);
+                m_AdminSubDirty.Set(id, false);
+            }
+        }
+    }
+
+    void UnsubscribeAdminStatus(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server || !sender)
+            return;
+
+        string id = sender.GetId();
+        if (m_AdminSubscribers)
+            m_AdminSubscribers.Remove(id);
+        if (m_AdminSubLeaseUntil)
+            m_AdminSubLeaseUntil.Remove(id);
+        if (m_AdminSubDirty)
+            m_AdminSubDirty.Remove(id);
+    }
+
+    void RequestAdminStatus(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server || !sender)
+            return;
+
+        if (!AllowAdminInbound(sender))
+            return;
+
+        if (!BRAdminAuthorizer.CanViewStatus(sender, true))
+            return;
+
+        string id = sender.GetId();
+        float now = GetGame().GetTickTime();
+        float lastSent = -100.0;
+        if (m_AdminSubLastSent.Contains(id))
+            lastSent = m_AdminSubLastSent.Get(id);
+
+        if ((now - lastSent) < ADMIN_STATUS_MIN_INTERVAL)
+            return;
+
+        int phaseEnum;
+        int stateIdx;
+        bool frozen;
+        int timeLeft;
+        int alive;
+        int starting;
+        int zoneNum;
+        float zoneRadius;
+        int flagsAndTotal;
+        BuildAdminStatusValues(phaseEnum, stateIdx, frozen, timeLeft, alive, starting, zoneNum, zoneRadius, flagsAndTotal);
+        SendAdminStatusTo(sender, phaseEnum, stateIdx, frozen, timeLeft, alive, starting, zoneNum, zoneRadius, flagsAndTotal);
+        m_AdminSubLastSent.Set(id, now);
+    }
+
+    void AdminNextPhase(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server || !sender)
+            return;
+
+        if (!AllowAdminInbound(sender))
+            return;
+
+        if (!BRAdminAuthorizer.IsAllowed(sender, "Next"))
+        {
+            if (BRAdminAuthorizer.CanViewStatus(sender, false))
+                SendAdminActionResult(sender, false, "STR_BR_PANEL_ERR_NO_PERM");
+            return;
+        }
+
+        string reasonKey;
+        if (BRAdminController.TryNext(reasonKey))
+            SendAdminActionResult(sender, true, "STR_BR_PANEL_OK_NEXT");
+        else
+            SendAdminActionResult(sender, false, reasonKey);
+    }
+
+    void AdminFreeze(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server || !sender)
+            return;
+
+        if (!AllowAdminInbound(sender))
+            return;
+
+        if (!BRAdminAuthorizer.IsAllowed(sender, "Pause"))
+        {
+            if (BRAdminAuthorizer.CanViewStatus(sender, false))
+                SendAdminActionResult(sender, false, "STR_BR_PANEL_ERR_NO_PERM");
+            return;
+        }
+
+        string reasonKey;
+        if (BRAdminController.TryFreeze(reasonKey))
+            SendAdminActionResult(sender, true, "STR_BR_PANEL_OK_FROZEN");
+        else
+            SendAdminActionResult(sender, false, reasonKey);
+    }
+
+    void AdminResume(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server || !sender)
+            return;
+
+        if (!AllowAdminInbound(sender))
+            return;
+
+        if (!BRAdminAuthorizer.IsAllowed(sender, "Resume"))
+        {
+            if (BRAdminAuthorizer.CanViewStatus(sender, false))
+                SendAdminActionResult(sender, false, "STR_BR_PANEL_ERR_NO_PERM");
+            return;
+        }
+
+        string reasonKey;
+        if (BRAdminController.TryResume(reasonKey))
+            SendAdminActionResult(sender, true, "STR_BR_PANEL_OK_RESUMED");
+        else
+            SendAdminActionResult(sender, false, reasonKey);
+    }
+
+    void AdminForceStart(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server || !sender)
+            return;
+
+        if (!AllowAdminInbound(sender))
+            return;
+
+        if (!BRAdminAuthorizer.IsAllowed(sender, "ForceStart"))
+        {
+            if (BRAdminAuthorizer.CanViewStatus(sender, false))
+                SendAdminActionResult(sender, false, "STR_BR_PANEL_ERR_NO_PERM");
+            return;
+        }
+
+        string reasonKey;
+        if (BRAdminController.TryForceStart(reasonKey))
+            SendAdminActionResult(sender, true, "STR_BR_PANEL_OK_FORCESTART");
+        else
+            SendAdminActionResult(sender, false, reasonKey);
+    }
+
+    void AdminAdjustTime(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        Param1<int> data;
+        if (!ctx.Read(data))
+            return;
+
+        if (type != CallType.Server || !sender)
+            return;
+
+        if (!AllowAdminInbound(sender))
+            return;
+
+        if (!BRAdminAuthorizer.IsAllowed(sender, "AdjustTime"))
+        {
+            if (BRAdminAuthorizer.CanViewStatus(sender, false))
+                SendAdminActionResult(sender, false, "STR_BR_PANEL_ERR_NO_PERM");
+            return;
+        }
+
+        int deltaSeconds = data.param1;
+        string reasonKey;
+        if (BRAdminController.TryAdjustTime(deltaSeconds, reasonKey))
+        {
+            string label = "+1 min";
+            if (deltaSeconds == -300)
+                label = "-5 min";
+            else if (deltaSeconds == -60)
+                label = "-1 min";
+            else if (deltaSeconds == 300)
+                label = "+5 min";
+            SendAdminActionResult(sender, true, "STR_BR_PANEL_OK_ADJUSTTIME", label);
+        }
+        else
+        {
+            SendAdminActionResult(sender, false, reasonKey);
+        }
+    }
+
+    void AdminRestartMatch(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server || !sender)
+            return;
+
+        if (!AllowAdminInbound(sender))
+            return;
+
+        if (!BRAdminAuthorizer.IsAllowed(sender, "Restart"))
+        {
+            if (BRAdminAuthorizer.CanViewStatus(sender, false))
+                SendAdminActionResult(sender, false, "STR_BR_PANEL_ERR_NO_PERM");
+            return;
+        }
+
+        string reasonKey;
+        if (BRAdminController.TryRestart(reasonKey))
+            SendAdminActionResult(sender, true, "STR_BR_PANEL_OK_RESTART");
+        else
+            SendAdminActionResult(sender, false, reasonKey);
     }
 }
 #endif

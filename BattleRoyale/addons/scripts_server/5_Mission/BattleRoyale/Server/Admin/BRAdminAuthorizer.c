@@ -19,6 +19,28 @@ class BRAdminAuthorizer
 		if (ShouldLogDeny(steamid + "|" + action))
 			BattleRoyaleUtils.Warn("Admin RPC denied: steamid=" + steamid + " action=" + action);
 
+		NotifyFrameworkDeny(sender, action);
+
+		return false;
+	}
+
+	//! Separate authorization policy for live status viewing and subscription:
+	//! VPP raw grant MenuBattleRoyaleManager, or COT BattleRoyale.StateMachine.View.
+	static bool CanViewStatus(PlayerIdentity sender, bool logDeny = false)
+	{
+		if (HasStatusGrant(sender))
+			return true;
+
+		if (logDeny)
+		{
+			string steamid = "null";
+			if (sender)
+				steamid = sender.GetPlainId();
+
+			if (ShouldLogDeny(steamid + "|Status"))
+				BattleRoyaleUtils.Warn("Admin status RPC denied: steamid=" + steamid);
+		}
+
 		return false;
 	}
 
@@ -29,14 +51,80 @@ class BRAdminAuthorizer
 		if (!sender)
 			return false;
 
+		if (HasFrameworkStatusGrant(sender))
+			return true;
 		if (HasFrameworkGrant(sender, "Next"))
 			return true;
 		if (HasFrameworkGrant(sender, "Pause"))
 			return true;
 		if (HasFrameworkGrant(sender, "Resume"))
 			return true;
+		if (HasFrameworkGrant(sender, "ForceStart"))
+			return true;
+		if (HasFrameworkGrant(sender, "AdjustTime"))
+			return true;
+		if (HasFrameworkGrant(sender, "Restart"))
+			return true;
 
 		return false;
+	}
+
+	protected static bool HasStatusGrant(PlayerIdentity sender)
+	{
+		if (!sender)
+			return false;
+
+		if (HasFrameworkStatusGrant(sender))
+			return true;
+
+		bool framework = false;
+#ifdef VPPADMINTOOLS
+		framework = true;
+#endif
+#ifdef JM_COT
+		framework = true;
+#endif
+		if (framework)
+			return false;
+
+		BattleRoyaleGameData gameData = BattleRoyaleConfig.GetConfig().GetGameData();
+		if (!gameData || !gameData.admins_steamid64)
+			return false;
+
+		return gameData.admins_steamid64.Find(sender.GetPlainId()) != -1;
+	}
+
+	protected static bool HasFrameworkStatusGrant(PlayerIdentity sender)
+	{
+		if (!sender)
+			return false;
+
+		bool allowed = false;
+
+#ifdef VPPADMINTOOLS
+		PermissionManager vpp = GetPermissionManager();
+		if (vpp && vpp.VerifyPermission(sender.GetPlainId(), "MenuBattleRoyaleManager", "", false))
+			allowed = true;
+#endif
+
+#ifdef JM_COT
+		if (GetPermissionsManager().HasPermission("BattleRoyale.StateMachine.View", sender))
+			allowed = true;
+#endif
+
+		return allowed;
+	}
+
+	protected static void NotifyFrameworkDeny(PlayerIdentity sender, string action)
+	{
+#ifdef VPPADMINTOOLS
+		if (!sender)
+			return;
+
+		PermissionManager vpp = GetPermissionManager();
+		if (vpp && vpp.HasUserGroup(sender.GetPlainId()))
+			vpp.NotifyPlayer(sender.GetPlainId(), "#VSTR_ERROR_NO_PERM BattleRoyale:" + action, NotifyTypes.PERMISSION_REJECT);
+#endif
 	}
 
 	protected static bool HasGrant(PlayerIdentity sender, string action)

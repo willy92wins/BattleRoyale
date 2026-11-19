@@ -52,9 +52,21 @@ class BattleRoyaleWin: BattleRoyaleState
         return "Win State";
     }
 
+    override int GetAdminPhaseEnum()
+    {
+        return EBRMatchPhase.FINISHED;
+    }
+
+    override int GetPhaseSecondsLeft()
+    {
+        if (m_KickTimer && m_KickTimer.IsRunning())
+            return Math.Ceil(m_KickTimer.GetRemaining());
+        return -1;
+    }
+
     override void Deactivate()
     {
-        if ( m_KickTimer && m_KickTimer.IsRunning() )
+        if ( m_KickTimer )
             m_KickTimer.Stop();
         
         super.Deactivate();
