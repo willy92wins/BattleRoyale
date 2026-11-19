@@ -6,8 +6,9 @@
 //! player's own. Third person orbits behind the player with the mouse. The vanilla person view key switches between them.
 class BattleRoyaleSpectatorCamera: Camera
 {
-	//! Spectating starts in third person; the vanilla person view key switches to first person and back
-	static bool s_ThirdPerson = true;
+	//! Each spectate starts in third person (the server makes a new camera for it); the vanilla person view key
+	//! switches to first person and back
+	protected bool m_ThirdPerson = true;
 
 	//! Eyes in the head bone's frame (x up, y forward), where the vanilla first person camera sits (DayZPlayerCamera1stPerson)
 	protected static const float EYE_UP = 0.04;
@@ -23,6 +24,9 @@ class BattleRoyaleSpectatorCamera: Camera
 	//! the eyes and the sights
 	protected static const float VIEW_SMOOTH_TIME = 0.15;
 	protected static const float EYES_SMOOTH_TIME = 0.2;
+	//! Most the smoothed eyes may stay from the head's, in metres: about the head's bobbing, so that a quick crouch, a fall
+	//! to the ground or a vehicle tilting does not leave the view above cover or out of the cabin
+	protected static const float EYES_MAX_LAG = 0.06;
 	protected static const float SIGHTS_SMOOTH_TIME = 0.1;
 
 	protected float m_UpdateAccumulator;
@@ -30,6 +34,8 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected float m_FrameTimeSlice;
 	protected float m_OrbitYaw;
 	protected float m_OrbitPitch = -15;
+	//! Watched player the orbit is around: a new one starts the orbit behind it
+	protected Human m_OrbitTarget;
 	protected int m_HeadBoneIndex = -1;
 	protected string m_HeadBoneTargetType;
 	protected Human m_HeadBoneTarget;
@@ -143,7 +149,7 @@ class BattleRoyaleSpectatorCamera: Camera
 		if (target)
 		{
 			m_MissingTarget = 0;
-			if (s_ThirdPerson)
+			if (m_ThirdPerson)
 			{
 				m_ViewTarget = null;
 				FollowThirdPerson(target);
@@ -184,14 +190,14 @@ class BattleRoyaleSpectatorCamera: Camera
 	protected void HandleInput(float timeSlice)
 	{
 		if (GetUApi().GetInputByID(UAPersonView).LocalPress())
-			s_ThirdPerson = !s_ThirdPerson;
+			m_ThirdPerson = !m_ThirdPerson;
 
 		if (GetUApi().GetInputByID(UAFire).LocalPress())
 			GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "SpectateCycle", new Param1<int>(1), true);
 		else if (GetUApi().GetInputByID(UATempRaiseWeapon).LocalPress())
 			GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "SpectateCycle", new Param1<int>(-1), true);
 
-		if (s_ThirdPerson)
+		if (m_ThirdPerson)
 		{
 			float yawDiff = GetUApi().GetInputByID(UAAimLeft).LocalValue() - GetUApi().GetInputByID(UAAimRight).LocalValue();
 			float pitchDiff = GetUApi().GetInputByID(UAAimDown).LocalValue() - GetUApi().GetInputByID(UAAimUp).LocalValue();
@@ -251,6 +257,7 @@ class BattleRoyaleSpectatorCamera: Camera
 
 		// Third person starts behind the player when switching
 		m_OrbitYaw = m_ShownYaw;
+		m_OrbitTarget = target;
 	}
 
 	//! The eyes without the head's bobbing: their place relative to the watched player's position is smoothed. A new
@@ -272,6 +279,10 @@ class BattleRoyaleSpectatorCamera: Camera
 		float y = Math.SmoothCD(m_EyesOffset[1], offset[1], m_EyesVelocityY, EYES_SMOOTH_TIME, 1000, timeSlice);
 		float z = Math.SmoothCD(m_EyesOffset[2], offset[2], m_EyesVelocityZ, EYES_SMOOTH_TIME, 1000, timeSlice);
 		m_EyesOffset = Vector(x, y, z);
+
+		vector lag = m_EyesOffset - offset;
+		if (lag.Length() > EYES_MAX_LAG)
+			m_EyesOffset = offset + lag.Normalized() * EYES_MAX_LAG;
 		return origin + m_EyesOffset;
 	}
 
@@ -536,6 +547,13 @@ class BattleRoyaleSpectatorCamera: Camera
 		ShowHead();
 		SetFOV(GetDayZGame().GetUserFOV());
 		SetNearPlane(NEAR_PLANE_ORBIT);
+
+		// A new watched player: the orbit starts behind it, where it is heading
+		if (target != m_OrbitTarget)
+		{
+			m_OrbitTarget = target;
+			m_OrbitYaw = target.GetOrientation()[0];
+		}
 
 		vector pivot = target.GetPosition() + "0 1.6 0";
 		vector angles = Vector(m_OrbitYaw, m_OrbitPitch, 0);
