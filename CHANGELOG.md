@@ -3,6 +3,14 @@
 ## 1.8.0 (2026-11-18)
 
 ### Added
+- Admin panel for VPPAdminTools (`@BattleRoyale-VPP` 1.2.0), in the BattleRoyale tab of the VPP toolbar:
+  - **Live status:** phase, running or frozen, when the phase ends, players alive and zone. Only admins with the panel open receive it, at most once a second, and nothing is sent while it is closed.
+  - **Next phase**, with VPP's confirmation dialog.
+  - **Freeze/Resume.** Freezing stops the clock of the phase: its timers, the zone closing, the countdown notices and the HUD countdown («PAUSADO»). Zone damage keeps applying, and every player is told. A match decided while frozen unfreezes and ends.
+  - **±1 and ±5 min** in the lobby, the start countdown and the rounds, never leaving less than 30 s.
+  - **Force start** with the players present, in the lobby only.
+  - **Restart the match:** with serial matches only. It goes back to the lobby without restarting the server, without counting toward the scheduled restart, and without leaderboard points or the match end message.
+  - Each action is checked on the server against its own VPP permission (`BattleRoyale:Next`, `Pause`, `Resume`, `ForceStart`, `AdjustTime`, `Restart`; the status needs `MenuBattleRoyaleManager`), or against COT where COT is loaded. A panel action that comes from an earlier phase or match is refused.
 - Leaderboard: players score points for each kill and for their final place (`leaderboard_points_per_kill`,
   `leaderboard_points_first` and `leaderboard_points_step` in `server_settings.json`: with 10 and 2, places 1 to 5
   get 10, 8, 6, 4 and 2, and a kill 1). The board starts again every month by default (`leaderboard_wipe`: `monthly`,
@@ -58,6 +66,7 @@
   while the watched player ran.
 
 ### Fixed
+- The BattleRoyale tab did not appear in the VPP toolbar, not even for superadmins, when the core compiled before VPP, which is what servers do whatever the `-mod=` order. `VPPADMINTOOLS` is a `#define` of VPP's own scripts, so the core's `#ifdef VPPADMINTOOLS` blocks dropped out: the permission was never registered and BattleRoyale's admin checks never asked VPP. The compat now registers the permissions and answers the checks through an instance hook (`BRAdminFrameworkHook`). A static override in a modded class is not called by core code that is already compiled.
 - Spectators could talk in direct voice to the player they watched, unseen. Their voice is now off while they
   spectate, from death or from the waiting room, and comes back with their next character.
 - Spectators who left the server could not join again until it restarted: «Player with same UID is already in game»
@@ -147,7 +156,17 @@
   - the match end message and the leaderboard's top 30 on a real Discord channel;
   - the leaderboard with two or more players (kills, and places other than the first), the real T key, 720p, the
     panel fading in, the kill feed keeping to 4 rows while the panel is open, and a weekly season across two months.
-- `@BattleRoyale-VPP` is unchanged: keep the 1.1.0 one.
+- `@BattleRoyale-VPP` goes to **1.2.0** and must be uploaded together with the 1.8.0 core: 1.2.0 needs the core's new admin hook and RPCs, and 1.1.0 does not compile against them. Server and clients need the same compat.
+- Tested in DayZDiag, with the core compiled before VPP and the solo test profile:
+  - the tab and its 7 permissions registered, and the status at 1 per second, stopping less than 1 s after the toolbar closes;
+  - freezing and resuming a round, the last round, the lobby and the start countdown: the time and the HUD countdown stood still and carried on within 1 s;
+  - +1 min (+60 s on the server and in the HUD), next phase, and a stale next phase refused;
+  - force start from a frozen lobby;
+  - with serial matches, restart: Restart state, back to the lobby, not counted, server up;
+  - a player without permissions: every panel RPC refused and the state unchanged;
+  - an untouched match against 1.8.0 beta 2, lobby to round 3, in 5 runs: the same times. Round 2 ran up to 6 s long once in each core, so that slip is pre-existing.
+  - Guillermo tested the panel with real clicks and VPP's confirmation dialog.
+- Not tested: COT permissions for the new actions, a real second player, and the panel at 4:3 and 21:9.
 
 ## 1.7.0 (2026-11-16)
 
