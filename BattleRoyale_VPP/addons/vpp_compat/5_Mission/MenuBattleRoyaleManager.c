@@ -361,6 +361,8 @@ class MenuBattleRoyaleManager: AdminHudSubMenu
             {
                 //! No active circle yet (first round before its lock): the zone number alone
                 int roundedRadius = Math.Round(zoneRadius);
+                if (zoneRadius > 0.0 && roundedRadius < 1)
+                    roundedRadius = 1;
                 if (roundedRadius > 0)
                     m_TxtZone.SetText(string.Format(Widget.TranslateString("#STR_BR_PANEL_ZONE_FMT"), zoneNum.ToString(), roundedRadius.ToString()));
                 else

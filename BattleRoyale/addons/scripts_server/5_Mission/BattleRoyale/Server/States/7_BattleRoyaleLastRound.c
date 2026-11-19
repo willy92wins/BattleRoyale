@@ -249,6 +249,12 @@ class BattleRoyaleLastRound: BattleRoyaleState
 		return -1;
 	}
 
+	//! The last round has no end time: it ends when one player or group is left, so the panel shows no phase end
+	override int GetAdminTimeLeft()
+	{
+		return -1;
+	}
+
 	override int GetCountdownSecondsLeft()
 	{
 		return GetPhaseSecondsLeft();
