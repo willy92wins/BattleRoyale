@@ -68,11 +68,20 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
         if (waitRem < 0)
             waitRem = 0;
 
+        //! Serial matches: the lobby waits until every player of the finished match is back in it
+        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+        if (server && server.IsReturningPlayers())
+            return -1;
+
         int players = GetPlayers().Count();
         if (!b_UseVoteSystem)
         {
             if (players < i_MinPlayers)
                 return -1;
+#ifdef Carim
+            if (GetGroupsCount() <= 1)
+                return -1;
+#endif
             return Math.Ceil(waitRem);
         }
 

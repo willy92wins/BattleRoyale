@@ -2113,6 +2113,9 @@ class BattleRoyaleServer: BattleRoyaleBase
         sig = sig + "|" + timerExpired.ToString() + "|" + hasCircle.ToString() + "|" + alive.ToString();
         sig = sig + "|" + starting.ToString() + "|" + zoneNum.ToString() + "|" + roundedRadius.ToString();
         sig = sig + "|" + flagsAndTotal.ToString();
+        //! A frozen countdown does not tick, so a change of its value (a lobby estimate, an adjustment) must count
+        if (frozen)
+            sig = sig + "|" + timeLeft.ToString();
         bool sigChanged = (sig != m_LastAdminStatusSignature);
         if (sigChanged)
             m_LastAdminStatusSignature = sig;
