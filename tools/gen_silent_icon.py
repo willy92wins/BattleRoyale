@@ -1,9 +1,9 @@
 """Generate the HUD icon of silent mode: a speaker crossed out (an original texture, drawn here, no third-party art).
 
-Same look as the zone arrow (tools/gen_zone_arrow.py): white fill with a dark outline, so it reads on bright and dark
-ground. A speaker (body and cone) with a slash across the whole icon, the slash drawn over the speaker with its own dark
-edge. Rendered at 128x128 with 4x4 supersampling into a 32-bit TGA, then converted with DayZ Tools' ImageToPAA; the _ca
-suffix makes ImageToPAA keep the full alpha channel.
+White fill with a dark outline, so it reads on bright and dark ground. A speaker (body and cone) with a slash across
+the whole icon, the slash drawn over the speaker with its own dark edge. Rendered at 128x128 with 4x4 supersampling
+into a 32-bit TGA, then converted with DayZ Tools' ImageToPAA; the _ca suffix makes ImageToPAA keep the full alpha
+channel.
 
 Usage: python -I tools/gen_silent_icon.py <output_ca.paa>
 """
