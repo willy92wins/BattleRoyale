@@ -1,8 +1,41 @@
 #ifdef SERVER
+//! Instance hook overridden by admin framework compatibility mods so virtual dispatch works
+//! regardless of script compile order between the core and the framework.
+class BRAdminFrameworkHook
+{
+	bool HasGrant(PlayerIdentity sender, string action)
+	{
+		return false;
+	}
+
+	bool HasStatusGrant(PlayerIdentity sender)
+	{
+		return false;
+	}
+
+	bool OwnsAdminList()
+	{
+		return false;
+	}
+
+	void NotifyDeny(PlayerIdentity sender, string action)
+	{
+	}
+}
+
 class BRAdminAuthorizer
 {
 	protected static const int DENY_LOG_INTERVAL_MS = 10000;
 	protected static ref map<string, int> s_DenyLogMs;
+	protected static ref BRAdminFrameworkHook s_FrameworkHook;
+
+	protected static BRAdminFrameworkHook GetFrameworkHook()
+	{
+		if (!s_FrameworkHook)
+			s_FrameworkHook = new BRAdminFrameworkHook();
+
+		return s_FrameworkHook;
+	}
 
 	// Deny by default. VPP and COT are consulted only when that mod is compiled in.
 	// When both are present, either grant is enough. The steamid list is used only
@@ -44,15 +77,13 @@ class BRAdminAuthorizer
 		return false;
 	}
 
-	// True when COT or VPP would allow any Battle Royale admin action.
-	// Does not log. The steamid list is not consulted here.
+	// True when COT or VPP would allow any Battle Royale admin mutation.
+	// Does not log. The steamid list and status-only view grant are not consulted here.
 	static bool IsOperator(PlayerIdentity sender)
 	{
 		if (!sender)
 			return false;
 
-		if (HasFrameworkStatusGrant(sender))
-			return true;
 		if (HasFrameworkGrant(sender, "Next"))
 			return true;
 		if (HasFrameworkGrant(sender, "Pause"))
@@ -69,29 +100,13 @@ class BRAdminAuthorizer
 		return false;
 	}
 
+	//! Status is granted only by an admin framework view permission, never by the steamid list.
 	protected static bool HasStatusGrant(PlayerIdentity sender)
 	{
 		if (!sender)
 			return false;
 
-		if (HasFrameworkStatusGrant(sender))
-			return true;
-
-		bool framework = false;
-#ifdef VPPADMINTOOLS
-		framework = true;
-#endif
-#ifdef JM_COT
-		framework = true;
-#endif
-		if (framework)
-			return false;
-
-		BattleRoyaleGameData gameData = BattleRoyaleConfig.GetConfig().GetGameData();
-		if (!gameData || !gameData.admins_steamid64)
-			return false;
-
-		return gameData.admins_steamid64.Find(sender.GetPlainId()) != -1;
+		return HasFrameworkStatusGrant(sender);
 	}
 
 	protected static bool HasFrameworkStatusGrant(PlayerIdentity sender)
@@ -112,18 +127,29 @@ class BRAdminAuthorizer
 			allowed = true;
 #endif
 
+		if (!allowed)
+		{
+			BRAdminFrameworkHook hook = GetFrameworkHook();
+			if (hook && hook.HasStatusGrant(sender))
+				allowed = true;
+		}
+
 		return allowed;
 	}
 
 	protected static void NotifyFrameworkDeny(PlayerIdentity sender, string action)
 	{
-#ifdef VPPADMINTOOLS
 		if (!sender)
 			return;
 
+#ifdef VPPADMINTOOLS
 		PermissionManager vpp = GetPermissionManager();
 		if (vpp && vpp.HasUserGroup(sender.GetPlainId()))
 			vpp.NotifyPlayer(sender.GetPlainId(), "#VSTR_ERROR_NO_PERM BattleRoyale:" + action, NotifyTypes.PERMISSION_REJECT);
+#else
+		BRAdminFrameworkHook hook = GetFrameworkHook();
+		if (hook)
+			hook.NotifyDeny(sender, action);
 #endif
 	}
 
@@ -142,6 +168,9 @@ class BRAdminAuthorizer
 #ifdef JM_COT
 		framework = true;
 #endif
+		BRAdminFrameworkHook hook = GetFrameworkHook();
+		if (hook && hook.OwnsAdminList())
+			framework = true;
 		if (framework)
 			return false;
 
@@ -169,6 +198,13 @@ class BRAdminAuthorizer
 		if (GetPermissionsManager().HasPermission("BattleRoyale.StateMachine.Update", sender))
 			allowed = true;
 #endif
+
+		if (!allowed)
+		{
+			BRAdminFrameworkHook hook = GetFrameworkHook();
+			if (hook && hook.HasGrant(sender, action))
+				allowed = true;
+		}
 
 		return allowed;
 	}

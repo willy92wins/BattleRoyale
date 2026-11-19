@@ -39,6 +39,10 @@ class MenuBattleRoyaleManager: AdminHudSubMenu
     protected bool m_CanAdjust;
     protected bool m_CanForceStart;
     protected bool m_CanRestart;
+    protected int m_LastStateIdx;
+    protected int m_LastMatchId;
+    protected int m_PendingConfirmStateIdx;
+    protected int m_PendingConfirmMatchId;
 
     void MenuBattleRoyaleManager()
     {
@@ -50,6 +54,10 @@ class MenuBattleRoyaleManager: AdminHudSubMenu
         m_CanAdjust = false;
         m_CanForceStart = false;
         m_CanRestart = false;
+        m_LastStateIdx = -1;
+        m_LastMatchId = 0;
+        m_PendingConfirmStateIdx = -1;
+        m_PendingConfirmMatchId = 0;
 
         GetRPCManager().AddRPC(RPC_DAYZBR_NAMESPACE, "AdminStatusUpdate", this, SingleplayerExecutionType.Client);
         GetRPCManager().AddRPC(RPC_DAYZBR_NAMESPACE, "AdminActionResult", this, SingleplayerExecutionType.Client);
@@ -255,25 +263,27 @@ class MenuBattleRoyaleManager: AdminHudSubMenu
         if (!diag)
             return;
 
+        m_PendingConfirmStateIdx = m_LastStateIdx;
+        m_PendingConfirmMatchId = m_LastMatchId;
         diag.InitDiagBox(DIAGTYPE.DIAG_YESNO, Widget.TranslateString(titleKey), Widget.TranslateString(msgKey), this, cbFunc);
     }
 
     void OnConfirmNext(int result)
     {
         if (result == DIAGRESULT.YES)
-            GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "AdminNextPhase", NULL, true);
+            GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "AdminNextPhase", new Param2<int, int>(m_PendingConfirmStateIdx, m_PendingConfirmMatchId), true);
     }
 
     void OnConfirmForceStart(int result)
     {
         if (result == DIAGRESULT.YES)
-            GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "AdminForceStart", NULL, true);
+            GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "AdminForceStart", new Param2<int, int>(m_PendingConfirmStateIdx, m_PendingConfirmMatchId), true);
     }
 
     void OnConfirmRestart(int result)
     {
         if (result == DIAGRESULT.YES)
-            GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "AdminRestartMatch", NULL, true);
+            GetRPCManager().SendRPC(RPC_DAYZBRSERVER_NAMESPACE, "AdminRestartMatch", new Param2<int, int>(m_PendingConfirmStateIdx, m_PendingConfirmMatchId), true);
     }
 
     void AdminStatusUpdate(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
@@ -286,6 +296,7 @@ class MenuBattleRoyaleManager: AdminHudSubMenu
             return;
 
         int phaseEnum = data.param1;
+        int stateIdx = data.param2;
         bool frozen = data.param3;
         int timeLeft = data.param4;
         int alive = data.param5;
@@ -295,7 +306,11 @@ class MenuBattleRoyaleManager: AdminHudSubMenu
         int flagsAndTotal = data.param9;
 
         int availMask = flagsAndTotal & 0xFF;
-        int totalRounds = flagsAndTotal >> 8;
+        int totalRounds = (flagsAndTotal >> 8) & 0xFF;
+        int matchId = (flagsAndTotal >> 16) & 0x7FFF;
+
+        m_LastStateIdx = stateIdx;
+        m_LastMatchId = matchId;
 
         m_IsFrozen = frozen;
         m_CanNext = (availMask & AVAIL_NEXT) != 0;

@@ -37,8 +37,9 @@ class BattleRoyaleCountReached: BattleRoyaleDebugState
         return -1;
     }
 
-    override bool AdjustTime(int deltaSeconds, out string reasonKey)
+    override bool AdjustTime(int deltaSeconds, out int appliedDelta, out string reasonKey)
     {
+        appliedDelta = 0;
         if (!IsActive() || !m_StartTimer || !IsTimerActiveOrPaused(m_StartTimer))
         {
             reasonKey = "STR_BR_PANEL_ERR_NO_TIMER";
@@ -63,6 +64,7 @@ class BattleRoyaleCountReached: BattleRoyaleDebugState
             }
         }
 
+        appliedDelta = Math.Round(target - rem);
         m_StartTimer.Stop();
         RemoveTimer(m_StartTimer);
         if (IsFrozen())
@@ -82,7 +84,7 @@ class BattleRoyaleCountReached: BattleRoyaleDebugState
         }
 
 #ifdef DIAG_DEVELOPER
-        Print("[BRPanel] AdjustTime state=" + GetName() + " delta=" + deltaSeconds.ToString() + " oldRem=" + rem.ToString() + " newRem=" + target.ToString());
+        Print("[BRPanel] AdjustTime state=" + GetName() + " delta=" + appliedDelta.ToString() + " oldRem=" + rem.ToString() + " newRem=" + target.ToString());
 #endif
         return true;
     }

@@ -68,8 +68,9 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
         return -1;
     }
 
-    override bool AdjustTime(int deltaSeconds, out string reasonKey)
+    override bool AdjustTime(int deltaSeconds, out int appliedDelta, out string reasonKey)
     {
+        appliedDelta = 0;
         if (!IsActive())
         {
             reasonKey = "STR_BR_PANEL_ERR_WRONG_PHASE";
@@ -98,6 +99,7 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
             }
         }
 
+        appliedDelta = Math.Round(targetRem - currentRem);
         f_MinWaitingTime = currentWait + targetRem;
         int newSec = GetPhaseSecondsLeft();
         if (IsFrozen())
@@ -111,7 +113,7 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
         }
 
 #ifdef DIAG_DEVELOPER
-        Print("[BRPanel] AdjustTime state=" + GetName() + " delta=" + deltaSeconds.ToString() + " oldRem=" + currentRem.ToString() + " newRem=" + targetRem.ToString());
+        Print("[BRPanel] AdjustTime state=" + GetName() + " delta=" + appliedDelta.ToString() + " oldRem=" + currentRem.ToString() + " newRem=" + targetRem.ToString());
 #endif
         return true;
     }

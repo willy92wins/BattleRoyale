@@ -38,6 +38,8 @@ class BattleRoyaleServer: BattleRoyaleBase
     protected ref map<string, float> m_AdminInboundWindowStart;
     protected ref map<string, int> m_AdminInboundCount;
     protected string m_LastAdminStatusSignature;
+    protected int m_MatchId;
+    protected bool m_UsesSerialMatches;
 
     void BattleRoyaleServer()
     {
@@ -121,6 +123,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         m_AdminInboundWindowStart = new map<string, float>;
         m_AdminInboundCount = new map<string, int>;
         m_LastAdminStatusSignature = "";
+        m_MatchId = 1;
 
         // The actions that hurt or hold another player are blocked in the lobby (BRProtectedPlayerActions.c)
         BattleRoyaleSpawnsData spawnsData = config_data.GetSpawnsData();
@@ -131,7 +134,8 @@ class BattleRoyaleServer: BattleRoyaleBase
         BRLeaderboard.Get().Load();
         BRLeaderboard.Get().EnsurePeriod(m_ServerData.leaderboard_wipe);
 
-        BRMatchDebris.s_Enabled = m_ServerData.UsesSerialMatches();
+        m_UsesSerialMatches = m_ServerData.UsesSerialMatches();
+        BRMatchDebris.s_Enabled = m_UsesSerialMatches;
         if (BRMatchDebris.s_Enabled)
             BattleRoyaleUtils.Info("[Serial] Serial matches on: the server stays up between matches (full restart every " + m_ServerData.serial_restart_every_matches + " matches, 0 = never)");
 
@@ -300,8 +304,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 
     bool CanAbortMatch(out string reasonKey)
     {
-        BattleRoyaleServerData serverData = BattleRoyaleConfig.GetConfig().GetServerData();
-        if (!serverData || !serverData.UsesSerialMatches())
+        if (!m_UsesSerialMatches)
         {
             reasonKey = "STR_BR_PANEL_ERR_NO_SERIAL";
             return false;
@@ -430,6 +433,9 @@ class BattleRoyaleServer: BattleRoyaleBase
     void Turnover_BuildNextMatch()
     {
         m_AbortedByAdmin = false;
+        m_MatchId++;
+        if (m_MatchId > 32766)
+            m_MatchId = 1;
         BattleRoyaleState.ResetMatchStatics();
         BattleRoyaleZone.ResetMatch();
 
@@ -2035,7 +2041,7 @@ class BattleRoyaleServer: BattleRoyaleBase
             availMask = ComputeAdminAvailMask(state);
         }
 
-        flagsAndTotal = availMask | (i_NumRounds << 8);
+        flagsAndTotal = (availMask & 0xFF) | ((i_NumRounds & 0xFF) << 8) | ((m_MatchId & 0x7FFF) << 16);
     }
 
     protected void SendAdminStatusTo(PlayerIdentity identity, int phaseEnum, int stateIdx, bool frozen, int timeLeft, int alive, int starting, int zoneNum, float zoneRadius, int flagsAndTotal)
@@ -2046,7 +2052,8 @@ class BattleRoyaleServer: BattleRoyaleBase
         GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "AdminStatusUpdate", new Param9<int, int, bool, int, int, int, int, float, int>(phaseEnum, stateIdx, frozen, timeLeft, alive, starting, zoneNum, zoneRadius, flagsAndTotal), true, identity);
 
 #ifdef DIAG_DEVELOPER
-        Print("[BRPanel] StatusSend recipient=" + identity.GetPlainId() + " tick=" + GetGame().GetTickTime().ToString() + " phase=" + phaseEnum.ToString() + " stateIdx=" + stateIdx.ToString() + " frozen=" + frozen.ToString() + " timeLeft=" + timeLeft.ToString() + " alive=" + alive.ToString() + " zone=" + zoneNum.ToString() + " radius=" + Math.Round(zoneRadius).ToString());
+        int logMatchId = (flagsAndTotal >> 16) & 0x7FFF;
+        Print("[BRPanel] StatusSend recipient=" + identity.GetPlainId() + " tick=" + GetGame().GetTickTime().ToString() + " matchId=" + logMatchId.ToString() + " phase=" + phaseEnum.ToString() + " stateIdx=" + stateIdx.ToString() + " frozen=" + frozen.ToString() + " timeLeft=" + timeLeft.ToString() + " alive=" + alive.ToString() + " zone=" + zoneNum.ToString() + " radius=" + Math.Round(zoneRadius).ToString());
 #endif
     }
 
@@ -2093,7 +2100,8 @@ class BattleRoyaleServer: BattleRoyaleBase
         BuildAdminStatusValues(phaseEnum, stateIdx, frozen, timeLeft, alive, starting, zoneNum, zoneRadius, flagsAndTotal);
 
         int roundedRadius = Math.Round(zoneRadius);
-        string sig = phaseEnum.ToString() + "|" + stateIdx.ToString() + "|" + frozen.ToString() + "|" + alive.ToString() + "|" + starting.ToString() + "|" + zoneNum.ToString() + "|" + roundedRadius.ToString() + "|" + flagsAndTotal.ToString();
+        bool timerExpired = (timeLeft < 0);
+        string sig = phaseEnum.ToString() + "|" + stateIdx.ToString() + "|" + frozen.ToString() + "|" + timerExpired.ToString() + "|" + alive.ToString() + "|" + starting.ToString() + "|" + zoneNum.ToString() + "|" + roundedRadius.ToString() + "|" + flagsAndTotal.ToString();
         bool sigChanged = (sig != m_LastAdminStatusSignature);
         if (sigChanged)
             m_LastAdminStatusSignature = sig;
@@ -2220,6 +2228,30 @@ class BattleRoyaleServer: BattleRoyaleBase
         m_AdminSubLastSent.Set(id, now);
     }
 
+    protected bool IsAdminTargetCurrent(int expectedStateIdx, int expectedMatchId)
+    {
+        return expectedStateIdx == i_CurrentStateIndex && expectedMatchId == m_MatchId;
+    }
+
+    protected string FormatAdminDeltaLabel(int appliedDelta)
+    {
+        string sign = "+";
+        int absSec = appliedDelta;
+        if (appliedDelta < 0)
+        {
+            sign = "-";
+            absSec = -appliedDelta;
+        }
+
+        int mins = absSec / 60;
+        int secs = absSec % 60;
+        if (mins > 0 && secs == 0)
+            return sign + mins.ToString() + " min";
+        if (mins > 0)
+            return sign + mins.ToString() + " min " + secs.ToString() + " s";
+        return sign + secs.ToString() + " s";
+    }
+
     void AdminNextPhase(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
     {
         if (type != CallType.Server || !sender)
@@ -2232,6 +2264,17 @@ class BattleRoyaleServer: BattleRoyaleBase
         {
             if (BRAdminAuthorizer.CanViewStatus(sender, false))
                 SendAdminActionResult(sender, false, "STR_BR_PANEL_ERR_NO_PERM");
+            return;
+        }
+
+        Param2<int, int> data;
+        if (!ctx.Read(data) || !data)
+            return;
+
+        if (!IsAdminTargetCurrent(data.param1, data.param2))
+        {
+            SendAdminActionResult(sender, false, "STR_BR_PANEL_ERR_STALE_PHASE");
+            MarkAdminStatusDirty();
             return;
         }
 
@@ -2301,6 +2344,17 @@ class BattleRoyaleServer: BattleRoyaleBase
             return;
         }
 
+        Param2<int, int> data;
+        if (!ctx.Read(data) || !data)
+            return;
+
+        if (!IsAdminTargetCurrent(data.param1, data.param2))
+        {
+            SendAdminActionResult(sender, false, "STR_BR_PANEL_ERR_STALE_PHASE");
+            MarkAdminStatusDirty();
+            return;
+        }
+
         string reasonKey;
         if (BRAdminController.TryForceStart(reasonKey))
             SendAdminActionResult(sender, true, "STR_BR_PANEL_OK_FORCESTART");
@@ -2328,22 +2382,12 @@ class BattleRoyaleServer: BattleRoyaleBase
         }
 
         int deltaSeconds = data.param1;
+        int appliedDelta;
         string reasonKey;
-        if (BRAdminController.TryAdjustTime(deltaSeconds, reasonKey))
-        {
-            string label = "+1 min";
-            if (deltaSeconds == -300)
-                label = "-5 min";
-            else if (deltaSeconds == -60)
-                label = "-1 min";
-            else if (deltaSeconds == 300)
-                label = "+5 min";
-            SendAdminActionResult(sender, true, "STR_BR_PANEL_OK_ADJUSTTIME", label);
-        }
+        if (BRAdminController.TryAdjustTime(deltaSeconds, appliedDelta, reasonKey))
+            SendAdminActionResult(sender, true, "STR_BR_PANEL_OK_ADJUSTTIME", FormatAdminDeltaLabel(appliedDelta));
         else
-        {
             SendAdminActionResult(sender, false, reasonKey);
-        }
     }
 
     void AdminRestartMatch(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
@@ -2358,6 +2402,17 @@ class BattleRoyaleServer: BattleRoyaleBase
         {
             if (BRAdminAuthorizer.CanViewStatus(sender, false))
                 SendAdminActionResult(sender, false, "STR_BR_PANEL_ERR_NO_PERM");
+            return;
+        }
+
+        Param2<int, int> data;
+        if (!ctx.Read(data) || !data)
+            return;
+
+        if (!IsAdminTargetCurrent(data.param1, data.param2))
+        {
+            SendAdminActionResult(sender, false, "STR_BR_PANEL_ERR_STALE_PHASE");
+            MarkAdminStatusDirty();
             return;
         }
 

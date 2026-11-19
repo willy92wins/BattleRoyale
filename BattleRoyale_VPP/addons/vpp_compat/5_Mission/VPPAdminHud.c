@@ -11,11 +11,14 @@ modded class VPPAdminHud
 
     override void HideMenu()
     {
-        MenuBattleRoyaleManager brMenu = MenuBattleRoyaleManager.Cast(GetSubMenuByType(MenuBattleRoyaleManager));
-        if (brMenu)
-            brMenu.OnToolbarHidden();
-
         super.HideMenu();
+
+        if (!IsShowing())
+        {
+            MenuBattleRoyaleManager brMenu = MenuBattleRoyaleManager.Cast(GetSubMenuByType(MenuBattleRoyaleManager));
+            if (brMenu)
+                brMenu.OnToolbarHidden();
+        }
     }
 };
 #endif

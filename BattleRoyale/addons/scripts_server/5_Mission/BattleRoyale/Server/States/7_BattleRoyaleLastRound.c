@@ -282,7 +282,8 @@ class BattleRoyaleLastRound: BattleRoyaleState
 
 	override protected void SendResumeSync()
 	{
-		if (b_Shrinking && !b_IsZoneLocked && f_ShrinkDuration > 0 && GetStateClock() >= f_ShrinkStartTime)
+		bool shrinkTimerFired = !m_ShrinkTimer || !IsTimerActiveOrPaused(m_ShrinkTimer);
+		if (b_Shrinking && !b_IsZoneLocked && f_ShrinkDuration > 0 && (GetStateClock() >= f_ShrinkStartTime || shrinkTimerFired))
 			SendShrinkTo(null);
 
 		int rem = GetPhaseSecondsLeft();

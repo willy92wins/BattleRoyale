@@ -227,8 +227,9 @@ class BattleRoyaleState: Timeable
         return s_MatchPhase;
     }
 
-    bool AdjustTime(int deltaSeconds, out string reasonKey)
+    bool AdjustTime(int deltaSeconds, out int appliedDelta, out string reasonKey)
     {
+        appliedDelta = 0;
         reasonKey = "STR_BR_PANEL_ERR_WRONG_PHASE";
         return false;
     }

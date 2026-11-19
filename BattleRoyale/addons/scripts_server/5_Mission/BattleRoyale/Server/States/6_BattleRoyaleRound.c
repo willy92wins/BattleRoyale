@@ -147,13 +147,8 @@ class BattleRoyaleRound: BattleRoyaleState
     {
         vector c;
         float r;
-        if (b_Shrinking && !b_ZoneLocked)
-        {
-            GetShrinkCircle(GetShrinkClock(), c, r);
+        if (GetCurrentCircle(c, r))
             return r;
-        }
-        if (GetZone() && GetZone().GetArea())
-            return GetZone().GetArea().GetRadius();
         return 0.0;
     }
 
@@ -222,8 +217,9 @@ class BattleRoyaleRound: BattleRoyaleState
         return false;
     }
 
-    override bool AdjustTime(int deltaSeconds, out string reasonKey)
+    override bool AdjustTime(int deltaSeconds, out int appliedDelta, out string reasonKey)
     {
+        appliedDelta = 0;
         if (!IsActive() || !m_RoundTimeUpTimer || !IsTimerActiveOrPaused(m_RoundTimeUpTimer))
         {
             reasonKey = "STR_BR_PANEL_ERR_NO_TIMER";
@@ -379,6 +375,8 @@ class BattleRoyaleRound: BattleRoyaleState
             }
         }
 
+        appliedDelta = Math.Round(actualDelta);
+
 #ifdef DIAG_DEVELOPER
         Print("[BRPanel] AdjustTime state=" + GetName() + " delta=" + actualDelta.ToString() + " locked=" + b_ZoneLocked.ToString() + " shrinking=" + b_Shrinking.ToString() + " oldShrink=" + shrinkRem.ToString() + " newShrink=" + newShrinkRem.ToString() + " oldLock=" + lockRem.ToString() + " newLock=" + newLockRem.ToString() + " oldEnd=" + endRem.ToString() + " newEnd=" + newEndRem.ToString());
 #endif
@@ -387,7 +385,8 @@ class BattleRoyaleRound: BattleRoyaleState
 
     override protected void SendResumeSync()
     {
-        if (b_Shrinking && !b_ZoneLocked && f_ShrinkDuration > 0 && GetStateClock() >= f_ShrinkStartTime)
+        bool shrinkTimerFired = !m_ShrinkTimer || !IsTimerActiveOrPaused(m_ShrinkTimer);
+        if (b_Shrinking && !b_ZoneLocked && f_ShrinkDuration > 0 && (GetStateClock() >= f_ShrinkStartTime || shrinkTimerFired))
             SendShrinkTo(null);
 
         int phaseSec = GetPhaseSecondsLeft();

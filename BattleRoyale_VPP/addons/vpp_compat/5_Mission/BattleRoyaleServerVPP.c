@@ -17,7 +17,7 @@ modded class BattleRoyaleServer
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "VPPNextState", this, SingleplayerExecutionType.Server);
     }
 
-    //! Next state from the VPP menu. The modded BRAdminAuthorizer below consults VPP and throttles the deny log.
+    //! Next state from the VPP menu. The modded BRAdminFrameworkHook below consults VPP and throttles the deny log.
     void VPPNextState(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
     {
         if (type != CallType.Server || !sender)
@@ -31,21 +31,13 @@ modded class BattleRoyaleServer
     }
 };
 
-//! The core authorizer consults VPP only when it compiled after VPP. This mod always does, so VPP is
-//! always consulted and, as in the core when VPP is compiled in, the BattleRoyale steamid list is not.
-modded class BRAdminAuthorizer
+//! The core authorizer consults VPP directly only when it compiled after VPP. This mod always does, so
+//! overriding the instance hook ensures VPP is always consulted and the BattleRoyale steamid list is not.
+modded class BRAdminFrameworkHook
 {
-    override protected static bool HasGrant(PlayerIdentity sender, string action)
+    override bool HasGrant(PlayerIdentity sender, string action)
     {
-        if (!sender)
-            return false;
-
-        return HasFrameworkGrant(sender, action);
-    }
-
-    override protected static bool HasFrameworkGrant(PlayerIdentity sender, string action)
-    {
-        if (super.HasFrameworkGrant(sender, action))
+        if (super.HasGrant(sender, action))
             return true;
 
         if (!sender)
@@ -55,17 +47,9 @@ modded class BRAdminAuthorizer
         return vpp && vpp.VerifyPermission(sender.GetPlainId(), "BattleRoyale:" + action, "", false);
     }
 
-    override protected static bool HasStatusGrant(PlayerIdentity sender)
+    override bool HasStatusGrant(PlayerIdentity sender)
     {
-        if (!sender)
-            return false;
-
-        return HasFrameworkStatusGrant(sender);
-    }
-
-    override protected static bool HasFrameworkStatusGrant(PlayerIdentity sender)
-    {
-        if (super.HasFrameworkStatusGrant(sender))
+        if (super.HasStatusGrant(sender))
             return true;
 
         if (!sender)
@@ -75,8 +59,15 @@ modded class BRAdminAuthorizer
         return vpp && vpp.VerifyPermission(sender.GetPlainId(), "MenuBattleRoyaleManager", "", false);
     }
 
-    override protected static void NotifyFrameworkDeny(PlayerIdentity sender, string action)
+    override bool OwnsAdminList()
     {
+        return true;
+    }
+
+    override void NotifyDeny(PlayerIdentity sender, string action)
+    {
+        super.NotifyDeny(sender, action);
+
         if (!sender)
             return;
 

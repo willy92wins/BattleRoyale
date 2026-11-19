@@ -153,8 +153,9 @@ class BRAdminController
 		return true;
 	}
 
-	static bool TryAdjustTime(int deltaSeconds, out string reasonKey)
+	static bool TryAdjustTime(int deltaSeconds, out int appliedDelta, out string reasonKey)
 	{
+		appliedDelta = 0;
 		if (deltaSeconds != -300 && deltaSeconds != -60 && deltaSeconds != 60 && deltaSeconds != 300)
 		{
 			reasonKey = "STR_BR_PANEL_ERR_INVALID_DELTA";
@@ -175,7 +176,7 @@ class BRAdminController
 			return false;
 		}
 
-		if (!current.AdjustTime(deltaSeconds, reasonKey))
+		if (!current.AdjustTime(deltaSeconds, appliedDelta, reasonKey))
 			return false;
 
 		server.MarkAdminStatusDirty();
