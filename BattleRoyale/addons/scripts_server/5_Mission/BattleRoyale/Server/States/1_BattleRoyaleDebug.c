@@ -60,6 +60,15 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
         return EBRMatchPhase.LOBBY;
     }
 
+    //! The minimum wait only ends the lobby once enough players are in: before that the panel shows no phase end
+    override int GetAdminTimeLeft()
+    {
+        if (GetPlayers().Count() < i_MinPlayers)
+            return -1;
+
+        return GetPhaseSecondsLeft();
+    }
+
     override int GetPhaseSecondsLeft()
     {
         float rem = f_MinWaitingTime - GetWaitingTime();

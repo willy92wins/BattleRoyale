@@ -2107,7 +2107,8 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         int roundedRadius = Math.Round(zoneRadius);
         bool timerExpired = (timeLeft < 0);
-        string sig = phaseEnum.ToString() + "|" + stateIdx.ToString() + "|" + frozen.ToString() + "|" + timerExpired.ToString() + "|" + alive.ToString() + "|" + starting.ToString() + "|" + zoneNum.ToString() + "|" + roundedRadius.ToString() + "|" + flagsAndTotal.ToString();
+        bool hasCircle = (zoneRadius > 0.0);
+        string sig = phaseEnum.ToString() + "|" + stateIdx.ToString() + "|" + frozen.ToString() + "|" + timerExpired.ToString() + "|" + hasCircle.ToString() + "|" + alive.ToString() + "|" + starting.ToString() + "|" + zoneNum.ToString() + "|" + roundedRadius.ToString() + "|" + flagsAndTotal.ToString();
         bool sigChanged = (sig != m_LastAdminStatusSignature);
         if (sigChanged)
             m_LastAdminStatusSignature = sig;
