@@ -430,6 +430,9 @@ class BattleRoyaleSpectators
 		anchor.SetPosition(AnchorPosition(target));
 		SetAnchor(identityId, anchor);
 		GetGame().SelectPlayer(identity, anchor);
+		// The spectator's voice would come from the anchor, under the watched player: it stays silent, as vanilla
+		// silences a body that dies. The next character the identity gets is a new body with its voice on
+		GetGame().EnableVoN(anchor, false);
 		if (previous && previous != anchor)
 			GetGame().ObjectDelete(previous);
 
