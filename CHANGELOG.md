@@ -58,6 +58,8 @@
   while the watched player ran.
 
 ### Fixed
+- Spectators could talk in direct voice to the player they watched, unseen. Their voice is now off while they
+  spectate, from death or from the waiting room, and comes back with their next character.
 - Spectators who left the server could not join again until it restarted: «Player with same UID is already in game»
   (`0x00040033`). A spectator who leaves is now disconnected at once.
 - The view and the character's aim could drift apart (a vanilla bug), for example at the character's aiming limit when
