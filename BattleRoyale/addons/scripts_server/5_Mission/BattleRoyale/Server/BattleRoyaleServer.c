@@ -30,6 +30,7 @@ class BattleRoyaleServer: BattleRoyaleBase
     //! Admin panel status subscription (lease-based, zero work while empty)
     static const float ADMIN_SUB_LEASE_SECONDS = 5.0;
     static const float ADMIN_STATUS_MIN_INTERVAL = 1.0;
+    static const float ADMIN_STATUS_TICK_INTERVAL = 0.25;
     protected ref map<string, PlayerIdentity> m_AdminSubscribers;
     protected ref map<string, float> m_AdminSubLeaseUntil;
     protected ref map<string, float> m_AdminSubLastSent;
@@ -38,6 +39,8 @@ class BattleRoyaleServer: BattleRoyaleBase
     protected ref map<string, float> m_AdminInboundWindowStart;
     protected ref map<string, int> m_AdminInboundCount;
     protected string m_LastAdminStatusSignature;
+    //! Tick time of the last pass over the status subscribers: the status is built at most every ADMIN_STATUS_TICK_INTERVAL
+    protected float m_LastAdminStatusTick;
     protected int m_MatchId;
     protected bool m_UsesSerialMatches;
 
@@ -2060,6 +2063,9 @@ class BattleRoyaleServer: BattleRoyaleBase
     protected void TickAdminStatusSubscribers()
     {
         float now = GetGame().GetTickTime();
+        if ((now - m_LastAdminStatusTick) < ADMIN_STATUS_TICK_INTERVAL)
+            return;
+        m_LastAdminStatusTick = now;
         m_ExpiredAdminSubIds.Clear();
 
         int i;

@@ -16,3 +16,14 @@ Live list of known defects outside the scope of the work in progress. One entry 
 - **Fix:** an instance hook (`BRAdminFrameworkHook`), which the compat overrides with a `modded class`.
 - **Rule:** to change core behaviour from a later mod, use instance methods, not static overrides.
 - **State:** being fixed. The 1.2.0 build without the panel must not be published (`br-deploy/@BattleRoyale-VPP/NO_SUBIR.txt`).
+
+## BR-003 — Resuming LastRound in the second before its shrink: client circle up to ~9 m ahead of the server one (open, minor)
+
+- **Found:** 2026-11-19, Sol review round 2 of the panel diff (`br-runs/vpp-panel-2026-11-18/pr2/sol_diff_r2.log`).
+- **Scenario:** freeze LastRound after its shrink timer has fired, but up to 1 s before the state-clock start. On resume, the negative elapsed time is clamped to 0 (`States/7_BattleRoyaleLastRound.c:286,434`), so the client interpolates up to 1 s ahead until the lock: about 9 m at 9 m/s. Damage uses the server circle.
+- **State:** open, low priority. The window is 1 s and the effect is cosmetic. Not reproduced.
+
+## BR-004 — The panel shows the wrong round total with more than 255 zones (open, minor)
+
+- **Found:** 2026-11-19, Sol review round 2. The status packs the total into 8 bits (`BattleRoyaleServer.c:2044`), so `num_zones=257` shows «Ronda 2 / 1».
+- **State:** open. No realistic config comes close: the tables have about 7 zones.
