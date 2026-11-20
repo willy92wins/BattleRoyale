@@ -26,13 +26,14 @@ class BattleRoyaleHud
     //! The zone arrow icon (dayz_gui icon_arrow) points down at rest; this turns it to point up at angle 0
     protected static const float ZONE_ARROW_ICON_OFFSET = 0;  //!< br_zone_arrow_ca.paa points up
     protected static const float ZONE_DISTANCE_ROW_Y = 80;   //!< y of ZoneDistancePanel in br_hud.layout
-    protected static const float SILENT_MODE_ROW_Y = 120;    //!< y of SilentModePanel in br_hud.layout
+    protected static const float SILENT_MODE_ROW_Y = 160;    //!< y of SilentModePanel in br_hud.layout
 
     protected Widget m_Root;
 
     protected Widget m_PlayerCountPanel;
     protected Widget m_GroupCountPanel;
     protected Widget m_ZoneDistancePanel;
+    protected Widget m_ZoneRadiusPanel;
     protected Widget m_KillCountPanel;
     protected Widget m_PhasePanel;
     protected Widget m_ZoneDamagePanel;
@@ -41,11 +42,13 @@ class BattleRoyaleHud
     protected TextWidget m_PlayerTextWidget;
     protected TextWidget m_GroupTextWidget;
     protected TextWidget m_DistanceTextWidget;
+    protected TextWidget m_RadiusTextWidget;
     protected TextWidget m_KillTextWidget;
     //! Black copies drawn 2 px right and down of the counters: their font draws no text shadow of its own
     protected TextWidget m_PlayerTextShadow;
     protected TextWidget m_GroupTextShadow;
     protected TextWidget m_DistanceTextShadow;
+    protected TextWidget m_RadiusTextShadow;
     protected TextWidget m_KillTextShadow;
     protected TextWidget m_PhaseTextWidget;
     protected TextWidget m_ZoneDamageTextWidget;
@@ -60,8 +63,9 @@ class BattleRoyaleHud
     // Last values written to the widgets, so the setters only touch them when something changed
     protected int m_DistanceColorState;
     protected int m_LastDistanceMeters;
+    protected int m_LastRadiusMeters;
     protected float m_LastArrowAngle;
-    protected float m_SilentModeRowY;
+    protected float m_SilentModeRowY;  //!< screen pixels, as last set with SetPos
     protected int m_LastPhaseLabel;
     protected int m_LastPhaseSeconds;
     protected bool m_LastPhaseFrozen;
@@ -79,6 +83,7 @@ class BattleRoyaleHud
         m_PlayerCountPanel = Widget.Cast( m_Root.FindAnyWidget( "PlayerCountPanel" ) );
         m_GroupCountPanel = Widget.Cast( m_Root.FindAnyWidget( "GroupsCountPanel" ) );
         m_ZoneDistancePanel = Widget.Cast( m_Root.FindAnyWidget( "ZoneDistancePanel" ) );
+        m_ZoneRadiusPanel = m_Root.FindAnyWidget( "ZoneRadiusPanel" );
         m_KillCountPanel = Widget.Cast( m_Root.FindAnyWidget( "KillCountPanel" ) );
         m_PhasePanel = Widget.Cast( m_Root.FindAnyWidget( "PhasePanel" ) );
         m_ZoneDamagePanel = Widget.Cast( m_Root.FindAnyWidget( "ZoneDamagePanel" ) );
@@ -87,10 +92,12 @@ class BattleRoyaleHud
         m_PlayerTextWidget = TextWidget.Cast( m_PlayerCountPanel.FindAnyWidget( "PlayerText" ) );
         m_GroupTextWidget = TextWidget.Cast( m_GroupCountPanel.FindAnyWidget( "GroupText" ) );
         m_DistanceTextWidget = TextWidget.Cast( m_ZoneDistancePanel.FindAnyWidget( "DistanceText" ) );
+        m_RadiusTextWidget = TextWidget.Cast( m_ZoneRadiusPanel.FindAnyWidget( "RadiusText" ) );
         m_KillTextWidget = TextWidget.Cast( m_KillCountPanel.FindAnyWidget( "KillCountText" ) );
         m_PlayerTextShadow = TextWidget.Cast( m_PlayerCountPanel.FindAnyWidget( "PlayerTextShadow" ) );
         m_GroupTextShadow = TextWidget.Cast( m_GroupCountPanel.FindAnyWidget( "GroupTextShadow" ) );
         m_DistanceTextShadow = TextWidget.Cast( m_ZoneDistancePanel.FindAnyWidget( "DistanceTextShadow" ) );
+        m_RadiusTextShadow = TextWidget.Cast( m_ZoneRadiusPanel.FindAnyWidget( "RadiusTextShadow" ) );
         m_KillTextShadow = TextWidget.Cast( m_KillCountPanel.FindAnyWidget( "KillCountTextShadow" ) );
         m_PhaseTextWidget = TextWidget.Cast( m_Root.FindAnyWidget( "PhaseText" ) );
         m_ZoneDamageTextWidget = TextWidget.Cast( m_Root.FindAnyWidget( "ZoneDamageText" ) );
@@ -101,6 +108,7 @@ class BattleRoyaleHud
         m_PlayerCountPanel.Show( false );
         m_GroupCountPanel.Show( false );
         m_ZoneDistancePanel.Show( false );
+        SetVisible( m_ZoneRadiusPanel, false );
         m_KillCountPanel.Show( false );
         SetVisible( m_PhasePanel, false );
         SetVisible( m_ZoneDamagePanel, false );
@@ -108,8 +116,9 @@ class BattleRoyaleHud
 
         m_DistanceColorState = -1;
         m_LastDistanceMeters = -2;
+        m_LastRadiusMeters = -1;
         m_LastArrowAngle = -1000;
-        m_SilentModeRowY = SILENT_MODE_ROW_Y;
+        m_SilentModeRowY = -1;
         m_LastPhaseLabel = PHASE_LABEL_NONE;
         m_LastPhaseSeconds = -1;
         m_LastPhaseFrozen = false;
@@ -136,12 +145,13 @@ class BattleRoyaleHud
         left = LeftOfRightAlignedText( m_GroupCountPanel, m_GroupTextWidget, left );
         left = LeftOfRightAlignedText( m_KillCountPanel, m_KillTextWidget, left );
         left = LeftOfRightAlignedText( m_ZoneDistancePanel, m_DistanceTextWidget, left );
+        left = LeftOfRightAlignedText( m_ZoneRadiusPanel, m_RadiusTextWidget, left );
         return left;
     }
 
     //! Called every frame: shows the silent mode icon while the mode is on and the vanilla HUD shows
-    //! (BattleRoyaleCompass.IsHudShown), in its own row under the zone distance, or in the zone distance's row while
-    //! the zone distance is hidden
+    //! (BattleRoyaleCompass.IsHudShown), in its own row under the zone radius, or in the zone distance's row while
+    //! the zone distance and radius are hidden
     void UpdateSilentMode( bool active )
     {
         SetVisible( m_SilentModePanel, active );
@@ -152,10 +162,16 @@ class BattleRoyaleHud
         if ( !m_ZoneDistancePanel.IsVisible() )
             row_y = ZONE_DISTANCE_ROW_Y;
 
-        if ( row_y != m_SilentModeRowY )
+        // The layout scales exact units with the screen height (1/1080), but SetPos takes screen pixels
+        int screen_w;
+        int screen_h;
+        GetScreenSize( screen_w, screen_h );
+        float row_px = row_y * screen_h / 1080.0;
+
+        if ( row_px != m_SilentModeRowY )
         {
-            m_SilentModeRowY = row_y;
-            m_SilentModePanel.SetPos( 0, row_y );
+            m_SilentModeRowY = row_px;
+            m_SilentModePanel.SetPos( 0, row_px );
         }
     }
 
@@ -270,6 +286,8 @@ class BattleRoyaleHud
     void ShowDistance( bool show )
     {
         SetVisible( m_ZoneDistancePanel, show );
+        if ( !show )
+            SetVisible( m_ZoneRadiusPanel, false );
 
         // Without a distance there is no zone to reach: the colors go back to white
         if ( !show && m_DistanceColorState != -1 )
@@ -366,6 +384,21 @@ class BattleRoyaleHud
             else
                 SetShadowedText( m_DistanceTextWidget, m_DistanceTextShadow, meters.ToString() + "m" );
         }
+    }
+
+    //! Shows the radius, in whole metres, of the zone the play area closes to, in the row under the zone distance
+    void SetZoneRadius( float radius )
+    {
+        if ( !m_RadiusTextWidget )
+            return;
+
+        int meters = Math.Round( radius );
+        if ( meters != m_LastRadiusMeters )
+        {
+            m_LastRadiusMeters = meters;
+            SetShadowedText( m_RadiusTextWidget, m_RadiusTextShadow, meters.ToString() + "m" );
+        }
+        SetVisible( m_ZoneRadiusPanel, true );
     }
 
     //! Inside the zone everything is white; outside, the distance is red and the phase text, which shows the countdown, tells how hard the zone is to reach
