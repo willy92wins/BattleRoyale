@@ -108,6 +108,8 @@ def check(events, spec):
             tolerance = _finite_number(mark.get("tolerance_seconds", 0))
             if delay is None or tolerance is None:
                 return "non-finite tolerance: %s" % name
+            if tolerance < 0:
+                return "negative tolerance: %s" % name
             # Whole milliseconds. 60.100 s against 60 +/- 0.1 s is 100 ms, on the boundary, and passes.
             delta_ms = _delta_ms(stamp, origin)
             delay_ms = int(round(delay * 1000.0))

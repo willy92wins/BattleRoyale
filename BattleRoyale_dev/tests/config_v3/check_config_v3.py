@@ -96,8 +96,8 @@ FLOAT_FIELDS = {
     "parachute_auto_open_agl_m",
 }
 
-PROFILE_FILE = "profile:general_settings.json"
-MISSION_FILE = "mission:general_settings.json"
+PROFILE_FILE = "general_settings.json"
+MISSION_FILE = "general_settings.json"
 
 
 def f32(value):
@@ -136,9 +136,7 @@ def load_object(raw):
 
 
 def setting_file(mission, field):
-    """BattleRoyaleGameData.SettingFile: mission text wins when it names the key."""
-    if mission and field in mission:
-        return MISSION_FILE
+    """Every rejection names general_settings.json, as LogInvalidSetting is called in Validate."""
     return PROFILE_FILE
 
 
@@ -216,6 +214,14 @@ def validate(data, logs, rules=None, mission=None):
         lo, hi = rules["plane_max_altitude_m"]
         if data["plane_max_altitude_m"] < lo or data["plane_max_altitude_m"] > hi:
             _reject(data, logs, mission, "plane_max_altitude_m", "must be between 400 and 2500")
+    # Mirrors the second pair check after per-field defaults.
+    if data["plane_min_altitude_m"] >= data["plane_max_altitude_m"]:
+        logs.append(
+            "invalid %s plane_min_altitude_m / plane_max_altitude_m = %s / %s (plane_min_altitude_m must be lower than plane_max_altitude_m)"
+            % (setting_file(mission, "plane_min_altitude_m"), data["plane_min_altitude_m"], data["plane_max_altitude_m"])
+        )
+        data["plane_min_altitude_m"] = DEFAULTS["plane_min_altitude_m"]
+        data["plane_max_altitude_m"] = DEFAULTS["plane_max_altitude_m"]
 
     lo, hi = rules["plane_edge_margin_m"]
     if data["plane_edge_margin_m"] < lo or data["plane_edge_margin_m"] > hi:
@@ -246,6 +252,8 @@ def apply_mission(data, mission):
     if mission is None:
         return data
     for key, value in mission.items():
+        if key in FLOAT_FIELDS and isinstance(value, (int, float)) and not isinstance(value, bool):
+            value = f32(value)
         data[key] = copy.deepcopy(value)
     return data
 
@@ -324,6 +332,19 @@ CASES = [
     {"name": "speed_180", "profile": "speed_180.json", "expected": "expected_speed_180.json"},
     {"name": "speed_above_ceiling", "profile": "speed_above_ceiling.json", "expected": "expected_speed_above_ceiling.json"},
     {"name": "speed_float32_ceiling", "profile": "speed_float32_ceiling.json", "expected": "expected_speed_float32_ceiling.json"},
+    {
+        "name": "mission_min_below_range",
+        "profile": "altitudes_400_700.json",
+        "mission": "mission_min_300.json",
+        "expected": "expected_mission_min_below_range.json",
+        "altitude_pair_logs": 1,
+    },
+    {
+        "name": "mission_speed_float32",
+        "profile": "v2_mission_profile.json",
+        "mission": "mission_speed_float32.json",
+        "expected": "expected_mission_speed_float32.json",
+    },
 ]
 
 # Substrings that must appear in the rejection log for that case. Empty means no rejection.
@@ -345,6 +366,8 @@ REJECT_LOGS = {
     "speed_180": [],
     "speed_above_ceiling": ["invalid " + PROFILE_FILE + " plane_speed_mps"],
     "speed_float32_ceiling": [],
+    "mission_min_below_range": ["invalid " + PROFILE_FILE + " plane_min_altitude_m = 300", "invalid " + PROFILE_FILE + " plane_min_altitude_m / plane_max_altitude_m"],
+    "mission_speed_float32": [],
 }
 
 
