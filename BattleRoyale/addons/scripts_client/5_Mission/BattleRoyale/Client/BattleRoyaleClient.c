@@ -319,6 +319,16 @@ class BattleRoyaleClient: BattleRoyaleBase
 			// Check if player is inside current play area and get distExt, distInt and angle
 			isInsideZone = GetZoneDistance(player, m_CurrentPlayArea, distExt, distInt, angle);
 
+			// The radius of the zone the play area closes to: the announced one, else the one in force; set before the
+			// distance shows, so its row never shows a stale value
+			if (!IsZoneCollapsed(br_rpc))
+			{
+				BattleRoyalePlayArea radius_area = m_CurrentPlayArea;
+				if (m_FuturePlayArea)
+					radius_area = m_FuturePlayArea;
+				gameplay.UpdateZoneRadius(radius_area.GetRadius());
+			}
+
 			// Once the final zone is gone there is no safe area left to point at
 			if (IsZoneCollapsed(br_rpc))
 			{

@@ -223,6 +223,14 @@ modded class MissionGameplay
 		m_BattleRoyaleHud.SetDistance( isInsideZone, distExt, distInt, angle );
 	}
 
+	void UpdateZoneRadius(float radius)
+	{
+		if (!m_BattleRoyaleHud)
+			return;
+
+		m_BattleRoyaleHud.SetZoneRadius( radius );
+	}
+
 	void HideDistance()
 	{
 		if (!m_BattleRoyaleHud)
