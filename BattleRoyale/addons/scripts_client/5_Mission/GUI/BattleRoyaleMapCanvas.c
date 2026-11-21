@@ -82,6 +82,167 @@ class BattleRoyaleMapCanvas
 		return drawn;
 	}
 
+	//! Draws a dashed world-space flight line from start_pos to end_pos on a canvas covering the map widget.
+	//! Clips to [0, clip_w] x [0, clip_h] when both are positive; dashes stay anchored to start_pos so scrolling
+	//! the map or minimap does not make them swim. Returns true when any segment was drawn.
+	static bool DrawWorldFlightLine(CanvasWidget canvas, MapWidget world_map, vector start_pos, vector end_pos, int line_color = 0xE6FFFFFF, int border_color = 0x90000000, float width = 2.0, float dash_px = 14.0, float gap_px = 9.0, float clip_w = 0, float clip_h = 0)
+	{
+		if (!canvas || !world_map)
+			return false;
+
+		float screen_x, screen_y;
+		world_map.GetScreenPos(screen_x, screen_y);
+
+		vector screen_start = world_map.MapToScreen(Vector(start_pos[0], 0, start_pos[2]));
+		vector screen_end = world_map.MapToScreen(Vector(end_pos[0], 0, end_pos[2]));
+
+		float ox1 = screen_start[0] - screen_x;
+		float oy1 = screen_start[1] - screen_y;
+		float ox2 = screen_end[0] - screen_x;
+		float oy2 = screen_end[1] - screen_y;
+
+		float orig_dx = ox2 - ox1;
+		float orig_dy = oy2 - oy1;
+		float orig_len = Math.Sqrt(orig_dx * orig_dx + orig_dy * orig_dy);
+		if (orig_len < 0.5)
+			return false;
+
+		float ux = orig_dx / orig_len;
+		float uy = orig_dy / orig_len;
+
+		float x1 = ox1;
+		float y1 = oy1;
+		float x2 = ox2;
+		float y2 = oy2;
+
+		bool clip = clip_w > 0 && clip_h > 0;
+		if (clip && !ClipSegment(x1, y1, x2, y2, clip_w, clip_h))
+			return false;
+
+		float seg_dx = x2 - x1;
+		float seg_dy = y2 - y1;
+		float seg_len = Math.Sqrt(seg_dx * seg_dx + seg_dy * seg_dy);
+		if (seg_len < 0.5)
+			return false;
+
+		float period = dash_px + gap_px;
+		if (period <= 0.5 || dash_px <= 0.5)
+		{
+			if (border_color != 0)
+				canvas.DrawLine(x1, y1, x2, y2, width + 2.0, border_color);
+			canvas.DrawLine(x1, y1, x2, y2, width, line_color);
+			return true;
+		}
+
+		// Project the clipped interval onto the unclipped line so dash phase stays anchored in world space
+		float dist_a = (x1 - ox1) * ux + (y1 - oy1) * uy;
+		float dist_b = (x2 - ox1) * ux + (y2 - oy1) * uy;
+		if (dist_b < dist_a)
+		{
+			float tmp = dist_a;
+			dist_a = dist_b;
+			dist_b = tmp;
+		}
+
+		float d = Math.Floor(dist_a / period) * period;
+		float border_w = width + 2.0;
+		int max_dashes = 256;
+		int count = 0;
+
+		while (d < dist_b && count < max_dashes)
+		{
+			float a = d;
+			if (a < dist_a)
+				a = dist_a;
+			float b = d + dash_px;
+			if (b > dist_b)
+				b = dist_b;
+
+			if (b - a > 0.5)
+			{
+				float sx1 = ox1 + ux * a;
+				float sy1 = oy1 + uy * a;
+				float sx2 = ox1 + ux * b;
+				float sy2 = oy1 + uy * b;
+
+				if (border_color != 0)
+					canvas.DrawLine(sx1, sy1, sx2, sy2, border_w, border_color);
+				canvas.DrawLine(sx1, sy1, sx2, sy2, width, line_color);
+			}
+
+			d += period;
+			count++;
+		}
+
+		return true;
+	}
+
+	//! Draws a top-down transport aircraft silhouette centred on (cx, cy) in canvas space, pointing along
+	//! heading (sin_h = east, cos_h = north, 0 = north, clockwise).
+	static void DrawPlaneIcon(CanvasWidget canvas, float cx, float cy, float sin_h, float cos_h, float scale, float half_size = 15.0, int fill_color = 0xFFFFFFFF, int border_color = 0xFF141414)
+	{
+		if (!canvas || scale <= 0)
+			return;
+
+		float s = half_size * scale;
+		float fwd_x = sin_h;
+		float fwd_y = -cos_h;
+		float right_x = cos_h;
+		float right_y = sin_h;
+
+		float fuse_w = Math.Max(2.0, 3.6 * scale);
+		float wing_w = Math.Max(2.0, 3.8 * scale);
+		float tail_w = Math.Max(1.5, 2.5 * scale);
+		float border_pad = Math.Max(1.5, 2.4 * scale);
+
+		// Key points of fuselage, main wings and horizontal stabilizer
+		float nose_x = cx + fwd_x * (0.98 * s);
+		float nose_y = cy + fwd_y * (0.98 * s);
+		float tail_x = cx - fwd_x * (0.92 * s);
+		float tail_y = cy - fwd_y * (0.92 * s);
+
+		float wing_c_x = cx + fwd_x * (0.18 * s);
+		float wing_c_y = cy + fwd_y * (0.18 * s);
+		float wing_l_x = cx - right_x * (1.05 * s) - fwd_x * (0.04 * s);
+		float wing_l_y = cy - right_y * (1.05 * s) - fwd_y * (0.04 * s);
+		float wing_r_x = cx + right_x * (1.05 * s) - fwd_x * (0.04 * s);
+		float wing_r_y = cy + right_y * (1.05 * s) - fwd_y * (0.04 * s);
+
+		float stab_c_x = cx - fwd_x * (0.68 * s);
+		float stab_c_y = cy - fwd_y * (0.68 * s);
+		float stab_l_x = cx - right_x * (0.42 * s) - fwd_x * (0.78 * s);
+		float stab_l_y = cy - right_y * (0.42 * s) - fwd_y * (0.78 * s);
+		float stab_r_x = cx + right_x * (0.42 * s) - fwd_x * (0.78 * s);
+		float stab_r_y = cy + right_y * (0.42 * s) - fwd_y * (0.78 * s);
+
+		// Dark outline pass
+		float b_nose_x = cx + fwd_x * (1.06 * s);
+		float b_nose_y = cy + fwd_y * (1.06 * s);
+		float b_tail_x = cx - fwd_x * (1.00 * s);
+		float b_tail_y = cy - fwd_y * (1.00 * s);
+		float b_wing_l_x = cx - right_x * (1.13 * s) - fwd_x * (0.05 * s);
+		float b_wing_l_y = cy - right_y * (1.13 * s) - fwd_y * (0.05 * s);
+		float b_wing_r_x = cx + right_x * (1.13 * s) - fwd_x * (0.05 * s);
+		float b_wing_r_y = cy + right_y * (1.13 * s) - fwd_y * (0.05 * s);
+		float b_stab_l_x = cx - right_x * (0.49 * s) - fwd_x * (0.80 * s);
+		float b_stab_l_y = cy - right_y * (0.49 * s) - fwd_y * (0.80 * s);
+		float b_stab_r_x = cx + right_x * (0.49 * s) - fwd_x * (0.80 * s);
+		float b_stab_r_y = cy + right_y * (0.49 * s) - fwd_y * (0.80 * s);
+
+		canvas.DrawLine(b_wing_l_x, b_wing_l_y, wing_c_x, wing_c_y, wing_w + border_pad, border_color);
+		canvas.DrawLine(wing_c_x, wing_c_y, b_wing_r_x, b_wing_r_y, wing_w + border_pad, border_color);
+		canvas.DrawLine(b_stab_l_x, b_stab_l_y, stab_c_x, stab_c_y, tail_w + border_pad, border_color);
+		canvas.DrawLine(stab_c_x, stab_c_y, b_stab_r_x, b_stab_r_y, tail_w + border_pad, border_color);
+		canvas.DrawLine(b_nose_x, b_nose_y, b_tail_x, b_tail_y, fuse_w + border_pad, border_color);
+
+		// Bright fill pass
+		canvas.DrawLine(wing_l_x, wing_l_y, wing_c_x, wing_c_y, wing_w, fill_color);
+		canvas.DrawLine(wing_c_x, wing_c_y, wing_r_x, wing_r_y, wing_w, fill_color);
+		canvas.DrawLine(stab_l_x, stab_l_y, stab_c_x, stab_c_y, tail_w, fill_color);
+		canvas.DrawLine(stab_c_x, stab_c_y, stab_r_x, stab_r_y, tail_w, fill_color);
+		canvas.DrawLine(nose_x, nose_y, tail_x, tail_y, fuse_w, fill_color);
+	}
+
 	//! Cohen-Sutherland clip of a segment against [0, xmax] x [0, ymax]; false when nothing of it is left
 	static bool ClipSegment(inout float x1, inout float y1, inout float x2, inout float y2, float xmax, float ymax)
 	{

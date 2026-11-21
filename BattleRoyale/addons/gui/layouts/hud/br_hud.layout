@@ -534,6 +534,57 @@ FrameWidgetClass BattleRoyaleHudFrame {
       }
      }
     }
+    PanelWidgetClass AirdropPanel {
+     visible 0
+     ignorepointer 1
+     position 0 80
+     size 640 58
+     halign center_ref
+     hexactpos 1
+     vexactpos 1
+     hexactsize 1
+     vexactsize 1
+     {
+      TextWidgetClass AirdropStatusText {
+       ignorepointer 1
+       color 1 0.85 0.25 1
+       position 0 0
+       size 640 28
+       halign center_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style Bold
+       text ""
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" center
+       "text valign" center
+      }
+      TextWidgetClass AirdropHintText {
+       visible 0
+       ignorepointer 1
+       color 0.92 0.92 0.92 1
+       position 0 32
+       size 640 24
+       halign center_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       text ""
+       font "gui/fonts/etelkatextpro"
+       "exact text" 0
+       "outline size" 1
+       "outline color" 0 0 0 1
+       "text halign" center
+       "text valign" center
+      }
+     }
+    }
     PanelWidgetClass CompassPanel {
      visible 0
      ignorepointer 1

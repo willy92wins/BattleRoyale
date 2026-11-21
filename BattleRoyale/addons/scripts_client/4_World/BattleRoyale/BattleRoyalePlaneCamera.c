@@ -20,6 +20,7 @@ class BattleRoyalePlaneState
 	static const float CAM3_PITCH = -10.0;
 
 	protected static bool s_Active;
+	protected static bool s_HasFlight;
 	protected static bool s_View3P;
 	protected static vector s_Start;
 	protected static vector s_End;
@@ -53,6 +54,7 @@ class BattleRoyalePlaneState
 		s_HeadingDeg = ang[0];
 
 		s_View3P = false;
+		s_HasFlight = true;
 		s_Active = true;
 	}
 
@@ -117,6 +119,7 @@ class BattleRoyalePlaneState
 	static void StopAll()
 	{
 		s_Active = false;
+		s_HasFlight = false;
 		s_View3P = false;
 		s_Frozen = false;
 		s_FrozenElapsed = 0.0;
@@ -126,6 +129,40 @@ class BattleRoyalePlaneState
 	static bool IsActive()
 	{
 		return s_Active;
+	}
+
+	//! Seconds elapsed since flight start on the current client clock (clamped >= 0).
+	static float GetElapsedSec()
+	{
+		float elapsed = 0.0;
+		if (s_Frozen)
+			elapsed = s_FrozenElapsed;
+		else if (GetGame())
+			elapsed = (GetGame().GetTime() - s_T0Ms) * 0.001;
+		if (elapsed < 0.0)
+			elapsed = 0.0;
+		return elapsed;
+	}
+
+	//! True while the flight path and plane marker should be drawn on the map and minimap:
+	//! always while aboard, or while coasting before reaching the end of the flight line.
+	static bool IsFlightVisible()
+	{
+		if (!s_HasFlight || s_Duration <= 0.001)
+			return false;
+		if (s_Active)
+			return true;
+		return GetElapsedSec() <= s_Duration;
+	}
+
+	//! Returns the flight start and end world positions while the flight is visible.
+	static bool GetFlightRoute(out vector startPos, out vector endPos)
+	{
+		if (!IsFlightVisible())
+			return false;
+		startPos = s_Start;
+		endPos = s_End;
+		return true;
 	}
 
 	static bool IsView3P()
@@ -142,13 +179,7 @@ class BattleRoyalePlaneState
 	//! Evaluates the continuous 3D pose (including altitude interpolation) at the current client clock.
 	static void ComputePose(out vector pos, out vector horizDir, out float headingDeg)
 	{
-		float elapsed = 0.0;
-		if (s_Frozen)
-			elapsed = s_FrozenElapsed;
-		else if (GetGame())
-			elapsed = (GetGame().GetTime() - s_T0Ms) * 0.001;
-		if (elapsed < 0.0)
-			elapsed = 0.0;
+		float elapsed = GetElapsedSec();
 
 		float frac = 0.0;
 		if (s_Duration > 0.001)

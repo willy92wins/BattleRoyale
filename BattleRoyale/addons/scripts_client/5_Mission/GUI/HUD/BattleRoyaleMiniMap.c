@@ -14,6 +14,14 @@ class BattleRoyaleMiniMap
 	protected static const float ZONE_LINE_WIDTH = 2;
 	protected static const float BORDER_LINE_WIDTH = 2;
 	protected static const int BORDER_COLOR = 0xB4000000;
+	protected static const float PLANE_ICON_HALF_SIZE = 10.5;
+	protected static const int PLANE_ICON_FILL = 0xFFFFFFFF;
+	protected static const int PLANE_ICON_BORDER = 0xFF141414;
+	protected static const int FLIGHT_LINE_COLOR = 0xE6FFFFFF;
+	protected static const int FLIGHT_LINE_BORDER = 0x90000000;
+	protected static const float FLIGHT_LINE_WIDTH = 2.0;
+	protected static const float FLIGHT_DASH_PX = 10.0;
+	protected static const float FLIGHT_GAP_PX = 7.0;
 	protected static const float STATS_INTERVAL = 10;
 
 	protected Widget m_Panel;
@@ -23,6 +31,8 @@ class BattleRoyaleMiniMap
 
 	protected bool m_Visible;
 	protected int m_ZoomLevel;
+	protected bool m_ArrowVisibleInit;
+	protected bool m_ArrowVisible;
 
 	protected bool m_ViewDirty;  //!< scale or panel changed, the map is set up again
 	protected bool m_CanvasDirty;
@@ -45,6 +55,17 @@ class BattleRoyaleMiniMap
 	protected float m_DrawnLockedRadius;
 	protected vector m_DrawnOpenCenter;
 	protected float m_DrawnOpenRadius;
+
+	// Active drop-plane flight line and plane icon drawn on the canvas
+	protected bool m_DrawnFlightVisible;
+	protected vector m_DrawnFlightStart;
+	protected vector m_DrawnFlightEnd;
+	protected vector m_DrawnPlanePos;
+	protected float m_DrawnPlaneHeading;
+	protected bool m_HasDrawnPlaneScreen;
+	protected bool m_DrawnPlaneOnPanel;
+	protected float m_DrawnPlaneScreenX;
+	protected float m_DrawnPlaneScreenY;
 
 	// Counters logged at the trace level to measure the panel
 	protected float m_StatsTime;
@@ -98,6 +119,10 @@ class BattleRoyaleMiniMap
 		m_CanvasDirty = true;
 		m_HasMapCenter = false;
 		m_HasHeading = false;
+		m_ArrowVisibleInit = false;
+		m_DrawnFlightVisible = false;
+		m_HasDrawnPlaneScreen = false;
+		m_DrawnPlaneOnPanel = false;
 		m_ShrinkRedrawWait = BattleRoyaleClient.MAP_SHRINK_REFRESH_SECONDS;
 	}
 
@@ -200,7 +225,10 @@ class BattleRoyaleMiniMap
 				m_StatsMapMoves++;
 		}
 
-		UpdateHeading();
+		bool in_plane = BattleRoyalePlaneState.IsActive();
+		SetArrowVisible(!in_plane);
+		if (!in_plane)
+			UpdateHeading();
 
 		vector locked_center = vector.Zero;
 		float locked_radius = 0;
@@ -227,6 +255,58 @@ class BattleRoyaleMiniMap
 			m_CanvasDirty = true;
 		}
 
+		bool flight_visible = IsPlaneFlightVisible();
+		vector flight_start = vector.Zero;
+		vector flight_end = vector.Zero;
+		vector plane_pos = vector.Zero;
+		float plane_heading = 0;
+		if (flight_visible)
+		{
+			if (!BattleRoyalePlaneState.GetFlightRoute(flight_start, flight_end))
+			{
+				flight_visible = false;
+			}
+			else
+			{
+				vector plane_dir;
+				BattleRoyalePlaneState.ComputePose(plane_pos, plane_dir, plane_heading);
+				plane_heading = Math.NormalizeAngle(plane_heading);
+			}
+		}
+
+		if (flight_visible != m_DrawnFlightVisible)
+		{
+			m_DrawnFlightVisible = flight_visible;
+			m_DrawnFlightStart = flight_start;
+			m_DrawnFlightEnd = flight_end;
+			m_DrawnPlanePos = plane_pos;
+			m_DrawnPlaneHeading = plane_heading;
+			m_HasDrawnPlaneScreen = false;
+			m_CanvasDirty = true;
+		}
+		else if (flight_visible)
+		{
+			m_DrawnPlanePos = plane_pos;
+			if (flight_start != m_DrawnFlightStart || flight_end != m_DrawnFlightEnd || Math.AbsFloat(Math.DiffAngle(plane_heading, m_DrawnPlaneHeading)) >= HEADING_THRESHOLD_DEG)
+			{
+				m_DrawnFlightStart = flight_start;
+				m_DrawnFlightEnd = flight_end;
+				m_DrawnPlaneHeading = plane_heading;
+				m_CanvasDirty = true;
+			}
+			else if (!m_CanvasDirty)
+			{
+				vector plane_scr = m_Map.MapToScreen(Vector(plane_pos[0], 0, plane_pos[2]));
+				float psx = plane_scr[0] - m_PanelX;
+				float psy = plane_scr[1] - m_PanelY;
+				bool plane_on_panel = (psx >= 0 && psy >= 0 && psx <= m_PanelW && psy <= m_PanelH);
+				if (plane_on_panel != m_DrawnPlaneOnPanel)
+					m_CanvasDirty = true;
+				else if (plane_on_panel && (!m_HasDrawnPlaneScreen || Math.AbsFloat(psx - m_DrawnPlaneScreenX) >= MOVE_THRESHOLD_PX || Math.AbsFloat(psy - m_DrawnPlaneScreenY) >= MOVE_THRESHOLD_PX))
+					m_CanvasDirty = true;
+			}
+		}
+
 		// While the zone closes the circle and the map both move: the canvas follows them 10 times a second at most,
 		// and a redraw held back stays pending. The map itself keeps following the player every frame
 		if (m_CanvasDirty && (!shrinking || m_ShrinkRedrawWait >= BattleRoyaleClient.MAP_SHRINK_REFRESH_SECONDS))
@@ -245,9 +325,43 @@ class BattleRoyaleMiniMap
 			UpdateStats(timeslice);
 	}
 
-	//! The player while alive, otherwise the camera (spectating, dead or no player yet)
+	//! True while the drop-plane route and icon should be drawn on the minimap
+	protected bool IsPlaneFlightVisible()
+	{
+		if (!BattleRoyalePlaneState.IsFlightVisible())
+			return false;
+		if (BattleRoyalePlaneState.IsActive())
+			return true;
+
+		BattleRoyaleRPC br_rpc = BattleRoyaleRPC.GetInstance();
+		return br_rpc && br_rpc.match_phase == EBRMatchPhase.AIRDROP;
+	}
+
+	//! Shows or hides the centre player arrow only when its state changes
+	protected void SetArrowVisible(bool visible)
+	{
+		if (!m_Arrow)
+			return;
+		if (m_ArrowVisibleInit && m_ArrowVisible == visible)
+			return;
+
+		m_ArrowVisibleInit = true;
+		m_ArrowVisible = visible;
+		m_Arrow.Show(visible);
+	}
+
+	//! Interpolated plane position while aboard; otherwise the player while alive, or the camera
 	protected vector GetViewCenter()
 	{
+		if (BattleRoyalePlaneState.IsActive())
+		{
+			vector plane_pos;
+			vector plane_dir;
+			float heading_deg;
+			BattleRoyalePlaneState.ComputePose(plane_pos, plane_dir, heading_deg);
+			return Vector(plane_pos[0], 0, plane_pos[2]);
+		}
+
 		vector pos;
 		PlayerBase player = PlayerBase.Cast(GetGame().GetPlayer());
 		if (player && player.IsAlive())
@@ -312,6 +426,34 @@ class BattleRoyaleMiniMap
 
 		if (m_DrawnOpenRadius > 0)
 			segments += BattleRoyaleMapCanvas.DrawWorldOval(m_Canvas, m_Map, m_DrawnOpenCenter[0], m_DrawnOpenCenter[2], m_DrawnOpenRadius, m_DrawnOpenRadius, BR_ZONE_COLOR_OPEN, ZONE_LINE_WIDTH, w, h);
+
+		if (m_DrawnFlightVisible)
+		{
+			float scale = h / 200.0;
+			if (scale <= 0)
+				scale = 1.0;
+
+			BattleRoyaleMapCanvas.DrawWorldFlightLine(m_Canvas, m_Map, m_DrawnFlightStart, m_DrawnFlightEnd, FLIGHT_LINE_COLOR, FLIGHT_LINE_BORDER, FLIGHT_LINE_WIDTH * scale, FLIGHT_DASH_PX * scale, FLIGHT_GAP_PX * scale, w, h);
+
+			vector plane_screen = m_Map.MapToScreen(Vector(m_DrawnPlanePos[0], 0, m_DrawnPlanePos[2]));
+			float px = plane_screen[0] - m_PanelX;
+			float py = plane_screen[1] - m_PanelY;
+			m_HasDrawnPlaneScreen = true;
+			m_DrawnPlaneScreenX = px;
+			m_DrawnPlaneScreenY = py;
+			m_DrawnPlaneOnPanel = (px >= 0 && py >= 0 && px <= w && py <= h);
+
+			if (m_DrawnPlaneOnPanel)
+			{
+				float heading_rad = m_DrawnPlaneHeading * Math.DEG2RAD;
+				BattleRoyaleMapCanvas.DrawPlaneIcon(m_Canvas, px, py, Math.Sin(heading_rad), Math.Cos(heading_rad), scale, PLANE_ICON_HALF_SIZE, PLANE_ICON_FILL, PLANE_ICON_BORDER);
+			}
+		}
+		else
+		{
+			m_HasDrawnPlaneScreen = false;
+			m_DrawnPlaneOnPanel = false;
+		}
 
 		return segments;
 	}

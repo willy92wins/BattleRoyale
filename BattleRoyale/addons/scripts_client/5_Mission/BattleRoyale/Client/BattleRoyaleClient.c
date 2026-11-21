@@ -273,6 +273,7 @@ class BattleRoyaleClient: BattleRoyaleBase
 		if ( !player )
 		{
 			gameplay.HideDistance();
+			gameplay.UpdateAirdropState( BattleRoyaleHud.AIRDROP_STATE_NONE );
 			return;
 		}
 
@@ -309,6 +310,40 @@ class BattleRoyaleClient: BattleRoyaleBase
 		player.position_top = br_rpc.top_position;
 
 		UpdateZoneHud( gameplay, player, br_rpc );
+		UpdateAirdropHud( gameplay, player, br_rpc );
+    }
+
+    //! Airdrop status (in plane / freefall / parachute) and in-plane keybind help during EBRMatchPhase.AIRDROP;
+    //! hidden whenever plane deployment is off, outside AIRDROP, or once the player has landed
+    protected void UpdateAirdropHud(MissionGameplay gameplay, PlayerBase player, BattleRoyaleRPC br_rpc)
+    {
+		int state = BattleRoyaleHud.AIRDROP_STATE_NONE;
+		if ( br_rpc && br_rpc.match_phase == EBRMatchPhase.AIRDROP && !br_rpc.waiting && !BattleRoyaleRPC.s_Spectating && player && player.IsAlive() )
+		{
+			bool in_plane = false;
+			if ( m_PlaneClient )
+				in_plane = m_PlaneClient.IsPlayerInPlane( player );
+			else
+				in_plane = BattleRoyalePlaneState.IsActive() || player.BR_IsPlaneInRide();
+
+			if ( player.BR_IsPlaneDeploymentActive() || in_plane )
+			{
+				if ( in_plane )
+				{
+					state = BattleRoyaleHud.AIRDROP_STATE_IN_PLANE;
+				}
+				else if ( player.IsParachuteOpen() )
+				{
+					state = BattleRoyaleHud.AIRDROP_STATE_PARACHUTE;
+				}
+				else if ( player.BR_InAir() || ( m_PlaneClient && m_PlaneClient.IsRecentlyJumped() && player.BR_AGL() > 5.0 ) )
+				{
+					state = BattleRoyaleHud.AIRDROP_STATE_FREEFALL;
+				}
+			}
+		}
+
+		gameplay.UpdateAirdropState( state );
     }
 
     //! Distance to the zone, outside zone visual effect and zone damage indicator

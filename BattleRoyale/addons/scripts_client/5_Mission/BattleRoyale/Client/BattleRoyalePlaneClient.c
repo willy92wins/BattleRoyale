@@ -39,6 +39,22 @@ class BattleRoyalePlaneClient
 			m_LastFlightSerial = br_rpc.plane_flight_serial;
 	}
 
+	bool IsPlayerInPlane(PlayerBase player)
+	{
+		if (m_PlaneActive)
+			return true;
+		if (player && player.BR_IsPlaneInRide() && !m_LocalExitedRide)
+			return true;
+		return false;
+	}
+
+	bool IsRecentlyJumped()
+	{
+		if (m_JumpTimeMs <= 0 || !GetGame())
+			return false;
+		return (GetGame().GetTime() - m_JumpTimeMs) < PARACHUTE_OPEN_DELAY_MS;
+	}
+
 	void Cleanup()
 	{
 		DeletePlane();
