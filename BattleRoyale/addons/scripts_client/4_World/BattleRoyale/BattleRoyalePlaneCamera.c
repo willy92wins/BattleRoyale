@@ -12,12 +12,12 @@ class BattleRoyalePlaneState
 	static const float CAM1_YAW = 180.0;
 	static const float CAM1_PITCH = -8.0;
 
-	//! Measured 3PP exterior view behind and above the C-130.
+	//! Top-down 3PP exterior view above and slightly behind the C-130, looking nearly straight down.
 	static const float CAM3_RIGHT = 0.0;
-	static const float CAM3_UP = 15.0;
-	static const float CAM3_FWD = -60.0;
+	static const float CAM3_UP = 90.0;
+	static const float CAM3_FWD = -10.0;
 	static const float CAM3_YAW = 0.0;
-	static const float CAM3_PITCH = -10.0;
+	static const float CAM3_PITCH = -80.0;
 
 	protected static bool s_Active;
 	protected static bool s_HasFlight;
@@ -251,9 +251,21 @@ class BattleRoyalePlaneCameraBase extends DayZPlayerCameraBase
 		float camYaw;
 		float camPitch;
 		GetCamParams(camRight, camUp, camFwd, camYaw, camPitch);
-		float clampedPitch = Math.Clamp(camPitch, -89.0, 89.0);
+		float clampedPitch = Math.Clamp(camPitch, -90.0, 90.0);
 		vector lookDirLS = Vector(camYaw, clampedPitch, 0.0).AnglesToVector();
-		Math3D.DirectionAndUpMatrix(lookDirLS, "0 1 0", pOutResult.m_CameraTM);
+		vector upRefLS = "0 1 0";
+		if (Math.AbsFloat(clampedPitch) > 45.0)
+		{
+			// Near vertical pitch, world up is nearly collinear with lookDirLS; use the horizontal
+			// heading vector in plane-local space as up reference so screen-up stays aligned with
+			// the plane heading without gimbal instability.
+			vector horizHeadingLS = Vector(camYaw, 0.0, 0.0).AnglesToVector();
+			if (clampedPitch < 0.0)
+				upRefLS = horizHeadingLS;
+			else
+				upRefLS = horizHeadingLS * -1.0;
+		}
+		Math3D.DirectionAndUpMatrix(lookDirLS, upRefLS, pOutResult.m_CameraTM);
 		pOutResult.m_CameraTM[3] = Vector(camRight, camUp, camFwd);
 
 		m_CurrentCameraYaw = camYaw;

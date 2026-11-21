@@ -1193,6 +1193,22 @@ FrameWidgetClass BattleRoyaleHudFrame {
          vexactsize 0
          priority 2
         }
+        ImageWidgetClass MiniMapPlane {
+         visible 0
+         ignorepointer 1
+         position 0 0
+         size 26 26
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         priority 3
+         image0 "Vigrid-BattleRoyale/GUI/textures/hud/br_plane_icon_ca.paa"
+         mode blend
+         "src alpha" 1
+         "no wrap" 1
+         stretch 1
+        }
         ImageWidgetClass MiniMapPlayer {
          ignorepointer 1
          size 20 20
@@ -1202,7 +1218,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         priority 3
+         priority 4
          fixaspect fixwidth
          image0 "set:dayz_gui image:icon_arrow"
          mode blend

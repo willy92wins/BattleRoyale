@@ -1,0 +1,16 @@
+ImageWidgetClass BRPlaneIcon {
+ visible 0
+ ignorepointer 1
+ position 0 0
+ size 40 40
+ hexactpos 1
+ vexactpos 1
+ hexactsize 1
+ vexactsize 1
+ priority 1001
+ image0 "Vigrid-BattleRoyale/GUI/textures/hud/br_plane_icon_ca.paa"
+ mode blend
+ "src alpha" 1
+ "no wrap" 1
+ stretch 1
+}
