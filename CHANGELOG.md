@@ -19,6 +19,7 @@
   - Spectators exclude players still hidden aboard the plane and automatically attach once someone jumps; players reconnecting during the flight or before/after the reveal are resynchronized to the plane or the active zone countdown.
 
 ### Changed
+- ESC with the leaderboard open closes the leaderboard instead of opening the pause menu.
 - With `enable_plane_deployment` enabled (on by default), spawn selection and the start-match ground unlock countdown are skipped, and players receive a fabric parachute bag (`ADM_ParachuteBag_Fabric`) in the back slot during match preparation; if the only configured cargo garment was a backpack, starting items overflow to other equipped clothing, inventory or the ground instead of being lost.
 - Waiting room match-time estimates include the flight duration, zone reveal delay and extra first-zone time when plane deployment is enabled.
 
