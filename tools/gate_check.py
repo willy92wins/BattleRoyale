@@ -29,6 +29,7 @@ ALLOWED = {
     "scripts_server": {
         (PARAM, "5_mission/battleroyale/server/states/1_battleroyaledebug.c"): 1,
         (PARAM, "5_mission/battleroyale/server/states/4_battleroyaleprepare.c"): 1,
+        (PARAM, "5_mission/battleroyale/server/states/5_battleroyalestartmatch.c"): 1,
     },
     "vpp_compat": {
         (LAYOUT, "5_mission/menubattleroyalemanager.c"): 1,

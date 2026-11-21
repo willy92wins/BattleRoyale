@@ -6,7 +6,8 @@ class CfgPatches
 		{
 			"DZ_Data",
 			"DZ_Scripts",
-			"JM_CF_Scripts"
+			"JM_CF_Scripts",
+			"ADM_Parachute_Mod"
 		};
 	};
 };

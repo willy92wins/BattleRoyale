@@ -79,6 +79,7 @@ modded class MissionGameplay
 		BattleRoyaleRPC.s_WaitingRoom = false;
 		// A direct reconnect skips the main menu, which is the other place that clears the spectator statics
 		BattleRoyaleRPC.ResetSpectating();
+		BattleRoyalePlaneState.StopAll();
 
 		super.OnMissionFinish();
 	}
@@ -116,6 +117,7 @@ modded class MissionGameplay
 		DayZPlayerImplement.BR_OnSessionChanged();
 #endif
 		BattleRoyaleRPC.ResetSpectating();
+		BattleRoyalePlaneState.StopAll();
 		BattleRoyaleRPC.RestoreAfterDeath();
 		// Back in the lobby the voice goes back to whisper; SetMaxVolume also lowers a shout still active
 		VONManager.GetInstance().SetMaxVolume( VoiceLevelWhisper );

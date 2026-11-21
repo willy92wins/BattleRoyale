@@ -21,6 +21,7 @@ class BattleRoyaleClient: BattleRoyaleBase
 
     protected ref BattleRoyaleZoneWall m_ZoneWall;  //!< red, on the zone in force
     protected ref BattleRoyaleZoneWall m_OpenZoneWall;  //!< yellow, on the announced zone until it locks
+    protected ref BattleRoyalePlaneClient m_PlaneClient;
 
     //! Outside zone effect last queued: -1 unknown, 0 removed, 1 added; reset when the local player entity changes
     protected int i_OutsideZoneEffectState;
@@ -37,6 +38,7 @@ class BattleRoyaleClient: BattleRoyaleBase
         i_OutsideZoneEffectState = -1;
         m_ZoneWall = new BattleRoyaleZoneWall( BattleRoyaleZoneWall.MODEL_LOCKED );
         m_OpenZoneWall = new BattleRoyaleZoneWall( BattleRoyaleZoneWall.MODEL_OPEN );
+        m_PlaneClient = new BattleRoyalePlaneClient();
 
         Init();
     }
@@ -44,6 +46,9 @@ class BattleRoyaleClient: BattleRoyaleBase
     void ~BattleRoyaleClient()
     {
     	BattleRoyaleUtils.Trace("BattleRoyaleClient::~BattleRoyaleClient");
+
+		if ( m_PlaneClient )
+			m_PlaneClient.Cleanup();
 
 		if ( GetGame() )
 			GetGame().GetCallQueue(CALL_CATEGORY_GUI).RemoveByName( this, "OnSecond" );
@@ -59,6 +64,8 @@ class BattleRoyaleClient: BattleRoyaleBase
 		br_rpc.Reset();
 		// The serial outlives the client: only the countdowns received from now on are new
 		br_previous_countdown_serial = br_rpc.countdown_serial;
+		if ( m_PlaneClient )
+			m_PlaneClient.SyncSerialFromRPC( br_rpc );
 
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
     }
@@ -255,6 +262,10 @@ class BattleRoyaleClient: BattleRoyaleBase
 
 		// The compass hides itself without a living local player
 		gameplay.UpdateCompass();
+
+		// Drop plane interpolation, camera toggle and jump/chute inputs
+		if ( m_PlaneClient )
+			m_PlaneClient.Update( delta, br_rpc );
 
 		// Everything below needs the local player. Without one there is no distance to show, and hiding it also
 		// turns the phase text back to white
@@ -469,6 +480,11 @@ class BattleRoyaleClient: BattleRoyaleBase
 
 			case EBRMatchPhase.PREPARE:
 				label = BattleRoyaleHud.PHASE_LABEL_PREPARING;
+				seconds = phase_seconds;
+				break;
+
+			case EBRMatchPhase.AIRDROP:
+				label = BattleRoyaleHud.PHASE_LABEL_AIRDROP;
 				seconds = phase_seconds;
 				break;
 

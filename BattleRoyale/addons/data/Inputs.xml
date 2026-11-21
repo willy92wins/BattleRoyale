@@ -11,6 +11,7 @@
             <input name="UADayZBRToggleSilentMode" loc="STR_BR_INPUT_SILENT_MODE" />
             <input name="UADayZBRSpectate" loc="STR_BR_INPUT_SPECTATE" />
             <input name="UADayZBRToggleLeaderboard" loc="STR_BR_INPUT_LEADERBOARD" />
+            <input name="UADayZBRJump" loc="BR Plane Jump / Parachute" />
         </actions>
 
         <sorting name="dayzbr" loc="BATTLE ROYALE">
@@ -23,6 +24,7 @@
             <input name="UADayZBRToggleSilentMode" />
             <input name="UADayZBRSpectate" />
             <input name="UADayZBRToggleLeaderboard" />
+            <input name="UADayZBRJump" />
         </sorting>
     </inputs>
     <preset>
@@ -49,6 +51,9 @@
         </input>
         <input name="UADayZBRToggleLeaderboard">
             <btn name="kT" />
+        </input>
+        <input name="UADayZBRJump">
+            <btn name="kF" />
         </input>
     </preset>
 </modded_inputs>

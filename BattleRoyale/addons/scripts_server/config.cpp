@@ -6,6 +6,7 @@ class CfgPatches
 		{
 			"DZ_Data",
 			"DZ_Scripts",
+			"ADM_Parachute_Mod",
 			"BattleRoyale_Scripts_Client"
 		};
 	};

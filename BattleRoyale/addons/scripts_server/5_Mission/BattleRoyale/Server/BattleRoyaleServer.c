@@ -52,6 +52,9 @@ class BattleRoyaleServer: BattleRoyaleBase
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "SpectatorToLobby", this);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "WaitingToSpectator", this);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "RequestLeaderboard", this);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "RequestPlaneJump", this);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "RequestOpenParachute", this);
+        GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "RequestPlaneResync", this);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "SubscribeAdminStatus", this, SingleplayerExecutionType.Server);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "UnsubscribeAdminStatus", this, SingleplayerExecutionType.Server);
         GetRPCManager().AddRPC( RPC_DAYZBRSERVER_NAMESPACE, "RequestAdminStatus", this, SingleplayerExecutionType.Server);
@@ -166,7 +169,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         //load config (this may error because GetBattleRoyale would return false)
         BattleRoyaleGameData m_GameData = BattleRoyaleConfig.GetConfig().GetGameData();
         i_NumRounds = m_GameData.num_zones;
-        b_EnableSpawnSelectionMenu = m_GameData.enable_spawn_selection_menu;
+        b_EnableSpawnSelectionMenu = m_GameData.enable_spawn_selection_menu && !m_GameData.enable_plane_deployment;
 
         ref array<ref BattleRoyaleState> states = new array<ref BattleRoyaleState>;
 
@@ -397,6 +400,22 @@ class BattleRoyaleServer: BattleRoyaleBase
                 state.CancelPendingWork();
         }
 
+        BattleRoyaleGameData turnoverGameData = BattleRoyaleConfig.GetConfig().GetGameData();
+        if (turnoverGameData && turnoverGameData.enable_plane_deployment && GetGame())
+        {
+            array<Man> allPlayers = new array<Man>;
+            GetGame().GetPlayers(allPlayers);
+            int normalizedCount = 0;
+            for (int pi = 0; pi < allPlayers.Count(); pi++)
+            {
+                PlayerBase pb = PlayerBase.Cast(allPlayers.Get(pi));
+                if (pb && BattleRoyalePlaneFlight.NormalizePlayerForTurnover(pb, "turnover_cancel"))
+                    normalizedCount = normalizedCount + 1;
+            }
+            GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "EndPlaneFlight", new Param1<bool>(false), true);
+            BattleRoyaleUtils.Info(string.Format("[Plane] Clean flight shutdown for turnover: normalized=%1", normalizedCount));
+        }
+
         if (m_LateJoinTimers)
         {
             foreach (string steamid, Timer kickTimer : m_LateJoinTimers)
@@ -468,6 +487,13 @@ class BattleRoyaleServer: BattleRoyaleBase
             return RETURN_SKIPPED;
 
         PlayerBase previous = PlayerBase.Cast( identity.GetPlayer() );
+        BattleRoyaleGameData returnGameData = BattleRoyaleConfig.GetConfig().GetGameData();
+        if (returnGameData && returnGameData.enable_plane_deployment)
+        {
+            if (previous)
+                BattleRoyalePlaneFlight.NormalizePlayerForTurnover(previous, "turnover_return");
+            GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "EndPlaneFlight", new Param1<bool>(false), true, identity);
+        }
         bool spectating = m_Spectators && m_Spectators.IsSpectator(identity);
         if (!previous && !spectating)
             return RETURN_SKIPPED;
@@ -1175,6 +1201,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         BattleRoyaleRound round;
         BattleRoyaleLastRound lastRound;
+        BattleRoyaleStartMatch startMatch;
         if (Class.CastTo(round, state))
         {
             if (phaseLeft > 0)
@@ -1195,6 +1222,22 @@ class BattleRoyaleServer: BattleRoyaleBase
             seconds += 60;
             laterRoundsCount = 0;
             withLastRound = false;
+        }
+        else if (gameSettings.enable_plane_deployment && Class.CastTo(startMatch, state))
+        {
+            seconds += startMatch.GetEstimatedSecondsLeft();
+        }
+        else if (gameSettings.enable_plane_deployment)
+        {
+            // Preparation before plane deployment: estimated flight cross + reveal delay + first zone wait
+            float estFlightSec = 120.0;
+            if (GetGame() && GetGame().GetWorld() && gameSettings.plane_speed_mps > 0)
+            {
+                float span = GetGame().GetWorld().GetWorldSize() - (2.0 * gameSettings.plane_edge_margin_m);
+                if (span > 0)
+                    estFlightSec = span / gameSettings.plane_speed_mps;
+            }
+            seconds += Math.Ceil(estFlightSec) + gameSettings.first_zone_reveal_delay_seconds + (roundSeconds / 2) + gameSettings.first_zone_extra_seconds;
         }
         else
         {
@@ -1875,6 +1918,58 @@ class BattleRoyaleServer: BattleRoyaleBase
 			m_StartMatchStateObj.DeferredUnstuck( targetBase );
 			targetBase.SetSynchDirty();
 		}
+    }
+
+    void RequestPlaneJump(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server)
+            return;
+
+        PlayerBase targetBase = ResolveSenderPlayer(sender, target);
+        if (!targetBase)
+            return;
+
+        BattleRoyaleStartMatch startMatch = BattleRoyaleStartMatch.Cast(GetCurrentState());
+        if (!startMatch || !startMatch.ContainsPlayer(targetBase))
+            return;
+
+        startMatch.HandlePlaneJump(targetBase);
+    }
+
+    void RequestOpenParachute(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server)
+            return;
+
+        BattleRoyaleGameData gameData = BattleRoyaleConfig.GetConfig().GetGameData();
+        if (!gameData || !gameData.enable_plane_deployment)
+            return;
+
+        PlayerBase targetBase = ResolveSenderPlayer(sender, target);
+        if (!targetBase)
+            return;
+
+        BattleRoyaleState current = GetCurrentState();
+        if (!current || !current.ContainsPlayer(targetBase))
+            return;
+
+        BattleRoyalePlaneFlight.HandleOpenParachuteRequest(targetBase);
+    }
+
+    void RequestPlaneResync(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+    {
+        if (type != CallType.Server)
+            return;
+
+        PlayerBase targetBase = ResolveSenderPlayer(sender, target);
+        if (!targetBase)
+            return;
+
+        BattleRoyaleStartMatch startMatch = BattleRoyaleStartMatch.Cast(GetCurrentState());
+        if (!startMatch || !startMatch.ContainsPlayer(targetBase))
+            return;
+
+        startMatch.HandlePlaneResync(targetBase);
     }
 
     //TODO: This will need a rework!

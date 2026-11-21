@@ -30,6 +30,8 @@ class BattleRoyaleRPC
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetWaitingRoom", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "SetWaiting", this );
 		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "LeaderboardData", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "StartPlaneFlight", this );
+		GetRPCManager().AddRPC( RPC_DAYZBR_NAMESPACE, "EndPlaneFlight", this );
 
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
 	}
@@ -140,6 +142,52 @@ class BattleRoyaleRPC
 			waiting = data.param1;
 	}
 
+	//! Drop plane flight state received via StartPlaneFlight / EndPlaneFlight RPCs
+	int plane_flight_serial = 0;
+	bool plane_flight_active = false;
+	vector plane_flight_start = "0 0 0";
+	vector plane_flight_end = "0 0 0";
+	float plane_flight_duration = 0.0;
+	float plane_flight_elapsed = 0.0;
+	bool plane_flight_end_coast = true;
+
+	void StartPlaneFlight(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		Param4<vector, vector, float, float> data;
+		if ( !ctx || !ctx.Read( data ) || !data )
+		{
+			Error("FAILED TO READ STARTPLANEFLIGHT RPC");
+			return;
+		}
+		if ( type == CallType.Client )
+		{
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("[Plane] StartPlaneFlight: %1 -> %2 dur=%3 elapsed=%4", data.param1, data.param2, data.param3, data.param4));
+			plane_flight_start = data.param1;
+			plane_flight_end = data.param2;
+			plane_flight_duration = data.param3;
+			plane_flight_elapsed = data.param4;
+			plane_flight_active = true;
+			plane_flight_serial++;
+		}
+	}
+
+	void EndPlaneFlight(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
+	{
+		bool keepCoasting = true;
+		Param1<bool> data;
+		if ( ctx && ctx.Read( data ) && data )
+			keepCoasting = data.param1;
+		if ( type == CallType.Client )
+		{
+			if ( BattleRoyaleUtils.CheckLogLevel( BattleRoyaleUtils.TRACE ) )
+				BattleRoyaleUtils.Trace(string.Format("[Plane] EndPlaneFlight: coast=%1", keepCoasting));
+			plane_flight_active = false;
+			plane_flight_end_coast = keepCoasting;
+			plane_flight_serial++;
+		}
+	}
+
 	// Pending main menu message for a late join, shown once by MainMenu after AbortMission
 	static string s_PendingMainMenuMessage = "";
 	static bool s_MatchInProgressAbortScheduled = false;
@@ -195,6 +243,13 @@ class BattleRoyaleRPC
 		frozen_countdown_seconds = -1;
 		kill_feed_serial = 0;
 		waiting = false;
+		plane_flight_active = false;
+		plane_flight_start = "0 0 0";
+		plane_flight_end = "0 0 0";
+		plane_flight_duration = 0.0;
+		plane_flight_elapsed = 0.0;
+		plane_flight_end_coast = true;
+		plane_flight_serial++;
 	}
 
 	// Set the number of players and groups

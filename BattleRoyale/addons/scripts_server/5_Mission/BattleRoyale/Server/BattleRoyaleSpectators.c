@@ -45,6 +45,8 @@ class BattleRoyaleSpectators
 		{
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(UpdateAnchors);
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(RelaySights);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(Start);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(RetryWatch);
 		}
 	}
 
@@ -253,6 +255,7 @@ class BattleRoyaleSpectators
 
 		// The next alive player is the same for every watcher of this death: resolve it once
 		PlayerBase next = NextAlive(player, 1);
+		bool retryForPlane = !next && HasActivePlaneFlight();
 		foreach (string watcherId : watchers)
 		{
 			PlayerIdentity watcherIdentity = null;
@@ -266,6 +269,8 @@ class BattleRoyaleSpectators
 				continue;
 			}
 			Watch(watcherIdentity, next);
+			if (retryForPlane && GetGame())
+				GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(RetryWatch, 2000, false, watcherId);
 		}
 	}
 
@@ -331,7 +336,11 @@ class BattleRoyaleSpectators
 	//! Serial matches: spectating scheduled for a death of the finished match must not start in the next lobby
 	void CancelPending()
 	{
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(Start);
+		if (GetGame())
+		{
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(Start);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(RetryWatch);
+		}
 
 		// The sights reported in the finished match do not carry over: the next one starts from the eyes
 		m_Sights.Clear();
@@ -355,7 +364,7 @@ class BattleRoyaleSpectators
 		if (direction == 0)
 		{
 			BattleRoyaleState state = BattleRoyaleServer.GetInstance().GetCurrentState();
-			if (current && current.IsAlive() && state && state.ContainsPlayer(current))
+			if (IsWatchable(current) && state && state.ContainsPlayer(current))
 				Watch(identity, current);
 			else
 				Watch(identity, NextAlive(current, 1));
@@ -372,6 +381,10 @@ class BattleRoyaleSpectators
 
 	protected void Start(string identityId)
 	{
+		BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+		if (!server || !server.IsSpectatingPhase())
+			return;
+
 		PlayerIdentity identity = FindIdentity(identityId);
 		if (!identity)
 			return;
@@ -382,17 +395,47 @@ class BattleRoyaleSpectators
 		if (own && own.IsAlive())
 			return;
 
-		// Nobody left to watch: the waiting room takes the player, when it is on
+		// Nobody watchable yet: while players are still aboard the plane, retry until the first jump
 		PlayerBase target = NextAlive(null, 1);
 		if (!target)
 		{
-			BattleRoyaleServer.GetInstance().MoveToWaitingRoom(identity);
+			if (HasActivePlaneFlight() && GetGame())
+			{
+				GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Start, 2000, false, identityId);
+				return;
+			}
+			server.MoveToWaitingRoom(identity);
 			return;
 		}
 
 		// Without an anchor the camera never receives the target: the client leaves after its death as before
 		if (!Begin(identity, target, null))
-			BattleRoyaleServer.GetInstance().MoveToWaitingRoom(identity);
+			server.MoveToWaitingRoom(identity);
+	}
+
+	//! Retries target assignment for an active spectator whose previous target left while remaining players are still aboard the plane
+	protected void RetryWatch(string identityId)
+	{
+		BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+		if (!server || !server.IsSpectatingPhase())
+			return;
+
+		PlayerIdentity identity = FindIdentity(identityId);
+		if (!identity || !IsSpectator(identity) || HasLivingCharacterOfItsOwn(identity, identityId))
+			return;
+
+		if (m_Targets.Contains(identityId) && IsWatchable(m_Targets.Get(identityId)))
+			return;
+
+		PlayerBase target = NextAlive(null, 1);
+		if (target)
+		{
+			Watch(identity, target);
+			return;
+		}
+
+		if (HasActivePlaneFlight() && GetGame())
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(RetryWatch, 2000, false, identityId);
 	}
 
 	//! A player of the waiting room asked to watch the running match (the spectate key): it spectates as a dead player
@@ -634,6 +677,25 @@ class BattleRoyaleSpectators
 		m_SentSights.Remove(identityId);
 	}
 
+	//! Players still hidden aboard the drop plane are skipped so spectators only watch visible airborne or grounded players
+	protected bool IsWatchable(PlayerBase candidate)
+	{
+		if (!candidate || !candidate.IsAlive())
+			return false;
+		if (candidate.BR_IsPlaneInRide())
+			return false;
+		return true;
+	}
+
+	protected bool HasActivePlaneFlight()
+	{
+		BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+		if (!server)
+			return false;
+		BattleRoyaleStartMatch startMatch = BattleRoyaleStartMatch.Cast(server.GetCurrentState());
+		return startMatch && startMatch.HasActivePlaneFlight();
+	}
+
 	//! Alive player after (direction 1) or before (-1) the given one in the match list; any alive player when from is null or gone
 	protected PlayerBase NextAlive(PlayerBase from, int direction)
 	{
@@ -662,12 +724,12 @@ class BattleRoyaleSpectators
 				index += count;
 
 			PlayerBase candidate = players[index];
-			if (candidate && candidate != from && candidate.IsAlive())
+			if (candidate != from && IsWatchable(candidate))
 				return candidate;
 		}
 
 		// Only the current target is left
-		if (from && from.IsAlive() && state.ContainsPlayer(from))
+		if (IsWatchable(from) && state.ContainsPlayer(from))
 			return from;
 
 		return null;

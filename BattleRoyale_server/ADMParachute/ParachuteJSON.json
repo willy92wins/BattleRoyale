@@ -1,0 +1,14 @@
+{
+    "m_ParachuteInfo": [
+        {
+            "ClassName": "ADM_ParachuteBag_Fabric",
+            "CanopyName": "ADM_Parachute_Fabric",
+            "TopSpeedMultiplierY": 12.0,
+            "TopSpeedMultiplierZ": 8.0,
+            "AccelMultiplierY": 4.0,
+            "AccelMultiplierZ": 4.0,
+            "ParachuteDamage": 2,
+            "LandingSpeedDamage": 1
+        }
+    ]
+}

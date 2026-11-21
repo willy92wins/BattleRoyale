@@ -16,6 +16,7 @@ class BattleRoyaleHud
     static const int PHASE_LABEL_MATCH_OVER = 11;
     static const int PHASE_LABEL_RESTARTING = 12;
     static const int PHASE_LABEL_STARTING = 13;
+    static const int PHASE_LABEL_AIRDROP = 14;
 
     //! Color states of the distance widgets and the phase text
     protected static const int DISTANCE_INSIDE = 0;
@@ -533,6 +534,8 @@ class BattleRoyaleHud
                 return "#STR_BR_PHASE_RESTARTING";
             case PHASE_LABEL_STARTING:
                 return "#STR_BR_PHASE_STARTING";
+            case PHASE_LABEL_AIRDROP:
+                return "#STR_BR_PHASE_AIRDROP";
         }
 
         return "";
