@@ -981,6 +981,9 @@ class BattleRoyaleServer: BattleRoyaleBase
             GetCurrentState().SendPlayerCountTo(player.GetIdentity());
             SendZoneStateTo(player.GetIdentity());
             SendFrozenStateTo(player.GetIdentity());
+            // The restarted client mission lost the start lock: lock it again until the unlock
+            if (GetCurrentState().IsInputLocked() && GetCurrentState().ContainsPlayer(player))
+                GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetInput", new Param1<bool>(true), true, player.GetIdentity() );
         }
     }
 

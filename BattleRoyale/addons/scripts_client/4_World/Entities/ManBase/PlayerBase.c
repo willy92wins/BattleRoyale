@@ -73,6 +73,21 @@ modded class PlayerBase
 		}
     }
 
+    //! Sets the controller part of DisableInput(true) again, without the voice changes. Cheap enough to run every frame
+    void BR_ReassertInputLock()
+    {
+        HumanInputController hic = GetInputController();
+        if ( !hic )
+            return;
+
+        hic.OverrideMovementSpeed( HumanInputControllerOverrideType.ENABLED, 0 );
+        hic.OverrideMovementAngle( HumanInputControllerOverrideType.ENABLED, 0 );
+        hic.OverrideMeleeEvade( HumanInputControllerOverrideType.ENABLED, false );
+        hic.OverrideRaise( HumanInputControllerOverrideType.ENABLED, false );
+        hic.OverrideFreeLook( HumanInputControllerOverrideType.ENABLED, false );
+        hic.SetDisabled( true );
+    }
+
     //! Name captured when the player connected; still valid after the identity is gone
     protected string m_BR_PlayerName;
 
