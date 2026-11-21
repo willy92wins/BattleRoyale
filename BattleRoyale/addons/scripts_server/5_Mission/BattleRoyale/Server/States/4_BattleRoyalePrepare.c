@@ -233,6 +233,14 @@ class BattleRoyalePrepare: BattleRoyaleState
     protected void DisablePlayerInput(PlayerBase process_player)
     {
         process_player.DisableInput(true);
+        // Sent to this client too: a client that missed the broadcast in Activate still gets locked
+        if (process_player.GetIdentity())
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetInput", new Param1<bool>(true), true, process_player.GetIdentity() );
+    }
+
+    override bool IsInputLocked()
+    {
+        return IsActive();
     }
 
     protected BRNamedLocation GetRandomVillage(BattleRoyalePlayArea area = NULL, bool use_radius = false)

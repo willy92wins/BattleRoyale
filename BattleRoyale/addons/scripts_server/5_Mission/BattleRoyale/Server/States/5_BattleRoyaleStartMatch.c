@@ -52,6 +52,20 @@ class BattleRoyaleStartMatch: BattleRoyaleState
         return true;
     }
 
+    override bool IsInputLocked()
+    {
+        return IsActive() && !b_IsGameplay;
+    }
+
+    //! Players arrive locked: they take no damage until the unlock, so a client that got free cannot kill anyone
+    override void AddPlayer(PlayerBase player)
+    {
+        if (player && !b_IsGameplay)
+            player.SetAllowDamage(false);
+
+        super.AddPlayer(player);
+    }
+
     override int GetAdminPhaseEnum()
     {
         return EBRMatchPhase.STARTING;
@@ -143,7 +157,10 @@ class BattleRoyaleStartMatch: BattleRoyaleState
             foreach (PlayerBase locked: m_Players)
             {
                 if (locked)
+                {
                     locked.DisableInput(false);
+                    locked.SetAllowDamage(true);
+                }
             }
         }
 
@@ -228,6 +245,9 @@ class BattleRoyaleStartMatch: BattleRoyaleState
         for(int i = 0; i < a_PlayerList.Count(); i++)
         {
             PlayerBase player = a_PlayerList[i];
+            // Damage comes back for a body without identity too (logging out), in case it reconnects
+            if (player)
+                player.SetAllowDamage(true);
             if (!player || !player.GetIdentity())
                 continue;
 

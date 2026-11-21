@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.8.0 (2026-11-18)
+## 1.8.0 (2026-11-21)
 
 ### Added
 - Admin panel for VPPAdminTools (`@BattleRoyale-VPP` 1.2.0), in the BattleRoyale tab of the VPP toolbar:
@@ -51,6 +51,8 @@
 - Lobby: every 5 s the server removes the living infected within the lobby radius plus 30 m, between matches, during
   the spawn selection and the preparation, and, during a match, only while somebody waits in the lobby. A lobby that
   lies inside the play area keeps the match's infected the rest of the time.
+- HUD: the radius of the closing zone, with a ring icon, in a row under the distance to the zone. It shows the
+  announced zone while there is one, and the zone in force otherwise.
 
 ### Changed
 - The zone closes gradually instead of jumping to the next one when it locks. From the second zone on, the zone in
@@ -68,6 +70,10 @@
   the top-right icons and counters get a soft drop shadow, and the kill counter uses a new skull icon.
 
 ### Fixed
+- A player could walk and kill during the start countdown while the others stayed frozen (seen on a live server
+  after a reconnect). The lock is now sent to each player's own client in the preparation, sent again to a player who
+  reconnects before the unlock, and set again every frame on the client while it holds; players take no damage
+  until the unlock.
 - The BattleRoyale tab did not appear in the VPP toolbar, not even for superadmins, when the core compiled before VPP, as on the live server even with VPP first on `-mod=`. `VPPADMINTOOLS` is a `#define` of VPP's own scripts, so the core's `#ifdef VPPADMINTOOLS` blocks dropped out: the permission was never registered and BattleRoyale's admin checks never asked VPP. The compat now registers the permissions and answers the checks through an instance hook (`BRAdminFrameworkHook`). A static override in a modded class is not called by core code that is already compiled.
 - Spectators could talk in direct voice to the player they watched, unseen. Their voice is now off while they
   spectate, from death or from the waiting room, and comes back with their next character.
@@ -95,6 +101,9 @@
   reopened.
 
 ### Notes
+- Tested in DayZDiag with one player (2026-11-21): the start lock holds the player in place for the whole
+  countdown and blocks damage until the unlock, then damage comes back; the zone radius row shows with its icon.
+  Not tested: a reconnect during the countdown and a second player.
 - New messages between the server and the clients: `StartZoneShrink` (the zone closing), `WaitingToSpectator` (the
   spectate key), `SightsState`, `SightsResend` and `SpectateSights` (the watched player's sights, contract in
   `BattleRoyale_dev/contracts/rpc-1.0.md`), and `RequestLeaderboard` and `LeaderboardData` (the leaderboard panel; a

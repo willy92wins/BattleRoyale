@@ -165,6 +165,12 @@ class BattleRoyaleState: Timeable
         return GetGame().GetTickTime() - f_FrozenTotal;
     }
 
+    //! True while this state keeps the players' controls locked (the start of the match)
+    bool IsInputLocked()
+    {
+        return false;
+    }
+
     bool CanFreeze()
     {
         return false;

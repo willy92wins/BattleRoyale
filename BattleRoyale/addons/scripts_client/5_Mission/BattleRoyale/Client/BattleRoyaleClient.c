@@ -288,6 +288,11 @@ class BattleRoyaleClient: BattleRoyaleBase
 			player.DisableInput( input_state );
 			br_previous_input_state = input_state;
 		}
+		else if( input_state && !BattleRoyaleRPC.s_Spectating )
+		{
+			// While locked, the controller overrides are set again every frame: nothing the engine resets can free the player
+			player.BR_ReassertInputLock();
+		}
 
 		// Set top position
 		player.position_top = br_rpc.top_position;
