@@ -90,6 +90,10 @@ class BattleRoyalePrepare: BattleRoyaleState
 		}
 
         m_PlayersProcessed = false;
+        m_ProcessThreadRunning = true;
+        BattleRoyaleServer prepServer = BattleRoyaleServer.GetInstance();
+        if (prepServer)
+            prepServer.SetPrepareWorkerRunning(true);
         m_ProcessWatchdog = AddTimer(120.0, this, "ProcessPlayersWatchdog", NULL, false);
         GetGame().GameScript.Call(this, "ProcessPlayers", NULL); //Spin up a new thread to process giving players items and teleporting them
     }
@@ -148,6 +152,11 @@ class BattleRoyalePrepare: BattleRoyaleState
     override string GetName()
     {
         return "Prepare State";
+    }
+
+    override int GetAdminPhaseEnum()
+    {
+        return EBRMatchPhase.PREPARE;
     }
 
     protected bool DeleteAllItems(PlayerBase process_player)
@@ -972,6 +981,9 @@ class BattleRoyalePrepare: BattleRoyaleState
 
         m_PlayersProcessed = true;
         m_ProcessThreadRunning = false;
+        BattleRoyaleServer doneServer = BattleRoyaleServer.GetInstance();
+        if (doneServer)
+            doneServer.SetPrepareWorkerRunning(false);
         StopProcessWatchdog();
         if (IsActive())
             Deactivate();

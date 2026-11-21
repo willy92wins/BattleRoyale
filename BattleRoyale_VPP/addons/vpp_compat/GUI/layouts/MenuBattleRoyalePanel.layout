@@ -1,0 +1,1017 @@
+FrameWidgetClass rootFrame {
+ clipchildren 1
+ color 0 0 0 0
+ position 0 0
+ size 576 605
+ hexactpos 1
+ vexactpos 1
+ hexactsize 1
+ vexactsize 1
+ draggable 1
+ {
+  PanelWidgetClass Main {
+   visible 1
+   clipchildren 1
+   inheritalpha 0
+   color 0.749 0.773 0.8 1
+   size 1 1
+   hexactpos 1
+   vexactpos 1
+   hexactsize 0
+   vexactsize 0
+   scaled 1
+   draggable 0
+   style VPPPanel
+   "no focus" 0
+   {
+    PanelWidgetClass HeaderTitle {
+     ignorepointer 1
+     color 0.031 0.035 0.039 0.85
+     position 0 0
+     size 1 0.055
+     halign center_ref
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style VPPFillRound
+     {
+      ImageWidgetClass ImgWindowIcon {
+       ignorepointer 1
+       color 0.91 0.639 0.239 1
+       position 4 0
+       size 30 30
+       valign center_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       image0 "set:vpp_icons image:crown"
+       mode blend
+       "src alpha" 1
+       "stretch mode" stretch_w_h
+       filter 1
+      }
+      TextWidgetClass Title {
+       ignorepointer 1
+       position 40 1
+       size 0.6 20
+       hexactpos 1
+       vexactpos 1
+       hexactsize 0
+       vexactsize 1
+       style None
+       text "#STR_BR_PANEL_TITLE"
+       font "gui/fonts/sdf_MetronLight72"
+       "bold text" 1
+       "exact text" 1
+       "exact text size" 20
+      }
+      TextWidgetClass SubTitle {
+       ignorepointer 1
+       position 40 19
+       size 0.6 13
+       hexactpos 1
+       vexactpos 1
+       hexactsize 0
+       vexactsize 1
+       style None
+       text "#STR_BR_PANEL_SUBTITLE"
+       font "gui/fonts/sdf_MetronLight72"
+       "text color" 0.604 0.627 0.651 1
+       "exact text" 1
+       "exact text size" 13
+      }
+      PanelWidgetClass BadgeFrozen {
+       visible 0
+       ignorepointer 1
+       color 0.243 0.557 0.89 1
+       position 40 0
+       size 0.2 22
+       halign right_ref
+       valign center_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 0
+       vexactsize 1
+       style VPPFillRound
+       {
+        TextWidgetClass TxtBadgeFrozen {
+         ignorepointer 1
+         position 0 0
+         size 1 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_FROZEN"
+         font "gui/fonts/sdf_MetronLight72"
+         "bold text" 1
+         "exact text" 1
+         "exact text size" 14
+         "text halign" center
+         "text valign" center
+        }
+       }
+      }
+      ButtonWidgetClass BtnClose {
+       clipchildren 1
+       color 1 1 1 1
+       position 4 0
+       size 26 26
+       halign right_ref
+       valign center_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       style VPPButtonGhost
+       {
+        ImageWidgetClass ImageClose {
+         ignorepointer 1
+         color 0.604 0.627 0.651 1
+         position 0 0
+         size 26 26
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:vpp_icons image:x"
+         mode blend
+         "src alpha" 1
+         "stretch mode" stretch_w_h
+         filter 1
+         halign center_ref
+        }
+       }
+      }
+     }
+    }
+    PanelWidgetClass Header {
+     ignorepointer 0
+     position 0 0
+     size 0.88 0.055
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     draggable 1
+     style blank
+    }
+    PanelWidgetClass PanelStatus {
+     ignorepointer 1
+     color 1 1 1 1
+     position 0.012 0.065
+     size 0.976 0.345
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style VPPPanel
+     {
+      PanelWidgetClass PanelStatusTitle {
+       ignorepointer 1
+       color 0.039 0.043 0.047 0.85
+       position 0 1
+       size 0.99 26
+       halign center_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 0
+       vexactsize 1
+       style VPPFillRound
+       {
+        ImageWidgetClass PanelStatusIcon {
+         ignorepointer 1
+         color 0.91 0.639 0.239 1
+         position 4 0
+         size 20 20
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:vpp_icons image:activity"
+         mode blend
+         "src alpha" 1
+         "stretch mode" stretch_w_h
+         filter 1
+        }
+        TextWidgetClass PanelStatusText {
+         ignorepointer 1
+         position 30 0
+         size 0.8 1
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_STATUS"
+         font "gui/fonts/sdf_MetronLight72"
+         "exact text" 1
+         "exact text size" 15
+         "text valign" center
+        }
+       }
+      }
+      PanelWidgetClass RowPhase {
+       ignorepointer 1
+       color 0.078 0.086 0.094 0.85
+       position 0.012 0.17
+       size 0.976 0.148
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style VPPFillRound
+       {
+        TextWidgetClass RowPhaseLabel {
+         ignorepointer 1
+         position 0.03 0
+         size 0.42 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_LBL_PHASE"
+         font "gui/fonts/sdf_MetronLight72"
+         "text color" 0.604 0.627 0.651 1
+         "exact text" 1
+         "exact text size" 15
+         "text valign" center
+        }
+        TextWidgetClass TxtPhase {
+         ignorepointer 1
+         position 0.45 0
+         size 0.52 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "-"
+         font "gui/fonts/sdf_MetronLight72"
+         "bold text" 1
+         "exact text" 1
+         "exact text size" 16
+         "text halign" right
+         "text valign" center
+        }
+       }
+      }
+      PanelWidgetClass RowState {
+       ignorepointer 1
+       color 0.078 0.086 0.094 0.85
+       position 0.012 0.33599999999999997
+       size 0.976 0.148
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style VPPFillRound
+       {
+        TextWidgetClass RowStateLabel {
+         ignorepointer 1
+         position 0.03 0
+         size 0.42 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_LBL_STATE"
+         font "gui/fonts/sdf_MetronLight72"
+         "text color" 0.604 0.627 0.651 1
+         "exact text" 1
+         "exact text size" 15
+         "text valign" center
+        }
+        TextWidgetClass TxtState {
+         ignorepointer 1
+         position 0.45 0
+         size 0.52 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "-"
+         font "gui/fonts/sdf_MetronLight72"
+         "bold text" 1
+         "exact text" 1
+         "exact text size" 16
+         "text halign" right
+         "text valign" center
+        }
+       }
+      }
+      PanelWidgetClass RowTimeLeft {
+       ignorepointer 1
+       color 0.078 0.086 0.094 0.85
+       position 0.012 0.502
+       size 0.976 0.148
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style VPPFillRound
+       {
+        TextWidgetClass RowTimeLeftLabel {
+         ignorepointer 1
+         position 0.03 0
+         size 0.42 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_LBL_TIMELEFT"
+         font "gui/fonts/sdf_MetronLight72"
+         "text color" 0.604 0.627 0.651 1
+         "exact text" 1
+         "exact text size" 15
+         "text valign" center
+        }
+        TextWidgetClass TxtTimeLeft {
+         ignorepointer 1
+         position 0.45 0
+         size 0.52 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "--:--"
+         font "gui/fonts/sdf_MetronLight72"
+         "bold text" 1
+         "exact text" 1
+         "exact text size" 16
+         "text halign" right
+         "text valign" center
+        }
+       }
+      }
+      PanelWidgetClass RowAlive {
+       ignorepointer 1
+       color 0.078 0.086 0.094 0.85
+       position 0.012 0.6679999999999999
+       size 0.976 0.148
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style VPPFillRound
+       {
+        TextWidgetClass RowAliveLabel {
+         ignorepointer 1
+         position 0.03 0
+         size 0.42 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_LBL_ALIVE"
+         font "gui/fonts/sdf_MetronLight72"
+         "text color" 0.604 0.627 0.651 1
+         "exact text" 1
+         "exact text size" 15
+         "text valign" center
+        }
+        TextWidgetClass TxtAlive {
+         ignorepointer 1
+         position 0.45 0
+         size 0.52 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "-"
+         font "gui/fonts/sdf_MetronLight72"
+         "bold text" 1
+         "exact text" 1
+         "exact text size" 16
+         "text halign" right
+         "text valign" center
+        }
+       }
+      }
+      PanelWidgetClass RowZone {
+       ignorepointer 1
+       color 0.078 0.086 0.094 0.85
+       position 0.012 0.834
+       size 0.976 0.148
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style VPPFillRound
+       {
+        TextWidgetClass RowZoneLabel {
+         ignorepointer 1
+         position 0.03 0
+         size 0.42 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_LBL_ZONE"
+         font "gui/fonts/sdf_MetronLight72"
+         "text color" 0.604 0.627 0.651 1
+         "exact text" 1
+         "exact text size" 15
+         "text valign" center
+        }
+        TextWidgetClass TxtZone {
+         ignorepointer 1
+         position 0.45 0
+         size 0.52 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "-"
+         font "gui/fonts/sdf_MetronLight72"
+         "bold text" 1
+         "exact text" 1
+         "exact text size" 16
+         "text halign" right
+         "text valign" center
+        }
+       }
+      }
+     }
+    }
+    PanelWidgetClass PanelPhase {
+     ignorepointer 1
+     color 1 1 1 1
+     position 0.012 0.42
+     size 0.976 0.15
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style VPPPanel
+     {
+      PanelWidgetClass PanelPhaseTitle {
+       ignorepointer 1
+       color 0.039 0.043 0.047 0.85
+       position 0 1
+       size 0.99 26
+       halign center_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 0
+       vexactsize 1
+       style VPPFillRound
+       {
+        ImageWidgetClass PanelPhaseIcon {
+         ignorepointer 1
+         color 0.91 0.639 0.239 1
+         position 4 0
+         size 20 20
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:vpp_icons image:zap"
+         mode blend
+         "src alpha" 1
+         "stretch mode" stretch_w_h
+         filter 1
+        }
+        TextWidgetClass PanelPhaseText {
+         ignorepointer 1
+         position 30 0
+         size 0.8 1
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_PHASE"
+         font "gui/fonts/sdf_MetronLight72"
+         "exact text" 1
+         "exact text size" 15
+         "text valign" center
+        }
+       }
+      }
+      ButtonWidgetClass BtnNextPhase {
+       ignorepointer 0
+       color 1 1 1 1
+       position 0.012 0.36
+       size 0.482 0.54
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style VPPButton
+       "no focus" 1
+       {
+        ImageWidgetClass ImgNextPhase {
+         ignorepointer 1
+         color 0.604 0.627 0.651 1
+         position 8 0
+         size 18 18
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:vpp_icons image:zap"
+         mode blend
+         "src alpha" 1
+         "stretch mode" stretch_w_h
+         filter 1
+        }
+        TextWidgetClass LblNextPhase {
+         ignorepointer 1
+         position 0.0 0
+         size 1 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_NEXT"
+         font "gui/fonts/sdf_MetronLight72"
+         "exact text" 1
+         "exact text size" 15
+         "text halign" center
+         "text valign" center
+        }
+       }
+      }
+      ButtonWidgetClass BtnFreeze {
+       ignorepointer 0
+       color 1 1 1 1
+       position 0.506 0.36
+       size 0.482 0.54
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style VPPButton
+       "no focus" 1
+       {
+        ImageWidgetClass ImgFreeze {
+         ignorepointer 1
+         color 0.604 0.627 0.651 1
+         position 8 0
+         size 18 18
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:vpp_icons image:snowflake"
+         mode blend
+         "src alpha" 1
+         "stretch mode" stretch_w_h
+         filter 1
+        }
+        TextWidgetClass LblFreeze {
+         ignorepointer 1
+         position 0.0 0
+         size 1 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_FREEZE"
+         font "gui/fonts/sdf_MetronLight72"
+         "exact text" 1
+         "exact text size" 15
+         "text halign" center
+         "text valign" center
+        }
+       }
+      }
+     }
+    }
+    PanelWidgetClass PanelTime {
+     ignorepointer 1
+     color 1 1 1 1
+     position 0.012 0.58
+     size 0.976 0.15
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style VPPPanel
+     {
+      PanelWidgetClass PanelTimeTitle {
+       ignorepointer 1
+       color 0.039 0.043 0.047 0.85
+       position 0 1
+       size 0.99 26
+       halign center_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 0
+       vexactsize 1
+       style VPPFillRound
+       {
+        ImageWidgetClass PanelTimeIcon {
+         ignorepointer 1
+         color 0.91 0.639 0.239 1
+         position 4 0
+         size 20 20
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:vpp_icons image:history"
+         mode blend
+         "src alpha" 1
+         "stretch mode" stretch_w_h
+         filter 1
+        }
+        TextWidgetClass PanelTimeText {
+         ignorepointer 1
+         position 30 0
+         size 0.8 1
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_TIME"
+         font "gui/fonts/sdf_MetronLight72"
+         "exact text" 1
+         "exact text size" 15
+         "text valign" center
+        }
+       }
+      }
+      ButtonWidgetClass BtnTimeMinus5 {
+       ignorepointer 0
+       color 1 1 1 1
+       position 0.012 0.36
+       size 0.232 0.54
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style VPPButton
+       "no focus" 1
+       {
+        ImageWidgetClass ImgTimeMinus5 {
+         ignorepointer 1
+         color 0.604 0.627 0.651 1
+         position 8 0
+         size 18 18
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:vpp_icons image:minus"
+         mode blend
+         "src alpha" 1
+         "stretch mode" stretch_w_h
+         filter 1
+        }
+        TextWidgetClass LblTimeMinus5 {
+         ignorepointer 1
+         position 0.0 0
+         size 1 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "-5 min"
+         font "gui/fonts/sdf_MetronLight72"
+         "exact text" 1
+         "exact text size" 15
+         "text halign" center
+         "text valign" center
+        }
+       }
+      }
+      ButtonWidgetClass BtnTimeMinus1 {
+       ignorepointer 0
+       color 1 1 1 1
+       position 0.26 0.36
+       size 0.232 0.54
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style VPPButton
+       "no focus" 1
+       {
+        ImageWidgetClass ImgTimeMinus1 {
+         ignorepointer 1
+         color 0.604 0.627 0.651 1
+         position 8 0
+         size 18 18
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:vpp_icons image:minus"
+         mode blend
+         "src alpha" 1
+         "stretch mode" stretch_w_h
+         filter 1
+        }
+        TextWidgetClass LblTimeMinus1 {
+         ignorepointer 1
+         position 0.0 0
+         size 1 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "-1 min"
+         font "gui/fonts/sdf_MetronLight72"
+         "exact text" 1
+         "exact text size" 15
+         "text halign" center
+         "text valign" center
+        }
+       }
+      }
+      ButtonWidgetClass BtnTimePlus1 {
+       ignorepointer 0
+       color 1 1 1 1
+       position 0.508 0.36
+       size 0.232 0.54
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style VPPButton
+       "no focus" 1
+       {
+        ImageWidgetClass ImgTimePlus1 {
+         ignorepointer 1
+         color 0.604 0.627 0.651 1
+         position 8 0
+         size 18 18
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:vpp_icons image:plus"
+         mode blend
+         "src alpha" 1
+         "stretch mode" stretch_w_h
+         filter 1
+        }
+        TextWidgetClass LblTimePlus1 {
+         ignorepointer 1
+         position 0.0 0
+         size 1 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "+1 min"
+         font "gui/fonts/sdf_MetronLight72"
+         "exact text" 1
+         "exact text size" 15
+         "text halign" center
+         "text valign" center
+        }
+       }
+      }
+      ButtonWidgetClass BtnTimePlus5 {
+       ignorepointer 0
+       color 1 1 1 1
+       position 0.756 0.36
+       size 0.232 0.54
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style VPPButton
+       "no focus" 1
+       {
+        ImageWidgetClass ImgTimePlus5 {
+         ignorepointer 1
+         color 0.604 0.627 0.651 1
+         position 8 0
+         size 18 18
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:vpp_icons image:plus"
+         mode blend
+         "src alpha" 1
+         "stretch mode" stretch_w_h
+         filter 1
+        }
+        TextWidgetClass LblTimePlus5 {
+         ignorepointer 1
+         position 0.0 0
+         size 1 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "+5 min"
+         font "gui/fonts/sdf_MetronLight72"
+         "exact text" 1
+         "exact text size" 15
+         "text halign" center
+         "text valign" center
+        }
+       }
+      }
+     }
+    }
+    PanelWidgetClass PanelMatch {
+     ignorepointer 1
+     color 1 1 1 1
+     position 0.012 0.74
+     size 0.976 0.15
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style VPPPanel
+     {
+      PanelWidgetClass PanelMatchTitle {
+       ignorepointer 1
+       color 0.039 0.043 0.047 0.85
+       position 0 1
+       size 0.99 26
+       halign center_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 0
+       vexactsize 1
+       style VPPFillRound
+       {
+        ImageWidgetClass PanelMatchIcon {
+         ignorepointer 1
+         color 0.91 0.639 0.239 1
+         position 4 0
+         size 20 20
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:vpp_icons image:crown"
+         mode blend
+         "src alpha" 1
+         "stretch mode" stretch_w_h
+         filter 1
+        }
+        TextWidgetClass PanelMatchText {
+         ignorepointer 1
+         position 30 0
+         size 0.8 1
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_MATCH"
+         font "gui/fonts/sdf_MetronLight72"
+         "exact text" 1
+         "exact text size" 15
+         "text valign" center
+        }
+       }
+      }
+      ButtonWidgetClass BtnForceStart {
+       ignorepointer 0
+       color 1 1 1 1
+       position 0.012 0.36
+       size 0.482 0.54
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style VPPButton
+       "no focus" 1
+       {
+        ImageWidgetClass ImgForceStart {
+         ignorepointer 1
+         color 0.604 0.627 0.651 1
+         position 8 0
+         size 18 18
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:vpp_icons image:users"
+         mode blend
+         "src alpha" 1
+         "stretch mode" stretch_w_h
+         filter 1
+        }
+        TextWidgetClass LblForceStart {
+         ignorepointer 1
+         position 0.0 0
+         size 1 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_FORCESTART"
+         font "gui/fonts/sdf_MetronLight72"
+         "exact text" 1
+         "exact text size" 15
+         "text halign" center
+         "text valign" center
+        }
+       }
+      }
+      ButtonWidgetClass BtnRestart {
+       ignorepointer 0
+       color 1 1 1 1
+       position 0.506 0.36
+       size 0.482 0.54
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style VPPButtonDanger
+       "no focus" 1
+       {
+        ImageWidgetClass ImgRestart {
+         ignorepointer 1
+         color 0.604 0.627 0.651 1
+         position 8 0
+         size 18 18
+         valign center_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:vpp_icons image:rotate_ccw"
+         mode blend
+         "src alpha" 1
+         "stretch mode" stretch_w_h
+         filter 1
+        }
+        TextWidgetClass LblRestart {
+         ignorepointer 1
+         position 0.0 0
+         size 1 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style None
+         text "#STR_BR_PANEL_RESTART"
+         font "gui/fonts/sdf_MetronLight72"
+         "exact text" 1
+         "exact text size" 15
+         "text halign" center
+         "text valign" center
+        }
+       }
+      }
+     }
+    }
+    TextWidgetClass TxtFeedback {
+     ignorepointer 1
+     position 0.02 0.905
+     size 0.96 0.08
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style None
+     text ""
+     font "gui/fonts/sdf_MetronLight72"
+     "text color" 0.604 0.627 0.651 1
+     "exact text" 1
+     "exact text size" 13
+     "text halign" center
+     "text valign" center
+    }
+   }
+  }
+ }
+}

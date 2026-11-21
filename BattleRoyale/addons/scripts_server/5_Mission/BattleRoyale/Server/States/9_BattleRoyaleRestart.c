@@ -39,10 +39,25 @@ class BattleRoyaleRestart: BattleRoyaleState
         return "Restart State";
     }
 
+    override int GetAdminPhaseEnum()
+    {
+        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+        if (server && !server.WillRestartAfterMatch())
+            return EBRMatchPhase.FINISHED;
+        return EBRMatchPhase.RESTARTING;
+    }
+
+    override int GetPhaseSecondsLeft()
+    {
+        if (m_ShutdownTimer && m_ShutdownTimer.IsRunning())
+            return Math.Ceil(m_ShutdownTimer.GetRemaining());
+        return -1;
+    }
+
     override void Deactivate()
     {
         Error("RESTART STATE WAS DEACTIVATED!");
-        if ( m_ShutdownTimer && m_ShutdownTimer.IsRunning() )
+        if ( m_ShutdownTimer )
         {
             m_ShutdownTimer.Stop();
         }
@@ -62,10 +77,13 @@ class BattleRoyaleRestart: BattleRoyaleState
 
     void Shutdown()
     {
+        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+        bool aborted = server && server.IsAbortedByAdmin();
+
         // The match end message can still be on its way: without a winner the win state ends at once, and a slow
         // connection takes longer than SHUTDOWN_DELAY_SECONDS. Called again from the call queue, as the timer that runs
         // this is the only reference to itself
-        if (BRDiscordWebhook.IsPending() && m_WebhookWaitedSeconds < WEBHOOK_WAIT_SECONDS)
+        if (!aborted && BRDiscordWebhook.IsPending() && m_WebhookWaitedSeconds < WEBHOOK_WAIT_SECONDS)
         {
             if (m_WebhookWaitedSeconds == 0)
                 BattleRoyaleUtils.Info("[Restart State] Waiting for the Discord webhooks");
@@ -76,8 +94,7 @@ class BattleRoyaleRestart: BattleRoyaleState
         }
 
         // Serial matches: the next match follows in this server run, unless the scheduled full restart is due
-        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
-        if (server && server.RequestTurnover())
+        if (server && server.RequestTurnover(aborted))
             return;
 
         GetGame().RequestExit(0);

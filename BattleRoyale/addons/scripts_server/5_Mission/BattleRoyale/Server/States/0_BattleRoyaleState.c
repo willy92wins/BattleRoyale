@@ -4,6 +4,9 @@ class BattleRoyaleState: Timeable
     protected ref array<PlayerBase> m_Players;
     protected bool b_IsActive;
     protected bool b_IsPaused;
+    protected bool b_IsFrozen;
+    protected float f_FrozenAt;
+    protected float f_FrozenTotal;
     protected bool b_IsDebug;
 
 	// Track the number of players in the game when the game starts - shared between all states
@@ -14,6 +17,7 @@ class BattleRoyaleState: Timeable
     static int s_MatchPhase = 0;
     static int s_MatchPhaseSeconds = -1;
     static int s_MatchPhaseSentAt = 0;
+    static bool s_MatchPhaseFrozen = false;
 
     //static int i_StartingZone = 1; // Default zone is the biggest one
 
@@ -39,6 +43,9 @@ class BattleRoyaleState: Timeable
 
         b_IsActive = false;
         b_IsPaused = false;
+        b_IsFrozen = false;
+        f_FrozenAt = 0;
+        f_FrozenTotal = 0;
         b_IsDebug = false;
 
         if (!s_BadTeleportSurfaces)
@@ -71,6 +78,11 @@ class BattleRoyaleState: Timeable
     	BattleRoyaleUtils.Debug(string.Format("BattleRoyaleState::Activate: %1", GetName()));
         //Note: this is called AFTER players are added
         b_IsActive = true;
+        b_IsPaused = false;
+        b_IsFrozen = false;
+        f_FrozenAt = 0;
+        f_FrozenTotal = 0;
+        s_MatchPhaseFrozen = false;
 
         // Lobby states do not send positions; every match state sends them once, with the players it received
         if (!b_IsDebug)
@@ -86,6 +98,7 @@ class BattleRoyaleState: Timeable
         s_MatchPhase = 0;
         s_MatchPhaseSeconds = -1;
         s_MatchPhaseSentAt = 0;
+        s_MatchPhaseFrozen = false;
     }
 
     //! Serial matches: removes the delayed calls this state queued, before a new match replaces it
@@ -112,6 +125,7 @@ class BattleRoyaleState: Timeable
         s_MatchPhase = phase;
         s_MatchPhaseSeconds = seconds;
         s_MatchPhaseSentAt = GetGame().GetTime();
+        s_MatchPhaseFrozen = b_IsFrozen;
         GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetMatchPhase", new Param2<int, int>(phase, seconds), true);
     }
 
@@ -119,6 +133,9 @@ class BattleRoyaleState: Timeable
     static int GetMatchPhaseSecondsLeft()
     {
         int seconds = s_MatchPhaseSeconds;
+        if (s_MatchPhaseFrozen)
+            return seconds;
+
         if (seconds > 0)
         {
             seconds -= (GetGame().GetTime() - s_MatchPhaseSentAt) / 1000;
@@ -139,11 +156,187 @@ class BattleRoyaleState: Timeable
         GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetMatchPhase", new Param2<int, int>(s_MatchPhase, seconds), true, identity);
     }
 
+    //! Per-state monotonic clock that halts while the state is frozen
+    float GetStateClock()
+    {
+        if (b_IsFrozen)
+            return f_FrozenAt - f_FrozenTotal;
+
+        return GetGame().GetTickTime() - f_FrozenTotal;
+    }
+
+    bool CanFreeze()
+    {
+        return false;
+    }
+
+    bool CanAdjustTime()
+    {
+        return false;
+    }
+
+    bool IsFrozen()
+    {
+        return b_IsFrozen;
+    }
+
+    //! Evaluated while frozen so a decisive elimination still ends the match
+    bool IsMatchDecided()
+    {
+        return false;
+    }
+
+    //! Seconds left on the phase timer, -1 when none
+    int GetPhaseSecondsLeft()
+    {
+        return -1;
+    }
+
+    //! Seconds left on the active HUD countdown, -1 when none
+    int GetCountdownSecondsLeft()
+    {
+        return -1;
+    }
+
+    //! Seconds left reported to the admin panel, -1 when none
+    int GetAdminTimeLeft()
+    {
+        return GetPhaseSecondsLeft();
+    }
+
+    //! Current play circle of this state, false when no zone is in force
+    bool GetCurrentCircle(out vector center, out float radius)
+    {
+        center = "0 0 0";
+        radius = 0.0;
+        return false;
+    }
+
+    int GetAdminZoneNumber()
+    {
+        return 0;
+    }
+
+    float GetAdminZoneRadius()
+    {
+        return 0.0;
+    }
+
+    int GetAdminPhaseEnum()
+    {
+        return s_MatchPhase;
+    }
+
+    bool AdjustTime(int deltaSeconds, out int appliedDelta, out string reasonKey)
+    {
+        appliedDelta = 0;
+        reasonKey = "STR_BR_PANEL_ERR_WRONG_PHASE";
+        return false;
+    }
+
+    protected void OnFreeze()
+    {
+    }
+
+    protected void OnUnfreeze(float frozenSeconds)
+    {
+    }
+
+    protected void SendResumeSync()
+    {
+    }
+
+    protected void LogPanelCallback(string callbackName)
+    {
+#ifdef DIAG_DEVELOPER
+        Print("[BRPanel] Callback state=" + GetName() + " fn=" + callbackName + " tick=" + GetGame().GetTickTime().ToString() + " clock=" + GetStateClock().ToString() + " active=" + IsActive().ToString());
+#endif
+    }
+
+    //! Sends the frozen state snapshot to one client, or to every client when identity is null
+    void SendFrozenSnapshotTo(PlayerIdentity identity)
+    {
+        int phaseSec = GetPhaseSecondsLeft();
+        int cdSec = GetCountdownSecondsLeft();
+        vector center = "0 0 0";
+        float radius = 0.0;
+        bool hasCircle = GetCurrentCircle(center, radius);
+        if (hasCircle && radius > 0.0)
+            GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "UpdateCurrentPlayArea", new Param2<vector, float>(center, radius), true, identity);
+
+        GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetMatchFrozen", new Param5<bool, int, int, vector, float>(true, phaseSec, cdSec, center, radius), true, identity);
+    }
+
+    bool Freeze()
+    {
+        if (!IsActive() || !CanFreeze() || b_IsFrozen)
+            return false;
+
+        b_IsFrozen = true;
+        b_IsPaused = true;
+        f_FrozenAt = GetGame().GetTickTime();
+        PauseTimers();
+        OnFreeze();
+
+        s_MatchPhaseSeconds = GetPhaseSecondsLeft();
+        s_MatchPhaseSentAt = GetGame().GetTime();
+        s_MatchPhaseFrozen = true;
+
+        SendFrozenSnapshotTo(null);
+        MessagePlayersUntranslated("STR_BR_MATCH_FROZEN");
+
+#ifdef DIAG_DEVELOPER
+        Print("[BRPanel] Freeze state=" + GetName() + " tick=" + f_FrozenAt.ToString() + " clock=" + GetStateClock().ToString() + " phaseLeft=" + s_MatchPhaseSeconds.ToString());
+#endif
+        return true;
+    }
+
+    bool Unfreeze(bool silent = false, bool notifyOnSilent = false)
+    {
+        if (!b_IsFrozen)
+            return false;
+
+        float now = GetGame().GetTickTime();
+        float dt = now - f_FrozenAt;
+        if (dt < 0)
+            dt = 0;
+
+        f_FrozenTotal = f_FrozenTotal + dt;
+        b_IsFrozen = false;
+        b_IsPaused = false;
+        s_MatchPhaseFrozen = false;
+
+        ContinueTimers();
+        OnUnfreeze(dt);
+
+        GetRPCManager().SendRPC(RPC_DAYZBR_NAMESPACE, "SetMatchFrozen", new Param5<bool, int, int, vector, float>(false, -1, -1, "0 0 0", 0.0), true);
+
+        if (!silent)
+        {
+            s_MatchPhaseSeconds = GetPhaseSecondsLeft();
+            s_MatchPhaseSentAt = GetGame().GetTime();
+            SendResumeSync();
+            MessagePlayersUntranslated("STR_BR_MATCH_RESUMED");
+        }
+        else if (notifyOnSilent)
+        {
+            MessagePlayersUntranslated("STR_BR_MATCH_RESUMED");
+        }
+
+#ifdef DIAG_DEVELOPER
+        Print("[BRPanel] Unfreeze state=" + GetName() + " silent=" + silent.ToString() + " dt=" + dt.ToString() + " clock=" + GetStateClock().ToString());
+#endif
+        return true;
+    }
+
     void Deactivate()
     {
     	BattleRoyaleUtils.Debug(string.Format("BattleRoyaleState::Deactivate: %1", GetName()));
         //Note: this is called BEFORE players are removed
-        //--- stop all repeating timers
+        if (b_IsFrozen)
+            Unfreeze(true, false);
+
+        //--- stop all timers unconditionally
         StopTimers();
 
         b_IsActive = false;
@@ -156,23 +349,23 @@ class BattleRoyaleState: Timeable
 
     bool IsPaused()
     {
-        return b_IsPaused;
+        return b_IsFrozen;
     }
 
     void Pause()
     {
-        b_IsPaused = true;
+        Freeze();
     }
 
     void Resume()
     {
-        b_IsPaused = false;
+        Unfreeze(false, false);
     }
 
     bool IsComplete()
     {
-        //state cannot complete if paused
-        if(b_IsPaused)
+        //state cannot complete if frozen
+        if (b_IsFrozen)
             return false;
 
         return !IsActive();
