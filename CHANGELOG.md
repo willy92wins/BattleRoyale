@@ -1,5 +1,52 @@
 # Changelog
 
+## 2.0.0 (2026-11-23)
+
+### Added
+- Plane deployment: matches start with all players aboard a C-130 transport aircraft (`Land_Wreck_C130J_Cargo`) flying across the map near the first zone, instead of the spawn selection menu and ground teleport:
+  - **Flight path:** generated per match between opposite edges of the map (inset by `plane_edge_margin_m`) at a random altitude between `plane_min_altitude_m` and `plane_max_altitude_m`, passing within `plane_path_max_zone_distance` times the first zone's radius (1x by default).
+  - **Boarding and cameras:** players ride inside the C-130 facing the open rear ramp in first person, and press **V** (the person-view key) to switch between first person and an overhead third-person view aligned with the aircraft's heading.
+  - **Jumping and parachuting:** press **F** («BR Plane Jump / Parachute» in Controls, rebindable) to jump from the plane and press **F** again in free fall (at least 1 s after jumping) to open the parachute manually; otherwise it opens automatically below `parachute_auto_open_agl_m` (150 m AGL by default). Players still aboard at the end of the flight path are ejected automatically in a fanned formation to avoid overlapping.
+  - **Parachute handling and airborne rules:** while parachuting, **S** brakes without flying backwards, and steering with **W/A/D** and the mouse pitches and banks the character and canopy smoothly. Aboard the plane and in the air, players cannot fire weapons, drop items or manipulate inventory, Space does not open the parachute, and unstuck (**F2**) stays disabled until landing.
+  - **Delayed first zone reveal:** the first zone stays hidden during the flight and is revealed `first_zone_reveal_delay_seconds` (60 s by default) after the plane finishes its run (or once the last passenger jumps), with inside/outside notices and an extra `first_zone_extra_seconds` (180 s by default) added to the first-zone countdown (330 s total with default 5-minute rounds). The first zone closing waits for airborne players to land, up to a 180 s safety cap.
+- Airdrop HUD and map indicators:
+  - The HUD phase line shows `AIRDROP` (`DESPLIEGUE AÉREO` in Spanish) with the flight or reveal countdown (and `(PAUSED)` when frozen by an admin). Below it, an airdrop status panel shows `IN PLANE` (with dynamic jump and camera key hints), `FREEFALL` or `PARACHUTE`, and hides as soon as the player lands.
+  - Full map (**M**) and minimap (**J**) draw the dashed flight path and a textured C-130 icon rotated to the aircraft's heading. While aboard, the minimap tracks the plane smoothly and the plane icon replaces the player arrow; after jumping, both appear until the flight ends.
+- Admin panel, turnover, spectator and reconnect integration for plane deployment:
+  - **Pause / Resume** freezes and resumes the plane's flight, reveal timer and countdown on server and clients (players already in free fall keep automatic parachute opening).
+  - **Next** during the airdrop ejects all remaining passengers with their parachutes open and reveals the first zone immediately; a second **Next** advances to Round 1. Time adjustments (±1 / ±5 min) are disabled during airdrop.
+  - **Restart** and serial-match turnover cleanly shut down active flights, close open parachutes and restore boarded or airborne players to the ground.
+  - Spectators exclude players still hidden aboard the plane and automatically attach once someone jumps; players reconnecting during the flight or before/after the reveal are resynchronized to the plane or the active zone countdown.
+
+### Changed
+- With `enable_plane_deployment` enabled (on by default), spawn selection and the start-match ground unlock countdown are skipped, and players receive a fabric parachute bag (`ADM_ParachuteBag_Fabric`) in the back slot during match preparation; if the only configured cargo garment was a backpack, starting items overflow to other equipped clothing, inventory or the ground instead of being lost.
+- Waiting room match-time estimates include the flight duration, zone reveal delay and extra first-zone time when plane deployment is enabled.
+
+### Fixed
+- Parachute speedometer HUD (Admiral's Parachute): prevented duplicate HUD instances and left-HUD flicker while parachuting, hid the speedometer whenever the map, inventory or pause menu is open, and ensured it closes cleanly upon landing.
+
+### Notes
+- **Hard dependency:** `@AdmiralsParachuteMod` (Steam Workshop `2912241382`, key `ADM.bikey`) is required by both client and server scripts and must load before `@BattleRoyale`:
+  - Without an admin tool: `-mod=@CF;@AdmiralsParachuteMod;@BattleRoyale`
+  - With COT: `-mod=@CF;@AdmiralsParachuteMod;@Community-Online-Tools;@BattleRoyale`
+  - With VPPAdminTools: `-mod=@CF;@AdmiralsParachuteMod;@VPPAdminTools;@BattleRoyale;@BattleRoyale-VPP`
+- **Admiral's Parachute config for servers:** BattleRoyale never writes or modifies Admiral's config file. Copy `BattleRoyale_server/ADMParachute/ParachuteJSON.json` (shipped in `ServerFiles/ADMParachute/ParachuteJSON.json` inside the Workshop mod) to `$profile:ADMParachute\ParachuteJSON.json` (`<profiles>\ADMParachute\ParachuteJSON.json`) before starting the server. It tunes `ADM_ParachuteBag_Fabric` for BattleRoyale (`TopSpeedMultiplierY: 12`, `TopSpeedMultiplierZ: 8`, `AccelMultiplierY/Z: 4`, `ParachuteDamage: 2`, `LandingSpeedDamage: 1`); without it, Admiral's creates slow defaults on first start. See `BattleRoyale_server/README.md`.
+- **New keys in `general_settings.json` (version 3):** existing version 1 and version 2 files upgrade automatically to version 3 on server start with the defaults below (all range-validated on load; mission overrides continue to apply):
+  - `enable_plane_deployment` (`true` by default): set to `false` (`0`) to disable plane deployment and run matches exactly as in 1.8.0 (spawn selection, ground teleport, start countdown unlock and first zone shown at match start);
+  - `plane_speed_mps` (`100`, valid `40..200`);
+  - `plane_min_altitude_m` (`800` AMSL, valid `400..2000`, lower than `plane_max_altitude_m`);
+  - `plane_max_altitude_m` (`1100` AMSL, valid `400..2500`);
+  - `plane_edge_margin_m` (`600`, valid `100..3000`);
+  - `plane_path_max_zone_distance` (`1.0`, valid `0..3`, multiples of the first zone's radius; `0` = no limit);
+  - `parachute_auto_open_agl_m` (`150`, valid `30..500` and lower than `plane_min_altitude_m - 100`);
+  - `first_zone_reveal_delay_seconds` (`60`, valid `0..600`);
+  - `first_zone_extra_seconds` (`180`, valid `0..1800`).
+- **New RPCs:** server-to-client `StartPlaneFlight` (start, end, duration, elapsed) and `EndPlaneFlight` (keep coasting) on `RPC-DayZBR`; client-to-server `RequestPlaneJump`, `RequestOpenParachute` and `RequestPlaneResync` on `RPC-DayZBR-Server`. `EBRMatchPhase.AIRDROP` was added at the end of `EBRMatchPhase`. Server and clients must run 2.0.0.
+- The plane map icon texture (`br_plane_icon_ca.paa`) is generated by `tools/gen_plane_icon.py`.
+- `@BattleRoyale-VPP` goes to **1.2.0** on the Workshop together with 2.0.0 (it requires the admin hook and RPCs introduced in 1.8.0 and included in 2.0.0).
+- Tested in game with one player (2026-11-21): full cycle (boarding the C-130, V toggling first person and overhead third person, jumping with F, opening the parachute with F, first zone revealed 60 s after the flight ends, first zone closing 210 s later with the test profile, landing), clean exit from the game while aboard the plane, plane icon on the map, zero script errors.
+- Not tested yet in game: two or more players, landing in the sea, admin panel Pause/Next during the flight, and reconnecting during the flight.
+
 ## 1.8.0 (2026-11-21)
 
 ### Added
