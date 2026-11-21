@@ -9,7 +9,8 @@ class CfgPatches
 		{
 			"DZM_VPPAdminTools",
 			"DZM_VPPAdminToolsScripts",
-			"BattleRoyale_Scripts_Client"
+			"BattleRoyale_Scripts_Client",
+			"BattleRoyale_Scripts_Server"
 		};
 	};
 };

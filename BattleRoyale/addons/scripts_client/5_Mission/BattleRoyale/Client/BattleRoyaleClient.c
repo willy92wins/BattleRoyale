@@ -280,12 +280,18 @@ class BattleRoyaleClient: BattleRoyaleBase
 			br_previous_fade_state = fade_state;
 		}
 
-		// Input enable/disable; a waiting player keeps its controls, and a later SetInput(false) still undoes a lock already applied
+		// Input enable/disable; a waiting player keeps its controls, and a later SetInput(false) still undoes a lock already applied.
+		// A spectator is left alone: enabling the input turns the voice back on, and the server keeps a spectator's voice off
 		bool input_state = br_rpc.input_state && !br_rpc.waiting;
-		if( br_previous_input_state != input_state )
+		if( br_previous_input_state != input_state && !BattleRoyaleRPC.s_Spectating )
 		{
 			player.DisableInput( input_state );
 			br_previous_input_state = input_state;
+		}
+		else if( input_state && !BattleRoyaleRPC.s_Spectating )
+		{
+			// While locked, the controller overrides are set again every frame: nothing the engine resets can free the player
+			player.BR_ReassertInputLock();
 		}
 
 		// Set top position
@@ -317,6 +323,16 @@ class BattleRoyaleClient: BattleRoyaleBase
 		{
 			// Check if player is inside current play area and get distExt, distInt and angle
 			isInsideZone = GetZoneDistance(player, m_CurrentPlayArea, distExt, distInt, angle);
+
+			// The radius of the zone the play area closes to: the announced one, else the one in force; set before the
+			// distance shows, so its row never shows a stale value
+			if (!IsZoneCollapsed(br_rpc))
+			{
+				BattleRoyalePlayArea radius_area = m_CurrentPlayArea;
+				if (m_FuturePlayArea)
+					radius_area = m_FuturePlayArea;
+				gameplay.UpdateZoneRadius(radius_area.GetRadius());
+			}
 
 			// Once the final zone is gone there is no safe area left to point at
 			if (IsZoneCollapsed(br_rpc))
@@ -535,7 +551,7 @@ class BattleRoyaleClient: BattleRoyaleBase
 				break;
 		}
 
-		gameplay.UpdateMatchPhase( label, seconds );
+		gameplay.UpdateMatchPhase( label, seconds, br_rpc.match_frozen );
     }
 
     protected bool GetZoneDistance(PlayerBase player, BattleRoyalePlayArea play_area, out float distExt, out float distInt, out float angle)
@@ -589,7 +605,7 @@ class BattleRoyaleClient: BattleRoyaleBase
         if (!gameplay)
             return;
 
-        if(i_SecondsRemaining > 0)
+        if(!BattleRoyaleRPC.GetInstance().match_frozen && i_SecondsRemaining > 0)
         {
             i_SecondsRemaining--;
             gameplay.UpdateCountdownTimer(i_SecondsRemaining);

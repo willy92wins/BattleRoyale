@@ -90,6 +90,10 @@ class BattleRoyalePrepare: BattleRoyaleState
 		}
 
         m_PlayersProcessed = false;
+        m_ProcessThreadRunning = true;
+        BattleRoyaleServer prepServer = BattleRoyaleServer.GetInstance();
+        if (prepServer)
+            prepServer.SetPrepareWorkerRunning(true);
         m_ProcessWatchdog = AddTimer(120.0, this, "ProcessPlayersWatchdog", NULL, false);
         GetGame().GameScript.Call(this, "ProcessPlayers", NULL); //Spin up a new thread to process giving players items and teleporting them
     }
@@ -148,6 +152,11 @@ class BattleRoyalePrepare: BattleRoyaleState
     override string GetName()
     {
         return "Prepare State";
+    }
+
+    override int GetAdminPhaseEnum()
+    {
+        return EBRMatchPhase.PREPARE;
     }
 
     protected bool DeleteAllItems(PlayerBase process_player)
@@ -224,6 +233,14 @@ class BattleRoyalePrepare: BattleRoyaleState
     protected void DisablePlayerInput(PlayerBase process_player)
     {
         process_player.DisableInput(true);
+        // Sent to this client too: a client that missed the broadcast in Activate still gets locked
+        if (process_player.GetIdentity())
+            GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "SetInput", new Param1<bool>(true), true, process_player.GetIdentity() );
+    }
+
+    override bool IsInputLocked()
+    {
+        return IsActive();
     }
 
     protected BRNamedLocation GetRandomVillage(BattleRoyalePlayArea area = NULL, bool use_radius = false)
@@ -972,6 +989,9 @@ class BattleRoyalePrepare: BattleRoyaleState
 
         m_PlayersProcessed = true;
         m_ProcessThreadRunning = false;
+        BattleRoyaleServer doneServer = BattleRoyaleServer.GetInstance();
+        if (doneServer)
+            doneServer.SetPrepareWorkerRunning(false);
         StopProcessWatchdog();
         if (IsActive())
             Deactivate();

@@ -10,6 +10,7 @@ Usage: python tools/build.py [--key <path to .biprivatekey>] [--only <addon> ...
 --only takes addon folder names of either mod (vpp_compat is the compatibility addon).
 """
 import argparse
+import filecmp
 import os
 import shutil
 import struct
@@ -85,12 +86,20 @@ def build_one(name, key, temp, addons=ADDONS, out=OUT):
     print(f"ok {name}: {len(expected)} files, {os.path.getsize(pbo)} bytes, prefix {prefix}")
 
 
+def asset_differs(local, main):
+    """True when the worktree lacks the main checkout's asset, has other content, or either cannot be read"""
+    try:
+        return not os.path.isfile(local) or not filecmp.cmp(local, main, shallow=False)
+    except OSError:
+        return True
+
+
 def missing_assets():
     """Binary assets (textures, sounds, models) are gitignored and live only in the main checkout.
     When building from another worktree, return the main checkout and the ignored asset files it
-    has under BattleRoyale/ and BattleRoyale_VPP/ that this tree lacks; the PBOs would ship without
-    them. Returns (None, []) when this is the main checkout or git cannot tell: it is only a
-    warning, so no failure in here may stop the build."""
+    has under BattleRoyale/ and BattleRoyale_VPP/ that this tree lacks or has with other content; the PBOs
+    would ship without them or with an old version. Returns (None, []) when this is the main checkout or git
+    cannot tell: it is only a warning, so no failure in here may stop the build."""
     def git(*args):
         return subprocess.run(["git", *args], capture_output=True, encoding="utf-8", errors="replace",
                               check=True).stdout
@@ -103,7 +112,7 @@ def missing_assets():
         listed = git("-C", main_root, "ls-files", "-z", "--others", "--ignored", "--exclude-standard",
                      "--", "BattleRoyale", "BattleRoyale_VPP").split("\0")
         assets = [p for p in listed if p.lower().endswith(ASSET_EXT)]
-        return main_root, [p for p in assets if not os.path.isfile(os.path.join(ROOT, p))]
+        return main_root, [p for p in assets if asset_differs(os.path.join(ROOT, p), os.path.join(main_root, p))]
     except Exception:
         return None, []
 
@@ -112,12 +121,14 @@ def warn_missing_assets():
     main_root, missing = missing_assets()
     if not missing:
         return
-    lines = [f"WARNING: {len(missing)} asset file(s) of the main checkout are missing in this worktree, "
-             "so the PBOs will ship without them (missing textures, imagesets, models):"]
+    lines = [f"WARNING: {len(missing)} asset file(s) of the main checkout are missing, out of date or could not be "
+             "compared in this worktree; the PBOs may ship without them or with an old version (textures, "
+             "imagesets, models):"]
     lines += ["  " + p for p in missing[:10]]
     if len(missing) > 10:
         lines.append(f"  ... and {len(missing) - 10} more")
-    lines.append(f"  Copy them first: python -I \"{os.path.join(main_root, 'tools', 'sync_assets.py')}\" \"{ROOT}\"")
+    lines.append(f"  Copy them first: python -I \"{os.path.join(ROOT, 'tools', 'sync_assets.py')}\" \"{ROOT}\" "
+                 f"\"{main_root}\"")
     enc = getattr(sys.stdout, "encoding", None) or "utf-8"
     try:
         for line in lines:

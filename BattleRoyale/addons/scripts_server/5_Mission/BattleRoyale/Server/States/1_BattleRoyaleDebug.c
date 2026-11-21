@@ -10,7 +10,8 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
     protected float f_MinWaitingTime;
     protected float f_AutoStartDelay;
     protected bool b_AutoStartGame;
-    protected int i_FirstPlayerTick;
+    protected float i_FirstPlayerTick;
+    protected bool b_ForceStart;
     //! Tick time the minimum waiting time counts from: 0 (server start) for the first lobby, the lobby opening after a serial match
     protected float f_WaitOrigin = 0;
 
@@ -21,7 +22,7 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
 
     protected float GetWaitingTime()
     {
-        return GetGame().GetTickTime() - f_WaitOrigin;
+        return GetStateClock() - f_WaitOrigin;
     }
 
     void BattleRoyaleDebug()
@@ -44,6 +45,135 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
         return "Debug Zone State";
     }
 
+    override bool CanFreeze()
+    {
+        return true;
+    }
+
+    override bool CanAdjustTime()
+    {
+        return true;
+    }
+
+    override int GetAdminPhaseEnum()
+    {
+        return EBRMatchPhase.LOBBY;
+    }
+
+    //! Seconds until the lobby ends with the players and votes it has now, -1 when it cannot end yet.
+    //! Mirrors IsComplete (no vote system) and CheckReadyState (vote and autostart).
+    override int GetAdminTimeLeft()
+    {
+#ifdef Carim
+        //! Carim also needs a second group, and counting groups (here or through IsVoteReady) would change what
+        //! IsComplete reads: no estimate
+        return -1;
+#endif
+        float waitRem = f_MinWaitingTime - GetWaitingTime();
+        if (waitRem < 0)
+            waitRem = 0;
+
+        //! Serial matches: the lobby waits until every player of the finished match is back in it
+        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+        if (server && server.IsReturningPlayers())
+            return -1;
+
+        int players = GetPlayers().Count();
+        if (!b_UseVoteSystem)
+        {
+            if (players < i_MinPlayers)
+                return -1;
+            return Math.Ceil(waitRem);
+        }
+
+        if (players <= 1)
+            return -1;
+
+        float best = -1;
+        if (IsVoteReady())
+            best = waitRem;
+
+        int readyCount = GetReadyCount();
+        int maxPlayers = GetGame().ServerConfigGetInt("maxPlayers");
+        if (b_AutoStartGame && readyCount > 1 && maxPlayers > 0 && f_AutoStartDelay > 0)
+        {
+            //! Autostart when readyCount >= maxPlayers * (1 - elapsed / delay), checked after the minimum wait
+            float autoAt = i_FirstPlayerTick + f_AutoStartDelay * (1.0 - (readyCount * 1.0) / maxPlayers);
+            float autoRem = autoAt - GetStateClock();
+            if (autoRem < waitRem)
+                autoRem = waitRem;
+            if (best < 0 || autoRem < best)
+                best = autoRem;
+        }
+
+        if (best < 0)
+            return -1;
+        return Math.Ceil(best);
+    }
+
+    override int GetPhaseSecondsLeft()
+    {
+        float rem = f_MinWaitingTime - GetWaitingTime();
+        if (rem > 0)
+            return Math.Ceil(rem);
+        return -1;
+    }
+
+    override bool AdjustTime(int deltaSeconds, out int appliedDelta, out string reasonKey)
+    {
+        appliedDelta = 0;
+        if (!IsActive())
+        {
+            reasonKey = "STR_BR_PANEL_ERR_WRONG_PHASE";
+            return false;
+        }
+
+        float currentWait = GetWaitingTime();
+        float currentRem = f_MinWaitingTime - currentWait;
+        if (currentRem < 0)
+            currentRem = 0;
+
+        float targetRem = currentRem + deltaSeconds;
+        if (deltaSeconds < 0)
+        {
+            if (currentRem <= 30.0)
+            {
+                reasonKey = "STR_BR_PANEL_ERR_TIME_FLOOR";
+                return false;
+            }
+            if (targetRem < 30.0)
+                targetRem = 30.0;
+            if (Math.AbsFloat(targetRem - currentRem) < 1.0)
+            {
+                reasonKey = "STR_BR_PANEL_ERR_TIME_FLOOR";
+                return false;
+            }
+        }
+
+        appliedDelta = Math.Round(targetRem - currentRem);
+        f_MinWaitingTime = currentWait + targetRem;
+        int newSec = GetPhaseSecondsLeft();
+        if (IsFrozen())
+        {
+            s_MatchPhaseSeconds = newSec;
+            SendFrozenSnapshotTo(null);
+        }
+        else
+        {
+            BroadcastMatchPhase(EBRMatchPhase.LOBBY, newSec);
+        }
+
+#ifdef DIAG_DEVELOPER
+        Print("[BRPanel] AdjustTime state=" + GetName() + " delta=" + appliedDelta.ToString() + " oldRem=" + currentRem.ToString() + " newRem=" + targetRem.ToString());
+#endif
+        return true;
+    }
+
+    override protected void SendResumeSync()
+    {
+        BroadcastMatchPhase(EBRMatchPhase.LOBBY, GetPhaseSecondsLeft());
+    }
+
     //returns true when this state is complete
     override bool IsComplete()
     {
@@ -51,6 +181,14 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
         BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
         if (server && server.IsReturningPlayers())
             return false;
+
+        if (IsActive() && b_ForceStart)
+        {
+            if (GetPlayers().Count() >= 1)
+                Deactivate();
+            else
+                b_ForceStart = false;
+        }
 
 #ifdef Carim
         if( IsActive() && !b_UseVoteSystem && GetPlayers().Count() >= i_MinPlayers && GetWaitingTime() >= f_MinWaitingTime && GetGroupsCount() > 1 )
@@ -68,13 +206,14 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
     {
         super.AddPlayer( player );
 
-		// Track the first connected player tick time to determine when to start the game
+		// Track the first connected player state clock to determine when to start the game
         if( GetPlayers().Count() == 1 )
-        	i_FirstPlayerTick = GetGame().GetTickTime();
+        	i_FirstPlayerTick = GetStateClock();
     }
 
     override void Activate()
     {
+        b_ForceStart = false;
         //these loop & will be automatically cleaned up on Deactivation
         AddTimer(i_TimeBetweenMessages, this, "MessageWaiting", NULL, true);
 
@@ -85,8 +224,37 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
         BroadcastMatchPhase(EBRMatchPhase.LOBBY, -1);
     }
 
+    bool ForceStart(out string reasonKey)
+    {
+        if (!IsActive())
+        {
+            reasonKey = "STR_BR_PANEL_ERR_WRONG_PHASE";
+            return false;
+        }
+
+        if (GetPlayers().Count() < 1)
+        {
+            reasonKey = "STR_BR_PANEL_ERR_NO_PLAYERS";
+            return false;
+        }
+
+        BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
+        if (server && server.IsReturningPlayers())
+        {
+            reasonKey = "STR_BR_PANEL_ERR_RETURNING";
+            return false;
+        }
+
+        if (IsFrozen())
+            Unfreeze(true, true);
+
+        b_ForceStart = true;
+        return true;
+    }
+
     void CheckReadyState()
     {
+        LogPanelCallback("CheckReadyState");
         BattleRoyaleServer server = BattleRoyaleServer.GetInstance();
         if (server && server.IsReturningPlayers())
             return;
@@ -97,13 +265,14 @@ class BattleRoyaleDebug: BattleRoyaleDebugState
 				Deactivate();
 
 			int t_MaxPlayers = GetGame().ServerConfigGetInt( "maxPlayers" );
-			if( b_AutoStartGame && GetReadyCount() > 1 && GetReadyCount() >= ( t_MaxPlayers - ( ( t_MaxPlayers * ( GetGame().GetTickTime() - i_FirstPlayerTick ) ) / f_AutoStartDelay ) ) )
+			if( b_AutoStartGame && GetReadyCount() > 1 && GetReadyCount() >= ( t_MaxPlayers - ( ( t_MaxPlayers * ( GetStateClock() - i_FirstPlayerTick ) ) / f_AutoStartDelay ) ) )
 				Deactivate();
 		}
     }
 
     void MessageWaiting()
     {
+        LogPanelCallback("MessageWaiting");
 		int waiting_on_count = i_MinPlayers - GetPlayers().Count();
 
 		if( waiting_on_count > 0)

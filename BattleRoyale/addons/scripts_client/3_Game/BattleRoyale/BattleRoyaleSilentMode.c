@@ -1,6 +1,5 @@
 //! Silent mode, switched by the player with its key (UADayZBRToggleSilentMode): the voices of the other players (the
-//! VOIP volume of the sound scene) are muted and the notification sound does not play. Notifications still show and
-//! the player's own microphone is not touched.
+//! VOIP volume of the sound scene) are muted. The player's own microphone is not touched.
 //! The choice lasts the whole game session (serial matches, back to the lobby, another server). The volume is given
 //! back whenever the mission ends, and muted again by the next one, so the mode never leaves the player's VOIP at 0.
 //! The volume given back is the one the player chose, kept apart from the mute: the one of the options when the game

@@ -15,6 +15,85 @@ class BattleRoyaleCountReached: BattleRoyaleDebugState
         return "Player Count Reached State";
     }
 
+    override bool CanFreeze()
+    {
+        return true;
+    }
+
+    override bool CanAdjustTime()
+    {
+        return true;
+    }
+
+    override int GetAdminPhaseEnum()
+    {
+        return EBRMatchPhase.LOBBY;
+    }
+
+    override int GetPhaseSecondsLeft()
+    {
+        if (m_StartTimer && IsTimerActiveOrPaused(m_StartTimer))
+            return Math.Ceil(m_StartTimer.GetRemaining());
+        return -1;
+    }
+
+    override bool AdjustTime(int deltaSeconds, out int appliedDelta, out string reasonKey)
+    {
+        appliedDelta = 0;
+        if (!IsActive() || !m_StartTimer || !IsTimerActiveOrPaused(m_StartTimer))
+        {
+            reasonKey = "STR_BR_PANEL_ERR_NO_TIMER";
+            return false;
+        }
+
+        float rem = m_StartTimer.GetRemaining();
+        float target = rem + deltaSeconds;
+        if (deltaSeconds < 0)
+        {
+            if (rem <= 30.0)
+            {
+                reasonKey = "STR_BR_PANEL_ERR_TIME_FLOOR";
+                return false;
+            }
+            if (target < 30.0)
+                target = 30.0;
+            if (Math.AbsFloat(target - rem) < 1.0)
+            {
+                reasonKey = "STR_BR_PANEL_ERR_TIME_FLOOR";
+                return false;
+            }
+        }
+
+        appliedDelta = Math.Round(target - rem);
+        m_StartTimer.Stop();
+        RemoveTimer(m_StartTimer);
+        if (IsFrozen())
+            m_StartTimer = AddPausedTimer(target, this, "DoStart", NULL, false);
+        else
+            m_StartTimer = AddTimer(target, this, "DoStart", NULL, false);
+
+        int newSec = Math.Ceil(target);
+        if (IsFrozen())
+        {
+            s_MatchPhaseSeconds = newSec;
+            SendFrozenSnapshotTo(null);
+        }
+        else
+        {
+            BroadcastMatchPhase(EBRMatchPhase.LOBBY, newSec);
+        }
+
+#ifdef DIAG_DEVELOPER
+        Print("[BRPanel] AdjustTime state=" + GetName() + " delta=" + appliedDelta.ToString() + " oldRem=" + rem.ToString() + " newRem=" + target.ToString());
+#endif
+        return true;
+    }
+
+    override protected void SendResumeSync()
+    {
+        BroadcastMatchPhase(EBRMatchPhase.LOBBY, GetPhaseSecondsLeft());
+    }
+
     override void Activate()
     {
     	BattleRoyaleUtils.Debug(string.Format("BattleRoyaleCountReached: Activating with time to start: %1 seconds", i_TimeToStart));
@@ -51,7 +130,7 @@ class BattleRoyaleCountReached: BattleRoyaleDebugState
 
     override void Deactivate()
     {
-        if ( m_StartTimer && m_StartTimer.IsRunning() )
+        if ( m_StartTimer )
         {
             m_StartTimer.Stop();
         }
@@ -61,6 +140,7 @@ class BattleRoyaleCountReached: BattleRoyaleDebugState
 
     void DoStart()
     {
+        LogPanelCallback("DoStart");
         Deactivate();
     }
 }

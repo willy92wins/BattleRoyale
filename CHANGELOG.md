@@ -1,5 +1,184 @@
 # Changelog
 
+## 1.8.0 (2026-11-21)
+
+### Added
+- Admin panel for VPPAdminTools (`@BattleRoyale-VPP` 1.2.0), in the BattleRoyale tab of the VPP toolbar:
+  - **Live status:** phase, running or frozen, when the phase ends, players alive and zone. Admins with the panel open receive it, at most once a second; while it is closed only an explicit request gets an answer.
+  - **Next phase**, with VPP's confirmation dialog.
+  - **Freeze/Resume.** Freezing stops the clock of the phase: its timers, the zone closing, the countdown notices and the HUD countdown («PAUSADO»). Zone damage keeps applying, and every player is told. A match decided while frozen unfreezes and ends.
+  - **±1 and ±5 min** in the lobby, the start countdown and the rounds before the last one, never leaving less than 30 s. The start of the match (StartMatch) and the last round refuse it.
+  - **Force start** with the players present, in the lobby only.
+  - **Restart the match:** with serial matches only. It goes back to the lobby without restarting the server, without counting toward the scheduled restart, and without leaderboard points or the match end message.
+  - Each action is checked on the server against its own VPP permission (`BattleRoyale:Next`, `Pause`, `Resume`, `ForceStart`, `AdjustTime`, `Restart`; the status needs `MenuBattleRoyaleManager`), or against COT where COT is loaded. Next phase, force start and restart are refused when they come from an earlier phase or match.
+- Leaderboard: players score points for each kill and for their final place (`leaderboard_points_per_kill`,
+  `leaderboard_points_first` and `leaderboard_points_step` in `server_settings.json`: with 10 and 2, places 1 to 5
+  get 10, 8, 6, 4 and 2, and a kill 1). The board starts again every month by default (`leaderboard_wipe`: `monthly`,
+  `weekly` from Monday or `yearly`, by the server's local date), and the one that ends is kept as
+  `leaderboard_<period>.json`. T («BR Leaderboard» in Controls) opens and closes a panel with the top 30: a podium for
+  the first three, the player's own row or, outside the top 30, their place at the bottom, and the season with the time
+  left until it starts again. It does not take the mouse or the keys, so the player can keep moving. With
+  `leaderboard_webhook_url` set, the server posts the top 30 to a Discord channel at the end of a match when it changed.
+- Discord message at the end of a match: with `match_end_webhook_url` set to a Discord webhook, the server posts
+  `match_end_message` when a match ends, with `{winner}`, `{kills}`, `{players}` and `{duration}` filled in, or
+  `match_end_message_no_winner` when nobody wins. Names and mentions in the message ping nobody, the URL never reaches
+  the players nor the logs, and a server that exits after the match waits up to 10 s for a message still on its way.
+- Watch the match from the waiting room with V («BR Watch the match» in Controls): a player who waits in the lobby
+  while a match runs, because they joined late or came back from spectating with F1, watches it the way its dead
+  players do, and F1 brings them back to the lobby. The waiting room notice adds «Press V to watch the match.» with
+  the key the player has bound, and a player watching this way hears the artillery of a new zone like a dead
+  spectator. When the server refuses, for example once the match is won, the player gets
+  «Nothing to watch right now: try again in a moment.». It needs the waiting room and spectating on
+  (`enable_waiting_room` and `enable_spectator` in `general_settings.json`). Where V also switches first and third
+  person, as in the profile used for the tests, pressing it in the waiting room flips the lobby character's camera
+  for a moment before spectating starts; while spectating, V still switches first and third person.
+- Spectators in first person look through the watched player's sights: iron sights and optics that do not magnify,
+  with their field of view. Behind a reflex sight, what that player carries on the back, shoulder and belt is hidden,
+  as vanilla does for a player's own optics. With a magnifying optic the view stays at the eyes, because on another
+  player's screen its lens is opaque and has no reticle.
+- Spectator equipment panel on Tab (the inventory key): while spectating, pressing Tab opens and closes a read-only
+  panel with the watched player's equipment instead of the naked anchor body's inventory. It shows the watched player's
+  name, what they hold in their hands, each occupied equipment slot, the attachments of a weapon in the hands or on the
+  shoulder, and any cargo items with their quantities present on the client, without taking the mouse or the keys so
+  the spectator can keep switching players. Opening a menu (Esc), leaving spectating, returning to the waiting room or
+  the lobby, or the win screen closes it.
+- Lobby: nobody can force-feed or force-drink another player (food, drinks, tablets, single bites), tie or handcuff
+  them, put the head sack or the gag on them, take or give them blood, or use the defibrillator on them, in any phase:
+  before a match, during the spawn selection, and in the waiting room while a match runs. The client does not offer
+  these actions there, and the server refuses them when the player or the target stands within the lobby circle of
+  `spawns_settings.json` plus 5 m. Untying, removing the sack or the gag, and the harmless actions (bandage, pulse,
+  splint, saline, injections) are still allowed. Outside the lobby nothing changes, also for a player in godmode.
+- Lobby: every 5 s the server removes the living infected within the lobby radius plus 30 m, between matches, during
+  the spawn selection and the preparation, and, during a match, only while somebody waits in the lobby. A lobby that
+  lies inside the play area keeps the match's infected the rest of the time.
+- HUD: the radius of the closing zone, with a ring icon, in a row under the distance to the zone. It shows the
+  announced zone while there is one, and the zone in force otherwise.
+
+### Changed
+- The zone closes gradually instead of jumping to the next one when it locks. From the second zone on, the zone in
+  force shrinks to the announced one, centre and radius moving together, and reaches it exactly at the lock, so a
+  match lasts as long as before; the final zone shrinks to nothing on its centre. The red wall moves continuously, the
+  map and the minimap follow the closing zone, zone damage and the distance on the HUD follow the moving edge, and the
+  zone notices count down to the start of the closing («The zone starts closing in …»). A player who reconnects or
+  joins late gets the closing in progress. Servers set its speed with `zone_shrink_speed` (see the notes).
+- Spectator first person: the camera sits at the watched player's eyes and looks where that player aims, as the
+  vanilla first person camera does, and the watched player's head, headgear, mask and eyewear are hidden on the
+  spectator's screen. It looked along any weapon in the hands, also a lowered one: with the rifle at the hip or across
+  the body while running, the view turned to the ground or sideways, as if it came from the weapon, and it bobbed
+  while the watched player ran.
+- HUD: notifications are silent and white (warnings and errors keep their colour), the zone arrow drops its black edge,
+  the top-right icons and counters get a soft drop shadow, and the kill counter uses a new skull icon.
+
+### Fixed
+- A player could walk and kill during the start countdown while the others stayed frozen (seen on a live server
+  after a reconnect). The lock is now sent to each player's own client in the preparation, sent again to a player who
+  reconnects before the unlock, and set again every frame on the client while it holds; players take no damage
+  until the unlock.
+- The BattleRoyale tab did not appear in the VPP toolbar, not even for superadmins, when the core compiled before VPP, as on the live server even with VPP first on `-mod=`. `VPPADMINTOOLS` is a `#define` of VPP's own scripts, so the core's `#ifdef VPPADMINTOOLS` blocks dropped out: the permission was never registered and BattleRoyale's admin checks never asked VPP. The compat now registers the permissions and answers the checks through an instance hook (`BRAdminFrameworkHook`). A static override in a modded class is not called by core code that is already compiled.
+- Spectators could talk in direct voice to the player they watched, unseen. Their voice is now off while they
+  spectate, from death or from the waiting room, and comes back with their next character.
+- Spectators who left the server could not join again until it restarted: «Player with same UID is already in game»
+  (`0x00040033`). A spectator who leaves is now disconnected at once.
+- The view and the character's aim could drift apart (a vanilla bug), for example at the character's aiming limit when
+  prone in the sights. In third person the shot left from the view, while the other players, spectators included,
+  saw the weapon point higher or lower. With a firearm raised, the view now comes back to the character's aim by
+  itself; vertical mouse input, or the weapon lifted against an obstacle, only pause it. It runs on the client only.
+- A player coming back from spectating, with F1 or at the end of a serial match, came back to the lobby as
+  `SurvivorM_Mirek`, the character of the spectator's anchor; they now come back with their own character.
+- Spectators: for up to a second after spectating started, a naked survivor showed next to the watched player. It was
+  the spectator's anchor, a `SurvivorM_Mirek` with no equipment that keeps the world streamed around the watched
+  player. It is now created at the map corner farthest from the watched player and the lobby, and moved under the
+  watched player in the same frame.
+- Spectators: the anchor no longer drowns under a river or a low shore, and no longer starts a fall about once a second
+  on dry ground. Testers reported drowning sounds from a spectator whose watched player was in a river, and a watched
+  player who heard someone falling next to them.
+- Spectators: the engine makes a new spectator camera every time a player starts spectating and never deletes the old
+  ones, so after spectating a second time, for example F1 then V, two cameras took the view from each other every
+  frame. Only the newest one follows now.
+- Serial matches: during the cleanup after a match, which can outlast the next lobby, the ready key (F1) did nothing
+  for a spectator, and a death with spectating off or with nobody to watch did not reach the waiting room.
+- Map: the player arrow follows a screen size change while the map is open; it kept the old size until the map was
+  reopened.
+
+### Notes
+- Tested in DayZDiag with one player (2026-11-21): the start lock holds the player in place for the whole
+  countdown and blocks damage until the unlock, then damage comes back; the zone radius row shows with its icon.
+  Not tested: a reconnect during the countdown and a second player.
+- New messages between the server and the clients: `StartZoneShrink` (the zone closing), `WaitingToSpectator` (the
+  spectate key), `SightsState`, `SightsResend` and `SpectateSights` (the watched player's sights, contract in
+  `BattleRoyale_dev/contracts/rpc-1.0.md`), and `RequestLeaderboard` and `LeaderboardData` (the leaderboard panel; a
+  player can ask at most every 2 s). Each client tells the server when its sights change, at most every 0.1 s, and the
+  server passes them on only to the players who watch it. Server and clients should run 1.8.0.
+- New in `server_settings.json`: the match end message (`match_end_webhook_url`, `match_end_message`,
+  `match_end_message_no_winner`) and the leaderboard (`leaderboard_points_first`, `leaderboard_points_step`,
+  `leaderboard_points_per_kill`, `leaderboard_wipe`, `leaderboard_webhook_url`). A server that ran 1.7.0 gets them on
+  its first start, with both webhooks off. `BattleRoyale_server/README.md` explains them. The leaderboard is kept in
+  `leaderboard.json` in the profile folder; while it saves, the server also writes `leaderboard.json.new` and keeps the
+  previous file as `leaderboard.json.bak`, so a crash in the middle of a save does not lose it.
+- `zone_shrink_speed` in `zone_settings.json` sets the speed of the zone closing, in metres per second of the edge
+  point that moves the most. It is 9 by default, faster than a running player and slower than a vehicle, and 0 brings
+  back the jump at the lock. If a closing does not fit before the lock, the round grows by that much.
+  `BattleRoyale_server/README.md` explains the setting and has a table of closing times with the default zones.
+- Each change was reviewed by a second model family (adversarial review of each change). Each was tested in DayZDiag
+  with one player, on its own branch and, where needed, with test hooks that are not part of the release (a
+  solo-match patch, survivor dummies, traces):
+  - zone: the closings of rounds 2 and 3 start on time, the edge moves at 9.09 m/s against 9 by design, zone damage
+    applies outside the zone, and the owner watched the wall and confirmed that it moves continuously;
+  - map: the owner resized the window with the map open, and the arrow followed;
+  - spectate key, with test keys standing in for V and F1: a death starts spectating, F1 goes to the waiting room with
+    its notices, V spectates again, F1 24 s later goes back, V once the match is won gets «Nothing to watch…», and the
+    player comes back with their own character after a death and after V;
+  - leaving while spectating: the spectator who left joined again 25 s later, with no `0x00040033`;
+  - lobby: an infected 14 m from the lobby centre is removed before the match and one 100 m away stays; the server
+    refuses the head sack and force-feeding inside the lobby circle, and both work 100 m outside it;
+  - spectator's anchor: it is created 16.5 km away and moved under the watched player in the same frame, and 0 of 30
+    samples on the spectator's client show it above the ground;
+  - anchor in water and on dry ground: with 1.6 to 2.0 m of water over its head the drowning modifier never turned on
+    and no drowning sound was requested; on dry ground it started 99 falls in 105 s without the fix and none with it;
+  - aim: with an M4A1 raised in third person and the drift provoked by an aiming limit like the one vanilla sets prone
+    in the sights, a 14° gap between the view and the character's aim closed in 11 frames (about 0.35 s), and no
+    correction happened during full-auto bursts;
+  - spectator first person: with the weapon lowered, the old camera looked at the ground and the new one looks
+    forward; with an AI dummy sprinting (it has no aiming angles, so the camera follows its head), the turn of the
+    view from frame to frame fell from 14.5° to 1.5° (RMS); an M68 is looked through with the backpack hidden, an ACOG
+    stays at the eyes, one camera is left after F1 and V, and the client stayed alive after F1;
+  - match end message, against a local receiver that answers like Discord: every placeholder filled, emoji, accents,
+    quotes and line breaks intact, `wait=true` added to the URL, the message without a winner, and the server waiting
+    for a message still on its way before it moved on (measured before the next serial match, which goes through the
+    same step as the exit);
+  - leaderboard: at start the server archived an October board and opened the week of Monday 16 November; the winner
+    of a match got 10 points and a win; the top 30 was posted once and not again without a change; the panel showed 30
+    and 60 seeded players (podium, the player's row by place, their place 60 at the bottom, «Temporada de noviembre de
+    2026» and the countdown); the board had the new points after two serial matches; the saves wrote `.new` and
+    `.bak`. The panel was opened with a test hook, because the test tools cannot press a key bound in Controls.
+- Not tested yet in game:
+  - with two players: that the spectator's first person view does not sway with a real player (the test dummy is an
+    AI without aiming angles), that the watched player no longer hears the anchor's falls, that the aim lines up
+    between players with the aim fix, and the sights a real watched player reports (the tests forced them on the
+    spectator's client);
+  - the zone: the later zones and the final collapse, the map and the minimap while the zone closes, several players
+    and `zone_shrink_speed` = 0;
+  - the spectate key: the real V key (its binding was read, not pressed), serial matches (the way back at the end of
+    a match and the cleanup after it), several real players and the artillery heard by a player watching with V;
+  - the lobby: the client hiding the actions, a pair that walks into the lobby during an action, and the blocked
+    actions other than the head sack and force-feeding;
+  - the aim fix: the aim on the server (the test's aim did not reach it), real prone, a real obstacle, gamepads and
+    the third person vehicle cameras;
+  - the match end message and the leaderboard's top 30 on a real Discord channel;
+  - the leaderboard with two or more players (kills, and places other than the first), the real T key, 720p, the
+    panel fading in, the kill feed keeping to 4 rows while the panel is open, and a weekly season across two months.
+- `@BattleRoyale-VPP` goes to **1.2.0** and must be uploaded together with the 1.8.0 core: 1.2.0 needs the core's new admin hook and RPCs. 1.1.0 still compiles, but with the core compiled before VPP its tab does not appear. Server and clients need the same compat.
+- Tested in DayZDiag, with the core compiled before VPP and the solo test profile:
+  - the tab and its 7 permissions registered, and the status at 1 per second, stopping less than 1 s after the toolbar closes;
+  - freezing and resuming a round, the last round, the lobby and the start countdown: the time and the HUD countdown stood still and carried on within 1 s;
+  - +1 min (+60 s on the server and in the HUD), next phase, and a stale next phase refused;
+  - force start from a frozen lobby;
+  - with serial matches, restart: Restart state, back to the lobby, not counted, server up;
+  - a player without permissions: every panel RPC refused and the state unchanged;
+  - an untouched match against 1.8.0 beta 2, lobby to round 3, in 5 runs: the same times. Round 2 ran up to 6 s long once in each core, so that slip is pre-existing.
+  - Guillermo tested the panel with real clicks and VPP's confirmation dialog.
+- Not tested: COT permissions for the new actions, a real second player, and the panel at 4:3 and 21:9.
+
 ## 1.7.0 (2026-11-16)
 
 ### Added

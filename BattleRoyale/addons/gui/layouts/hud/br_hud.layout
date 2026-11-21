@@ -23,7 +23,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
      ignorepointer 1
      clipchildren 0
      position 0 0
-     size 212 152
+     size 212 192
      halign right_ref
      hexactpos 1
      vexactpos 1
@@ -41,6 +41,22 @@ FrameWidgetClass BattleRoyaleHudFrame {
        hexactsize 1
        vexactsize 1
        {
+        ImageWidgetClass PlayerIconShadow {
+         ignorepointer 1
+         color 0 0 0 0.6
+         position 5 2
+         size 32 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:dayz_gui image:icon_player"
+         mode blend
+         "src alpha" 1
+         "no wrap" 1
+         stretch 1
+        }
         ImageWidgetClass PlayerIcon {
          ignorepointer 1
          position 7 0
@@ -55,6 +71,25 @@ FrameWidgetClass BattleRoyaleHudFrame {
          "src alpha" 1
          "no wrap" 1
          stretch 1
+        }
+        TextWidgetClass PlayerTextShadow {
+         ignorepointer 1
+         color 0 0 0 0.6
+         position 47 2
+         size 56 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         text "47"
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "size to text h" 0
+         "size to text v" 0
+         "text halign" right
+         "text valign" center
         }
         TextWidgetClass PlayerText {
          ignorepointer 1
@@ -87,6 +122,22 @@ FrameWidgetClass BattleRoyaleHudFrame {
        hexactsize 1
        vexactsize 1
        {
+        ImageWidgetClass GroupIconShadow {
+         ignorepointer 1
+         color 0 0 0 0.6
+         position -2 2
+         size 32 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "set:dayz_gui image:notification_friend"
+         mode blend
+         "src alpha" 1
+         "no wrap" 1
+         stretch 1
+        }
         ImageWidgetClass GroupIcon {
          ignorepointer 1
          position 0 0
@@ -101,6 +152,25 @@ FrameWidgetClass BattleRoyaleHudFrame {
          "src alpha" 1
          "no wrap" 1
          stretch 1
+        }
+        TextWidgetClass GroupTextShadow {
+         ignorepointer 1
+         color 0 0 0 0.6
+         position 40 2
+         size 55 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         text "14"
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "size to text h" 0
+         "size to text v" 0
+         "text halign" right
+         "text valign" center
         }
         TextWidgetClass GroupText {
          ignorepointer 1
@@ -133,6 +203,22 @@ FrameWidgetClass BattleRoyaleHudFrame {
        hexactsize 1
        vexactsize 1
        {
+        ImageWidgetClass KillIconShadow {
+         ignorepointer 1
+         color 0 0 0 0.6
+         position 5 2
+         size 32 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "Vigrid-BattleRoyale/GUI/textures/hud/br_kill_skull_ca.paa"
+         mode blend
+         "src alpha" 1
+         "no wrap" 1
+         stretch 1
+        }
         ImageWidgetClass KillIcon {
          ignorepointer 1
          position 7 0
@@ -142,11 +228,28 @@ FrameWidgetClass BattleRoyaleHudFrame {
          vexactpos 1
          hexactsize 1
          vexactsize 1
-         image0 "set:ccgui_enforce image:Icon40Attack"
+         image0 "Vigrid-BattleRoyale/GUI/textures/hud/br_kill_skull_ca.paa"
          mode blend
          "src alpha" 1
          "no wrap" 1
          stretch 1
+        }
+        TextWidgetClass KillCountTextShadow {
+         ignorepointer 1
+         color 0 0 0 0.6
+         position 47 2
+         size 150 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         text "99"
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
         }
         TextWidgetClass KillCountText {
          ignorepointer 1
@@ -177,6 +280,22 @@ FrameWidgetClass BattleRoyaleHudFrame {
        hexactsize 1
        vexactsize 1
        {
+        ImageWidgetClass ZoneIconShadow {
+         ignorepointer 1
+         color 0 0 0 0.6
+         position 5 2
+         size 32 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "Vigrid-BattleRoyale/GUI/textures/hud/br_zone_arrow_ca.paa"
+         mode blend
+         "src alpha" 1
+         "no wrap" 1
+         stretch 1
+        }
         ImageWidgetClass ZoneIcon {
          ignorepointer 1
          position 7 0
@@ -191,6 +310,23 @@ FrameWidgetClass BattleRoyaleHudFrame {
          "src alpha" 1
          "no wrap" 1
          stretch 1
+        }
+        TextWidgetClass DistanceTextShadow {
+         ignorepointer 1
+         color 0 0 0 0.6
+         position 47 2
+         size 150 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         text "safe"
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
         }
         TextWidgetClass DistanceText {
          ignorepointer 1
@@ -210,7 +346,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
         }
        }
       }
-      PanelWidgetClass SilentModePanel {
+      PanelWidgetClass ZoneRadiusPanel {
        visible 0
        ignorepointer 1
        clipchildren 0
@@ -222,6 +358,98 @@ FrameWidgetClass BattleRoyaleHudFrame {
        hexactsize 1
        vexactsize 1
        {
+        ImageWidgetClass ZoneRadiusIconShadow {
+         ignorepointer 1
+         color 0 0 0 0.6
+         position 5 2
+         size 32 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "Vigrid-BattleRoyale/GUI/textures/hud/br_zone_radius_ca.paa"
+         mode blend
+         "src alpha" 1
+         "no wrap" 1
+         stretch 1
+        }
+        ImageWidgetClass ZoneRadiusIcon {
+         ignorepointer 1
+         position 7 0
+         size 32 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "Vigrid-BattleRoyale/GUI/textures/hud/br_zone_radius_ca.paa"
+         mode blend
+         "src alpha" 1
+         "no wrap" 1
+         stretch 1
+        }
+        TextWidgetClass RadiusTextShadow {
+         ignorepointer 1
+         color 0 0 0 0.6
+         position 47 2
+         size 150 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+        TextWidgetClass RadiusText {
+         ignorepointer 1
+         position 49 0
+         size 150 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         style Bold
+         font "gui/fonts/etelkatextpro"
+         "exact text" 0
+         "text halign" right
+         "text valign" center
+        }
+       }
+      }
+      PanelWidgetClass SilentModePanel {
+       visible 0
+       ignorepointer 1
+       clipchildren 0
+       position 0 160
+       size 212 32
+       halign right_ref
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       {
+        ImageWidgetClass SilentModeIconShadow {
+         ignorepointer 1
+         color 0 0 0 0.6
+         position 5 2
+         size 32 32
+         halign right_ref
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+         image0 "Vigrid-BattleRoyale/GUI/textures/hud/br_silent_mode_ca.paa"
+         mode blend
+         "src alpha" 1
+         "no wrap" 1
+         stretch 1
+        }
         ImageWidgetClass SilentModeIcon {
          ignorepointer 1
          position 7 0
@@ -886,7 +1114,7 @@ FrameWidgetClass BattleRoyaleHudFrame {
     PanelWidgetClass MiniMapPanel {
      ignorepointer 1
      clipchildren 1
-     position 0 160
+     position 0 200
      size 200 200
      halign right_ref
      hexactpos 1

@@ -1,9 +1,9 @@
 """Generate the HUD icon of silent mode: a speaker crossed out (an original texture, drawn here, no third-party art).
 
-Same look as the zone arrow (tools/gen_zone_arrow.py): white fill with a dark outline, so it reads on bright and dark
-ground. A speaker (body and cone) with a slash across the whole icon, the slash drawn over the speaker with its own dark
-edge. Rendered at 128x128 with 4x4 supersampling into a 32-bit TGA, then converted with DayZ Tools' ImageToPAA; the _ca
-suffix makes ImageToPAA keep the full alpha channel.
+White fill with a dark outline, so it reads on bright and dark ground. A speaker (body and cone) with a slash across
+the whole icon, the slash drawn over the speaker with its own dark edge. Rendered at 128x128 with 4x4 supersampling
+into a 32-bit TGA, then converted with DayZ Tools' ImageToPAA; the _ca suffix makes ImageToPAA keep the full alpha
+channel.
 
 Usage: python -I tools/gen_silent_icon.py <output_ca.paa>
 """
@@ -22,8 +22,11 @@ FILL = (255, 255, 255, 255)
 BORDER = (20, 20, 20, 235)
 IMAGE_TO_PAA = "C:/Program Files (x86)/Steam/steamapps/common/DayZ Tools/Bin/ImageToPAA/ImageToPAA.exe"
 
-SPEAKER = (            # body then cone, clockwise from the top left of the body
-    (22.0, 48.0), (44.0, 48.0), (76.0, 22.0), (76.0, 106.0), (44.0, 80.0), (22.0, 80.0),
+SPEAKER_SCALE = 1.25   # speaker drawn bigger than its base shape, about the shape's centre; the slash keeps its size
+SPEAKER_CENTRE = (49.0, 64.0)
+SPEAKER = tuple(       # body then cone, clockwise from the top left of the body
+    (SPEAKER_CENTRE[0] + (x - SPEAKER_CENTRE[0]) * SPEAKER_SCALE, SPEAKER_CENTRE[1] + (y - SPEAKER_CENTRE[1]) * SPEAKER_SCALE)
+    for x, y in ((22.0, 48.0), (44.0, 48.0), (76.0, 22.0), (76.0, 106.0), (44.0, 80.0), (22.0, 80.0))
 )
 SLASH = ((18.0, 16.0), (110.0, 112.0))
 

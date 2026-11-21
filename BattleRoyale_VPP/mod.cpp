@@ -6,4 +6,4 @@ logoOver = "Vigrid-BattleRoyale/GUI/textures/Mod_Logo.paa";		// on mouse hover o
 tooltip = "DayZ Battle Royale menu for VPPAdminTools";			// tooltip on mouse hover
 overview = "Battle Royale menu in the VPPAdminTools toolbar";	// overview
 author = "Myst, KeganH, DayZ BR community, check credits";		// author
-version = "1.1.0";												// version
+version = "1.2.0";												// version
