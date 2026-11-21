@@ -356,6 +356,19 @@ modded class MissionGameplay
 		super.ShowInventory();
 	}
 
+	//! ESC with the leaderboard on screen closes the leaderboard instead of opening the pause menu.
+	//! A queued dialog still pauses: it needs the pause menu behind it.
+	override void Pause()
+	{
+		if (m_BattleRoyaleLeaderboard && m_BattleRoyaleLeaderboard.IsOpen() && !IsPaused() && !m_UIManager.GetMenu() && !g_Game.GetUIManager().IsDialogQueued())
+		{
+			m_BattleRoyaleLeaderboard.Close();
+			return;
+		}
+
+		super.Pause();
+	}
+
 
 	override void OnUpdate( float timeslice )
 	{
