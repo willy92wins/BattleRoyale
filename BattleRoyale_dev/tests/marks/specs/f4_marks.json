@@ -1,0 +1,13 @@
+{
+  "marks": [
+    {"name": "plane_end", "contains": "[BRV2] plane_end"},
+    {
+      "name": "zone_reveal",
+      "contains": "[BRV2] zone_reveal",
+      "after": "plane_end",
+      "delay_seconds": 60,
+      "tolerance_seconds": 1
+    },
+    {"name": "first_lock", "contains": "[BRV2] first_lock"}
+  ]
+}
