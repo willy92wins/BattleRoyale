@@ -258,16 +258,24 @@ modded class MissionGameplay
 		m_BattleRoyaleHud.ShowZoneDamage( taking_damage );
 	}
 
-	//! state is one of BattleRoyaleHud.AIRDROP_STATE_*; hidden while menus or hide-HUD flags hide the vanilla HUD
+	//! state is one of BattleRoyaleHud.AIRDROP_STATE_*; hidden while menus, map or hide-HUD flags hide the vanilla HUD
 	void UpdateAirdropState(int state)
 	{
 		if (!m_BattleRoyaleHud)
 			return;
 
-		if (state != BattleRoyaleHud.AIRDROP_STATE_NONE && !BattleRoyaleCompass.IsHudShown(m_Hud))
+		if (state != BattleRoyaleHud.AIRDROP_STATE_NONE && (!BattleRoyaleCompass.IsHudShown(m_Hud) || (m_UIManager && m_UIManager.GetMenu())))
 			state = BattleRoyaleHud.AIRDROP_STATE_NONE;
 
 		m_BattleRoyaleHud.SetAirdropState( state );
+	}
+
+	void UpdateAirdropOverSea(bool over_sea)
+	{
+		if (!m_BattleRoyaleHud)
+			return;
+
+		m_BattleRoyaleHud.SetAirdropOverSea( over_sea );
 	}
 
 	void UpdateKillFeed()

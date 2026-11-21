@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.0.1 (2026-11-23)
+
+### Changed
+- Plane deployment shows the first zone circle on the full map, minimap and world boundary from takeoff, so players can choose where to drop during the flight. Inside/outside zone notices and the first-zone closing countdown still start at the configured post-flight reveal delay (`first_zone_reveal_delay_seconds`).
+- Manual jumping from the drop plane is refused while the aircraft is over the sea; automatic end-of-path ejection and admin **Next** remain unaffected.
+- Added a large, centered in-plane jump prompt below the middle of the screen showing the player's bound jump key (or a wait notice while flying over the sea), hidden automatically after jumping, while menus or the map are open, and when the flight ends.
+- Drop-plane parachute speed and acceleration are now enforced directly by BattleRoyale from `general_settings.json` instead of relying on an external Admiral's Parachute JSON file.
+
+### Fixed
+- Translated the in-plane jump prompt (`STR_BR_AIRDROP_HINT_JUMP`) across supported languages and added the over-sea wait string (`STR_BR_AIRDROP_HINT_OVER_SEA`).
+- Prevented slow default Admiral's Parachute descent speeds when a server does not ship or update `$profile:ADMParachute\ParachuteJSON.json`.
+
+### Notes
+- **New keys in `general_settings.json` (version 4):** existing version 1, 2 and 3 files upgrade automatically to version 4 on server start with the defaults below (all range-validated on load; mission overrides continue to apply; set any multiplier to `0` to leave Admiral's `ParachuteJSON.json` value untouched):
+  - `parachute_fall_speed_multiplier` (`16`, valid `0` or `1..60`);
+  - `parachute_forward_speed_multiplier` (`8`, valid `0` or `1..40`);
+  - `parachute_accel_multiplier` (`4`, valid `0` or `1..20`).
+- `BattleRoyale_server/ADMParachute/ParachuteJSON.json` is still shipped in the server package because Admiral's Parachute still reads damage settings (`ParachuteDamage`, `LandingSpeedDamage`) from it.
+- No new RPCs or breaking changes to existing RPCs.
+
 ## 2.0.0 (2026-11-23)
 
 ### Added

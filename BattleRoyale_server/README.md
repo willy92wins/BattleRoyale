@@ -316,13 +316,18 @@ scored into it.
 
 ### Admiral's Parachute configuration
 
+Since 2.0.1, BattleRoyale sets the drop-plane parachute speed and acceleration directly from
+`general_settings.json` (`parachute_fall_speed_multiplier`, `parachute_forward_speed_multiplier`,
+`parachute_accel_multiplier`; set any key to `0` to fall back to Admiral's JSON). Admiral's
+`ParachuteJSON.json` therefore no longer decides the drop-plane parachute speed, though it still
+controls damage settings (`ParachuteDamage`, `LandingSpeedDamage`) and remains shipped in this
+package.
+
 BattleRoyale never writes or modifies Admiral's Parachute config file. Before starting the server with
 plane deployment enabled (`enable_plane_deployment: 1` in `general_settings.json`), copy
 `ADMParachute\ParachuteJSON.json` from this package into `<profiles>\ADMParachute\ParachuteJSON.json`
-(`$profile:ADMParachute\ParachuteJSON.json`). It configures `ADM_ParachuteBag_Fabric` with the
-measured BattleRoyale descent speeds (`TopSpeedMultiplierY: 12`, `TopSpeedMultiplierZ: 8`,
-`AccelMultiplierY/Z: 4`, `ParachuteDamage: 2`, `LandingSpeedDamage: 1`). Without it, Admiral's
-writes its own slow defaults on first start.
+(`$profile:ADMParachute\ParachuteJSON.json`) so Admiral's uses the intended damage settings
+(`ParachuteDamage: 2`, `LandingSpeedDamage: 1`).
 
 On the first start the mod writes its settings to `<profiles>\Vigrid-BattleRoyale\`
 (`general_settings.json`, `lobby_settings.json`, `spawns_settings.json`, `zone_settings.json`,

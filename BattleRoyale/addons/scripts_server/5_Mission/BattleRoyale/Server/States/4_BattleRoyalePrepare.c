@@ -197,7 +197,14 @@ class BattleRoyalePrepare: BattleRoyaleState
             existing = process_player.GetInventory().CreateAttachment(BattleRoyalePlaneFlight.PARACHUTE_BAG_CLASS);
 
         if (!existing)
+        {
             BattleRoyaleUtils.Warn("[Plane] Failed to equip " + BattleRoyalePlaneFlight.PARACHUTE_BAG_CLASS + " for " + process_player.BR_GetPlayerName());
+            return;
+        }
+
+        ADM_ParachuteBag_Base bag = ADM_ParachuteBag_Base.Cast(existing);
+        if (bag)
+            BattleRoyalePlaneFlight.ApplyParachuteTuning(bag, m_GameSettings);
     }
 
     protected void SpawnOverflowStartItem(PlayerBase process_player, string itemType, int itemIndex, array<int> shortcuts)
