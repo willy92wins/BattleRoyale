@@ -21,6 +21,7 @@ class BattleRoyaleClient: BattleRoyaleBase
 
     protected ref BattleRoyaleZoneWall m_ZoneWall;  //!< red, on the zone in force
     protected ref BattleRoyaleZoneWall m_OpenZoneWall;  //!< yellow, on the announced zone until it locks
+    protected ref BattleRoyalePlaneClient m_PlaneClient;
 
     //! Outside zone effect last queued: -1 unknown, 0 removed, 1 added; reset when the local player entity changes
     protected int i_OutsideZoneEffectState;
@@ -37,6 +38,7 @@ class BattleRoyaleClient: BattleRoyaleBase
         i_OutsideZoneEffectState = -1;
         m_ZoneWall = new BattleRoyaleZoneWall( BattleRoyaleZoneWall.MODEL_LOCKED );
         m_OpenZoneWall = new BattleRoyaleZoneWall( BattleRoyaleZoneWall.MODEL_OPEN );
+        m_PlaneClient = new BattleRoyalePlaneClient();
 
         Init();
     }
@@ -44,6 +46,9 @@ class BattleRoyaleClient: BattleRoyaleBase
     void ~BattleRoyaleClient()
     {
     	BattleRoyaleUtils.Trace("BattleRoyaleClient::~BattleRoyaleClient");
+
+		if ( m_PlaneClient )
+			m_PlaneClient.Cleanup();
 
 		if ( GetGame() )
 			GetGame().GetCallQueue(CALL_CATEGORY_GUI).RemoveByName( this, "OnSecond" );
@@ -59,6 +64,8 @@ class BattleRoyaleClient: BattleRoyaleBase
 		br_rpc.Reset();
 		// The serial outlives the client: only the countdowns received from now on are new
 		br_previous_countdown_serial = br_rpc.countdown_serial;
+		if ( m_PlaneClient )
+			m_PlaneClient.SyncSerialFromRPC( br_rpc );
 
 		BattleRoyaleUtils.Trace("BattleRoyaleClient::Init - Done");
     }
@@ -256,12 +263,17 @@ class BattleRoyaleClient: BattleRoyaleBase
 		// The compass hides itself without a living local player
 		gameplay.UpdateCompass();
 
+		// Drop plane interpolation, camera toggle and jump/chute inputs
+		if ( m_PlaneClient )
+			m_PlaneClient.Update( delta, br_rpc );
+
 		// Everything below needs the local player. Without one there is no distance to show, and hiding it also
 		// turns the phase text back to white
 		PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
 		if ( !player )
 		{
 			gameplay.HideDistance();
+			gameplay.UpdateAirdropState( BattleRoyaleHud.AIRDROP_STATE_NONE );
 			return;
 		}
 
@@ -298,6 +310,40 @@ class BattleRoyaleClient: BattleRoyaleBase
 		player.position_top = br_rpc.top_position;
 
 		UpdateZoneHud( gameplay, player, br_rpc );
+		UpdateAirdropHud( gameplay, player, br_rpc );
+    }
+
+    //! Airdrop status (in plane / freefall / parachute) and in-plane keybind help during EBRMatchPhase.AIRDROP;
+    //! hidden whenever plane deployment is off, outside AIRDROP, or once the player has landed
+    protected void UpdateAirdropHud(MissionGameplay gameplay, PlayerBase player, BattleRoyaleRPC br_rpc)
+    {
+		int state = BattleRoyaleHud.AIRDROP_STATE_NONE;
+		if ( br_rpc && br_rpc.match_phase == EBRMatchPhase.AIRDROP && !br_rpc.waiting && !BattleRoyaleRPC.s_Spectating && player && player.IsAlive() )
+		{
+			bool in_plane = false;
+			if ( m_PlaneClient )
+				in_plane = m_PlaneClient.IsPlayerInPlane( player );
+			else
+				in_plane = BattleRoyalePlaneState.IsActive() || player.BR_IsPlaneInRide();
+
+			if ( player.BR_IsPlaneDeploymentActive() || in_plane )
+			{
+				if ( in_plane )
+				{
+					state = BattleRoyaleHud.AIRDROP_STATE_IN_PLANE;
+				}
+				else if ( player.IsParachuteOpen() )
+				{
+					state = BattleRoyaleHud.AIRDROP_STATE_PARACHUTE;
+				}
+				else if ( player.BR_InAir() || ( m_PlaneClient && m_PlaneClient.IsRecentlyJumped() && player.BR_AGL() > 5.0 ) )
+				{
+					state = BattleRoyaleHud.AIRDROP_STATE_FREEFALL;
+				}
+			}
+		}
+
+		gameplay.UpdateAirdropState( state );
     }
 
     //! Distance to the zone, outside zone visual effect and zone damage indicator
@@ -469,6 +515,11 @@ class BattleRoyaleClient: BattleRoyaleBase
 
 			case EBRMatchPhase.PREPARE:
 				label = BattleRoyaleHud.PHASE_LABEL_PREPARING;
+				seconds = phase_seconds;
+				break;
+
+			case EBRMatchPhase.AIRDROP:
+				label = BattleRoyaleHud.PHASE_LABEL_AIRDROP;
 				seconds = phase_seconds;
 				break;
 

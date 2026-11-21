@@ -79,6 +79,7 @@ modded class MissionGameplay
 		BattleRoyaleRPC.s_WaitingRoom = false;
 		// A direct reconnect skips the main menu, which is the other place that clears the spectator statics
 		BattleRoyaleRPC.ResetSpectating();
+		BattleRoyalePlaneState.StopAll();
 
 		super.OnMissionFinish();
 	}
@@ -116,6 +117,7 @@ modded class MissionGameplay
 		DayZPlayerImplement.BR_OnSessionChanged();
 #endif
 		BattleRoyaleRPC.ResetSpectating();
+		BattleRoyalePlaneState.StopAll();
 		BattleRoyaleRPC.RestoreAfterDeath();
 		// Back in the lobby the voice goes back to whisper; SetMaxVolume also lowers a shout still active
 		VONManager.GetInstance().SetMaxVolume( VoiceLevelWhisper );
@@ -256,6 +258,18 @@ modded class MissionGameplay
 		m_BattleRoyaleHud.ShowZoneDamage( taking_damage );
 	}
 
+	//! state is one of BattleRoyaleHud.AIRDROP_STATE_*; hidden while menus or hide-HUD flags hide the vanilla HUD
+	void UpdateAirdropState(int state)
+	{
+		if (!m_BattleRoyaleHud)
+			return;
+
+		if (state != BattleRoyaleHud.AIRDROP_STATE_NONE && !BattleRoyaleCompass.IsHudShown(m_Hud))
+			state = BattleRoyaleHud.AIRDROP_STATE_NONE;
+
+		m_BattleRoyaleHud.SetAirdropState( state );
+	}
+
 	void UpdateKillFeed()
 	{
 		if (!m_BattleRoyaleKillFeed)
@@ -340,6 +354,19 @@ modded class MissionGameplay
 			return;
 
 		super.ShowInventory();
+	}
+
+	//! ESC with the leaderboard on screen closes the leaderboard instead of opening the pause menu.
+	//! A queued dialog still pauses: it needs the pause menu behind it.
+	override void Pause()
+	{
+		if (m_BattleRoyaleLeaderboard && m_BattleRoyaleLeaderboard.IsOpen() && !IsPaused() && !m_UIManager.GetMenu() && !g_Game.GetUIManager().IsDialogQueued())
+		{
+			m_BattleRoyaleLeaderboard.Close();
+			return;
+		}
+
+		super.Pause();
 	}
 
 

@@ -82,6 +82,101 @@ class BattleRoyaleMapCanvas
 		return drawn;
 	}
 
+	//! Draws a dashed world-space flight line from start_pos to end_pos on a canvas covering the map widget.
+	//! Clips to [0, clip_w] x [0, clip_h] when both are positive; dashes stay anchored to start_pos so scrolling
+	//! the map or minimap does not make them swim. Returns true when any segment was drawn.
+	static bool DrawWorldFlightLine(CanvasWidget canvas, MapWidget world_map, vector start_pos, vector end_pos, int line_color = 0xE6FFFFFF, int border_color = 0x90000000, float width = 2.0, float dash_px = 14.0, float gap_px = 9.0, float clip_w = 0, float clip_h = 0)
+	{
+		if (!canvas || !world_map)
+			return false;
+
+		float screen_x, screen_y;
+		world_map.GetScreenPos(screen_x, screen_y);
+
+		vector screen_start = world_map.MapToScreen(Vector(start_pos[0], 0, start_pos[2]));
+		vector screen_end = world_map.MapToScreen(Vector(end_pos[0], 0, end_pos[2]));
+
+		float ox1 = screen_start[0] - screen_x;
+		float oy1 = screen_start[1] - screen_y;
+		float ox2 = screen_end[0] - screen_x;
+		float oy2 = screen_end[1] - screen_y;
+
+		float orig_dx = ox2 - ox1;
+		float orig_dy = oy2 - oy1;
+		float orig_len = Math.Sqrt(orig_dx * orig_dx + orig_dy * orig_dy);
+		if (orig_len < 0.5)
+			return false;
+
+		float ux = orig_dx / orig_len;
+		float uy = orig_dy / orig_len;
+
+		float x1 = ox1;
+		float y1 = oy1;
+		float x2 = ox2;
+		float y2 = oy2;
+
+		bool clip = clip_w > 0 && clip_h > 0;
+		if (clip && !ClipSegment(x1, y1, x2, y2, clip_w, clip_h))
+			return false;
+
+		float seg_dx = x2 - x1;
+		float seg_dy = y2 - y1;
+		float seg_len = Math.Sqrt(seg_dx * seg_dx + seg_dy * seg_dy);
+		if (seg_len < 0.5)
+			return false;
+
+		float period = dash_px + gap_px;
+		if (period <= 0.5 || dash_px <= 0.5)
+		{
+			if (border_color != 0)
+				canvas.DrawLine(x1, y1, x2, y2, width + 2.0, border_color);
+			canvas.DrawLine(x1, y1, x2, y2, width, line_color);
+			return true;
+		}
+
+		// Project the clipped interval onto the unclipped line so dash phase stays anchored in world space
+		float dist_a = (x1 - ox1) * ux + (y1 - oy1) * uy;
+		float dist_b = (x2 - ox1) * ux + (y2 - oy1) * uy;
+		if (dist_b < dist_a)
+		{
+			float tmp = dist_a;
+			dist_a = dist_b;
+			dist_b = tmp;
+		}
+
+		float d = Math.Floor(dist_a / period) * period;
+		float border_w = width + 2.0;
+		int max_dashes = 256;
+		int count = 0;
+
+		while (d < dist_b && count < max_dashes)
+		{
+			float a = d;
+			if (a < dist_a)
+				a = dist_a;
+			float b = d + dash_px;
+			if (b > dist_b)
+				b = dist_b;
+
+			if (b - a > 0.5)
+			{
+				float sx1 = ox1 + ux * a;
+				float sy1 = oy1 + uy * a;
+				float sx2 = ox1 + ux * b;
+				float sy2 = oy1 + uy * b;
+
+				if (border_color != 0)
+					canvas.DrawLine(sx1, sy1, sx2, sy2, border_w, border_color);
+				canvas.DrawLine(sx1, sy1, sx2, sy2, width, line_color);
+			}
+
+			d += period;
+			count++;
+		}
+
+		return true;
+	}
+
 	//! Cohen-Sutherland clip of a segment against [0, xmax] x [0, ymax]; false when nothing of it is left
 	static bool ClipSegment(inout float x1, inout float y1, inout float x2, inout float y2, float xmax, float ymax)
 	{

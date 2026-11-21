@@ -7,6 +7,8 @@ and scripts. No binaries: the mods come from the Steam Workshop and from the Bat
 
 ```
 BattleRoyale_server\
+  ADMParachute\
+    ParachuteJSON.json                          measured Admiral's Parachute tuning for ADM_ParachuteBag_Fabric
   serverDZ.cfg.example                          stock serverDZ.cfg + maxPlayers 100 + enableCfgGameplayFile 1
   mpmissions\dayzOffline.chernarusplus\
     cfggameplay.json                            vanilla file, weapon obstruction mode 2 (see below)
@@ -52,23 +54,24 @@ Online Tools (COT), VPPAdminTools or none.
 | # | Folder | Steam Workshop id | Key in its `keys` folder | Load it |
 |---|---|---|---|---|
 | 1 | `@CF` | 1559212036 | `Jacob_Mango_V3.bikey` | always |
-| 2 | `@Community-Online-Tools` | 1564026768 | `Jacob_Mango_V3.bikey` | optional, admin tool |
-| 3 | `@VPPAdminTools` | 1828439124 | `VPP.bikey` | optional, admin tool |
-| 4 | `@BattleRoyale` | 3834219016 | the key shipped in `@BattleRoyale\keys` | always |
-| 5 | `@BattleRoyale-VPP` | 3834226297 | the same key as `@BattleRoyale` | only with `@VPPAdminTools` |
+| 2 | `@AdmiralsParachuteMod` | 2912241382 | `ADM.bikey` | always (BattleRoyale does not load without it, even with plane deployment off) |
+| 3 | `@Community-Online-Tools` | 1564026768 | `Jacob_Mango_V3.bikey` | optional, admin tool |
+| 4 | `@VPPAdminTools` | 1828439124 | `VPP.bikey` | optional, admin tool |
+| 5 | `@BattleRoyale` | 3834219016 | the key shipped in `@BattleRoyale\keys` | always |
+| 6 | `@BattleRoyale-VPP` | 3834226297 | the same key as `@BattleRoyale` | only with `@VPPAdminTools` |
 
 DayZ Expansion is not needed: the map opens with the map key without a map item and shows the zones.
 
 Without an admin tool:
 
 ```
--mod=@CF;@BattleRoyale
+-mod=@CF;@AdmiralsParachuteMod;@BattleRoyale
 ```
 
 With COT, nothing else is needed:
 
 ```
--mod=@CF;@Community-Online-Tools;@BattleRoyale
+-mod=@CF;@AdmiralsParachuteMod;@Community-Online-Tools;@BattleRoyale
 ```
 
 With VPPAdminTools, `@VPPAdminTools` goes before `@BattleRoyale` (VPP sets its `VPPADMINTOOLS` define
@@ -76,7 +79,7 @@ in a script, which only reaches the mods compiled after it; without it the Battl
 are not registered and every VPP admin action is denied), and `@BattleRoyale-VPP` goes after both:
 
 ```
--mod=@CF;@VPPAdminTools;@BattleRoyale;@BattleRoyale-VPP
+-mod=@CF;@AdmiralsParachuteMod;@VPPAdminTools;@BattleRoyale;@BattleRoyale-VPP
 ```
 
 `@BattleRoyale` holds both the client and the server script PBOs, so nothing is needed in
@@ -310,6 +313,16 @@ back before it is emptied; if that fails, the old board is kept and the match th
 scored into it.
 
 ## 6. BattleRoyale settings
+
+### Admiral's Parachute configuration
+
+BattleRoyale never writes or modifies Admiral's Parachute config file. Before starting the server with
+plane deployment enabled (`enable_plane_deployment: 1` in `general_settings.json`), copy
+`ADMParachute\ParachuteJSON.json` from this package into `<profiles>\ADMParachute\ParachuteJSON.json`
+(`$profile:ADMParachute\ParachuteJSON.json`). It configures `ADM_ParachuteBag_Fabric` with the
+measured BattleRoyale descent speeds (`TopSpeedMultiplierY: 12`, `TopSpeedMultiplierZ: 8`,
+`AccelMultiplierY/Z: 4`, `ParachuteDamage: 2`, `LandingSpeedDamage: 1`). Without it, Admiral's
+writes its own slow defaults on first start.
 
 On the first start the mod writes its settings to `<profiles>\Vigrid-BattleRoyale\`
 (`general_settings.json`, `lobby_settings.json`, `spawns_settings.json`, `zone_settings.json`,

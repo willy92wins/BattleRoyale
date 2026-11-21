@@ -16,6 +16,16 @@ class BattleRoyaleHud
     static const int PHASE_LABEL_MATCH_OVER = 11;
     static const int PHASE_LABEL_RESTARTING = 12;
     static const int PHASE_LABEL_STARTING = 13;
+    static const int PHASE_LABEL_AIRDROP = 14;
+
+    //! Player states for SetAirdropState during EBRMatchPhase.AIRDROP
+    static const int AIRDROP_STATE_NONE = 0;
+    static const int AIRDROP_STATE_IN_PLANE = 1;
+    static const int AIRDROP_STATE_FREEFALL = 2;
+    static const int AIRDROP_STATE_PARACHUTE = 3;
+
+    protected static const string AIRDROP_JUMP_INPUT = "UADayZBRJump";
+    protected static const string AIRDROP_VIEW_INPUT = "UAPersonView";
 
     //! Color states of the distance widgets and the phase text
     protected static const int DISTANCE_INSIDE = 0;
@@ -37,6 +47,7 @@ class BattleRoyaleHud
     protected Widget m_KillCountPanel;
     protected Widget m_PhasePanel;
     protected Widget m_ZoneDamagePanel;
+    protected Widget m_AirdropPanel;
     protected Widget m_SilentModePanel;
 
     protected TextWidget m_PlayerTextWidget;
@@ -52,6 +63,8 @@ class BattleRoyaleHud
     protected TextWidget m_KillTextShadow;
     protected TextWidget m_PhaseTextWidget;
     protected TextWidget m_ZoneDamageTextWidget;
+    protected TextWidget m_AirdropStatusText;
+    protected TextWidget m_AirdropHintText;
 
     protected ImageWidget m_DistanceZoneArrow;
     protected ImageWidget m_DistanceZoneArrowShadow;
@@ -69,6 +82,7 @@ class BattleRoyaleHud
     protected int m_LastPhaseLabel;
     protected int m_LastPhaseSeconds;
     protected bool m_LastPhaseFrozen;
+    protected int m_LastAirdropState;
 
     void BattleRoyaleHud( Widget root )
     {
@@ -87,6 +101,7 @@ class BattleRoyaleHud
         m_KillCountPanel = Widget.Cast( m_Root.FindAnyWidget( "KillCountPanel" ) );
         m_PhasePanel = Widget.Cast( m_Root.FindAnyWidget( "PhasePanel" ) );
         m_ZoneDamagePanel = Widget.Cast( m_Root.FindAnyWidget( "ZoneDamagePanel" ) );
+        m_AirdropPanel = m_Root.FindAnyWidget( "AirdropPanel" );
         m_SilentModePanel = m_Root.FindAnyWidget( "SilentModePanel" );
 
         m_PlayerTextWidget = TextWidget.Cast( m_PlayerCountPanel.FindAnyWidget( "PlayerText" ) );
@@ -101,6 +116,8 @@ class BattleRoyaleHud
         m_KillTextShadow = TextWidget.Cast( m_KillCountPanel.FindAnyWidget( "KillCountTextShadow" ) );
         m_PhaseTextWidget = TextWidget.Cast( m_Root.FindAnyWidget( "PhaseText" ) );
         m_ZoneDamageTextWidget = TextWidget.Cast( m_Root.FindAnyWidget( "ZoneDamageText" ) );
+        m_AirdropStatusText = TextWidget.Cast( m_Root.FindAnyWidget( "AirdropStatusText" ) );
+        m_AirdropHintText = TextWidget.Cast( m_Root.FindAnyWidget( "AirdropHintText" ) );
 
         m_DistanceZoneArrow = ImageWidget.Cast( m_Root.FindAnyWidget( "ZoneIcon" ) );
         m_DistanceZoneArrowShadow = ImageWidget.Cast( m_Root.FindAnyWidget( "ZoneIconShadow" ) );
@@ -112,6 +129,8 @@ class BattleRoyaleHud
         m_KillCountPanel.Show( false );
         SetVisible( m_PhasePanel, false );
         SetVisible( m_ZoneDamagePanel, false );
+        SetVisible( m_AirdropPanel, false );
+        SetVisible( m_AirdropHintText, false );
         SetVisible( m_SilentModePanel, false );
 
         m_DistanceColorState = -1;
@@ -122,6 +141,7 @@ class BattleRoyaleHud
         m_LastPhaseLabel = PHASE_LABEL_NONE;
         m_LastPhaseSeconds = -1;
         m_LastPhaseFrozen = false;
+        m_LastAirdropState = AIRDROP_STATE_NONE;
     }
 
     bool Shown()
@@ -175,23 +195,27 @@ class BattleRoyaleHud
         }
     }
 
-    //! Right edge, in screen pixels, of the centred lines at the top (phase, zone damage) as drawn now; -1 when
-    //! neither shows. Kill feed rows stay right of it
+    //! Right edge, in screen pixels, of the centred lines at the top (phase, zone damage, airdrop) as drawn now;
+    //! -1 when none shows. Kill feed rows stay right of it
     float GetCentreLinesRight()
     {
         float right = -1;
         right = RightOfCentredText( m_PhasePanel, m_PhaseTextWidget, right );
         right = RightOfCentredText( m_ZoneDamagePanel, m_ZoneDamageTextWidget, right );
+        right = RightOfCentredText( m_AirdropStatusText, m_AirdropStatusText, right );
+        right = RightOfCentredText( m_AirdropHintText, m_AirdropHintText, right );
         return right;
     }
 
-    //! Left edge, in screen pixels, of the centred lines at the top (phase, zone damage) as drawn now; -1 when
-    //! neither shows. The notifications at the top left wrap short of it
+    //! Left edge, in screen pixels, of the centred lines at the top (phase, zone damage, airdrop) as drawn now;
+    //! -1 when none shows. The notifications at the top left wrap short of it
     float GetCentreLinesLeft()
     {
         float left = -1;
         left = LeftOfCentredText( m_PhasePanel, m_PhaseTextWidget, left );
         left = LeftOfCentredText( m_ZoneDamagePanel, m_ZoneDamageTextWidget, left );
+        left = LeftOfCentredText( m_AirdropStatusText, m_AirdropStatusText, left );
+        left = LeftOfCentredText( m_AirdropHintText, m_AirdropHintText, left );
         return left;
     }
 
@@ -533,9 +557,102 @@ class BattleRoyaleHud
                 return "#STR_BR_PHASE_RESTARTING";
             case PHASE_LABEL_STARTING:
                 return "#STR_BR_PHASE_STARTING";
+            case PHASE_LABEL_AIRDROP:
+                return "#STR_BR_PHASE_AIRDROP";
         }
 
         return "";
+    }
+
+    //! Shows the player's airdrop state (in plane / freefall / parachute) and, while aboard the plane,
+    //! the bound jump and camera keys. Only updates widgets when the state changes.
+    void SetAirdropState( int state )
+    {
+        if ( state == m_LastAirdropState )
+            return;
+
+        m_LastAirdropState = state;
+
+        string key = GetAirdropStateKey( state );
+        if ( key == "" || !m_AirdropPanel || !m_AirdropStatusText )
+        {
+            SetVisible( m_AirdropPanel, false );
+            SetVisible( m_AirdropHintText, false );
+            return;
+        }
+
+        string status_text = Widget.TranslateString( key );
+        m_AirdropStatusText.SetText( status_text );
+        SetVisible( m_AirdropPanel, true );
+
+        if ( state == AIRDROP_STATE_IN_PLANE && m_AirdropHintText )
+        {
+            string hint_text = FormatAirdropPlaneHint();
+            if ( hint_text != "" )
+            {
+                m_AirdropHintText.SetText( hint_text );
+                SetVisible( m_AirdropHintText, true );
+            }
+            else
+            {
+                SetVisible( m_AirdropHintText, false );
+            }
+        }
+        else
+        {
+            SetVisible( m_AirdropHintText, false );
+        }
+    }
+
+    protected string GetAirdropStateKey( int state )
+    {
+        switch ( state )
+        {
+            case AIRDROP_STATE_IN_PLANE:
+                return "#STR_BR_AIRDROP_IN_PLANE";
+            case AIRDROP_STATE_FREEFALL:
+                return "#STR_BR_AIRDROP_FREEFALL";
+            case AIRDROP_STATE_PARACHUTE:
+                return "#STR_BR_AIRDROP_PARACHUTE";
+        }
+
+        return "";
+    }
+
+    protected string GetInputButtonName( string input_name )
+    {
+        UAInputAPI uapi = GetUApi();
+        if ( !uapi || !uapi.GetInputByName( input_name ) )
+            return "";
+
+        return InputUtils.GetButtonNameFromInput( input_name, EInputDeviceType.MOUSE_AND_KEYBOARD );
+    }
+
+    //! Formats the in-plane keybind help using the player's current bindings, keeping one TranslateString per statement
+    protected string FormatAirdropPlaneHint()
+    {
+        string jump_key = GetInputButtonName( AIRDROP_JUMP_INPUT );
+        string view_key = GetInputButtonName( AIRDROP_VIEW_INPUT );
+
+        string jump_part = "";
+        if ( jump_key != "" )
+        {
+            string jump_fmt = Widget.TranslateString( "#STR_BR_AIRDROP_HINT_JUMP" );
+            jump_part = string.Format( jump_fmt, jump_key );
+        }
+
+        string view_part = "";
+        if ( view_key != "" )
+        {
+            string view_fmt = Widget.TranslateString( "#STR_BR_AIRDROP_HINT_VIEW" );
+            view_part = string.Format( view_fmt, view_key );
+        }
+
+        if ( jump_part != "" && view_part != "" )
+            return jump_part + " - " + view_part;
+        if ( jump_part != "" )
+            return jump_part;
+        return view_part;
     }
 
     //! Formats a number of seconds as mm:ss

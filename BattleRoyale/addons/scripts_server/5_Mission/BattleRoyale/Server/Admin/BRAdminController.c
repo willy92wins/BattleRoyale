@@ -64,7 +64,8 @@ class BRAdminController
 		if (current.IsFrozen())
 			current.Unfreeze(true, true);
 
-		current.Deactivate();
+		if (!current.HandleAdminNext())
+			current.Deactivate();
 		server.MarkAdminStatusDirty();
 		return true;
 	}

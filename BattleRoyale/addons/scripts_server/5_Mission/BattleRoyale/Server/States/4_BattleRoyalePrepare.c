@@ -7,6 +7,7 @@ class BattleRoyalePrepare: BattleRoyaleState
     protected ref array<string> a_StartingItems;
     protected ref array<string> a_AvoidCitySpawn;
     protected bool b_EnableSpawnSelectionMenu;
+    protected bool b_EnablePlaneDeployment;
 
 	private BattleRoyaleConfig m_Config;
     private BattleRoyaleGameData m_GameSettings;
@@ -43,6 +44,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 		a_StartingItems = m_GameSettings.player_starting_items;
 		a_AvoidCitySpawn = m_SpawnsSettings.avoid_city_spawn;
 		b_EnableSpawnSelectionMenu = m_GameSettings.enable_spawn_selection_menu;
+		b_EnablePlaneDeployment = m_GameSettings.enable_plane_deployment;
 
         a_PlayerList = new array<PlayerBase>();
         m_SafeVillagePoints = new map<string, ref array<vector>>();
@@ -84,7 +86,7 @@ class BattleRoyalePrepare: BattleRoyaleState
         GetGame().GetWorld().SetDate(year, month, day, Math.RandomIntInclusive(6, 12), 0);
 
 		// Resend hide Spawn Selection UI RPC in case some players didn't get it
-		if (b_EnableSpawnSelectionMenu)
+		if (b_EnableSpawnSelectionMenu && !b_EnablePlaneDeployment)
 		{
 			GetRPCManager().SendRPC( RPC_DAYZBR_NAMESPACE, "HideSpawnSelection", NULL, true);
 		}
@@ -178,9 +180,75 @@ class BattleRoyalePrepare: BattleRoyaleState
         return true;
     }
 
+    protected void EquipParachuteBag(PlayerBase process_player)
+    {
+        if (!process_player || !process_player.GetInventory())
+            return;
+
+        process_player.BR_SetPlaneDeploymentActive(true);
+        EntityAI existing = process_player.FindAttachmentBySlotName("Back");
+        if (existing && existing.GetType() != BattleRoyalePlaneFlight.PARACHUTE_BAG_CLASS)
+        {
+            if (GetGame())
+                GetGame().ObjectDelete(existing);
+            existing = null;
+        }
+        if (!existing)
+            existing = process_player.GetInventory().CreateAttachment(BattleRoyalePlaneFlight.PARACHUTE_BAG_CLASS);
+
+        if (!existing)
+            BattleRoyaleUtils.Warn("[Plane] Failed to equip " + BattleRoyalePlaneFlight.PARACHUTE_BAG_CLASS + " for " + process_player.BR_GetPlayerName());
+    }
+
+    protected void SpawnOverflowStartItem(PlayerBase process_player, string itemType, int itemIndex, array<int> shortcuts)
+    {
+        if (!process_player || itemType == "")
+            return;
+
+        EntityAI item = null;
+        GameInventory inv = process_player.GetInventory();
+        if (inv)
+        {
+            for (int attIdx = 0; attIdx < inv.AttachmentCount(); attIdx++)
+            {
+                EntityAI att = inv.GetAttachmentFromIndex(attIdx);
+                if (att && att.GetInventory() && att.GetInventory().GetCargo())
+                {
+                    item = att.GetInventory().CreateEntityInCargo(itemType);
+                    if (item)
+                        break;
+                }
+            }
+            if (!item)
+                item = inv.CreateInInventory(itemType);
+        }
+
+        if (item)
+        {
+            item.SetHealthMax();
+            if (shortcuts)
+            {
+                int shortcutIndex = shortcuts.Find(itemIndex);
+                if (shortcutIndex != -1)
+                    process_player.SetQuickBarEntityShortcut(item, shortcutIndex);
+            }
+            return;
+        }
+
+        if (GetGame())
+        {
+            EntityAI groundItem = EntityAI.Cast(GetGame().CreateObjectEx(itemType, process_player.GetPosition(), ECE_PLACE_ON_SURFACE));
+            if (groundItem)
+                groundItem.SetHealthMax();
+        }
+    }
+
     protected bool AddStartItems(PlayerBase process_player)
     {
         DeleteAllItems(process_player);
+
+        if (b_EnablePlaneDeployment)
+            EquipParachuteBag(process_player);
 
 		array<int> player_starting_items_shortcut = m_GameSettings.player_starting_items_shortcut;
 
@@ -208,8 +276,21 @@ class BattleRoyalePrepare: BattleRoyaleState
 							process_player.SetQuickBarEntityShortcut(new_item, shortcut_index);
 						}
 					}
+                    else if (b_EnablePlaneDeployment)
+                    {
+                        SpawnOverflowStartItem(process_player, a_StartingItems[j], j, player_starting_items_shortcut);
+                    }
                 }
                 item_spawned = true;
+            }
+        }
+
+        if (b_EnablePlaneDeployment && !item_spawned)
+        {
+            int fallbackCount = a_StartingItems.Count();
+            for (int k = 0; k < fallbackCount; k++)
+            {
+                SpawnOverflowStartItem(process_player, a_StartingItems[k], k, player_starting_items_shortcut);
             }
         }
 
@@ -834,7 +915,22 @@ class BattleRoyalePrepare: BattleRoyaleState
         BattleRoyaleServer br_instance = BattleRoyaleServer.GetInstance();
         array<ref map<string, string>> parties_list = new array<ref map<string, string>> ();
 
-		if (b_EnableSpawnSelectionMenu)
+		if (b_EnablePlaneDeployment)
+		{
+			BattleRoyaleUtils.Debug("[Plane] Plane deployment enabled: skipping ground teleport in Prepare");
+            m_PlayerBatch = 0;
+            for (i = 0; i < pCount; i++) {
+                process_player = a_PlayerList[i];
+                if (process_player && !BattleRoyalePlaneFlight.HasValidParachuteBag(process_player))
+                {
+                    BattleRoyaleUtils.Warn("[Plane] Missing parachute bag in Prepare; falling back to ground spawn for " + process_player.BR_GetPlayerName());
+                    Teleport(process_player);
+                    SleepPlayerBatch();
+                }
+            }
+            FlushPlayerBatch();
+		}
+		else if (b_EnableSpawnSelectionMenu)
 		{
 			BattleRoyaleUtils.Trace("Spawn selection menu enabled");
             m_PlayerBatch = 0;

@@ -37,7 +37,8 @@ enum EBRMatchPhase
 	ROUND,
 	LAST_ROUND,
 	FINISHED,
-	RESTARTING
+	RESTARTING,
+	AIRDROP
 }
 
 //! Cause of a death, decided by the server and sent in the low byte of the KillFeedEvent RPC

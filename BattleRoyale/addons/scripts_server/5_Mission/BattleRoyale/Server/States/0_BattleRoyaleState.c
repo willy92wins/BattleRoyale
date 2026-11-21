@@ -240,6 +240,13 @@ class BattleRoyaleState: Timeable
         return false;
     }
 
+    //! Override for states with an internal sub-phase that admin Next advances before leaving the state.
+    //! Return true when Next was handled internally without deactivating the state.
+    bool HandleAdminNext()
+    {
+        return false;
+    }
+
     protected void OnFreeze()
     {
     }

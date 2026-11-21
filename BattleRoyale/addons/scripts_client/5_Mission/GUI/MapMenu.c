@@ -7,18 +7,29 @@ modded class MapMenu
 {
 	protected const string BR_MAP_ZONES_LAYOUT = "Vigrid-BattleRoyale/GUI/layouts/map/royale_map_zones.layout";
 	protected const string BR_MAP_PLAYER_LAYOUT = "Vigrid-BattleRoyale/GUI/layouts/map/royale_map_player.layout";
+	protected const string BR_MAP_PLANE_LAYOUT = "Vigrid-BattleRoyale/GUI/layouts/map/royale_map_plane.layout";
 
 	//! Arrow height in 1/1080 of the screen height, the unit of the exact layout sizes
 	protected const float BR_PLAYER_ARROW_HEIGHT = 28;
 	protected const int BR_PLAYER_ARROW_FILL = 0xFFFFFFFF;
 	protected const int BR_PLAYER_ARROW_BORDER = 0xFF141414;
 	protected const float BR_PLAYER_ARROW_BORDER_WIDTH = 3;
+	//! Drop-plane marker and dashed flight path shown during an active flight
+	protected const float BR_PLANE_ICON_SIZE = 40.0;
+	protected const int BR_PLANE_ICON_COLOR = 0xFFFFFFFF;
+	protected const float BR_PLANE_HEADING_THRESHOLD_DEG = 0.5;
+	protected const int BR_FLIGHT_LINE_COLOR = 0xE6FFFFFF;
+	protected const int BR_FLIGHT_LINE_BORDER = 0x90000000;
+	protected const float BR_FLIGHT_LINE_WIDTH = 2.0;
+	protected const float BR_FLIGHT_DASH_PX = 14.0;
+	protected const float BR_FLIGHT_GAP_PX = 9.0;
 	//! The arrow is only redrawn when its centre moved this far in pixels or its direction changed this much (sine of the angle)
 	protected const float BR_PLAYER_MOVE_THRESHOLD_PX = 0.25;
 	protected const float BR_PLAYER_TURN_THRESHOLD = 0.005;
 
 	protected CanvasWidget m_BR_ZoneCanvas;
 	protected CanvasWidget m_BR_PlayerCanvas;
+	protected ImageWidget m_BR_PlaneIcon;
 
 	// What the player canvas shows
 	protected bool b_BR_PlayerDrawn;
@@ -26,14 +37,25 @@ modded class MapMenu
 	protected float f_BR_PlayerDrawnY;
 	protected float f_BR_PlayerDrawnSin;
 	protected float f_BR_PlayerDrawnCos;
+	// What the plane icon widget shows
+	protected bool b_BR_PlaneIconVisible;
+	protected bool b_BR_PlanePosSet;
+	protected float f_BR_PlaneDrawnX;
+	protected float f_BR_PlaneDrawnY;
+	protected float f_BR_PlaneIconSize;
+	protected bool b_BR_PlaneHeadingSet;
+	protected float f_BR_PlaneDrawnHeading;
 	protected float f_BR_PlayerArrowScale = 1;
 
-	// What the canvas shows; it is only redrawn when the zones or the map view change
+	// What the canvas shows; it is only redrawn when the zones, flight line or map view change
 	protected bool b_BR_ZonesDirty = true;
 	protected vector v_BR_DrawnCurrentCenter;
 	protected float f_BR_DrawnCurrentRadius;
 	protected vector v_BR_DrawnNextCenter;
 	protected float f_BR_DrawnNextRadius;
+	protected bool b_BR_DrawnFlightLine;
+	protected vector v_BR_DrawnFlightStart;
+	protected vector v_BR_DrawnFlightEnd;
 	protected float f_BR_DrawnMapScale;
 	protected vector v_BR_DrawnMapPos;
 	protected float f_BR_DrawnScreenX;
@@ -55,6 +77,17 @@ modded class MapMenu
 			Error("[MapMenu] zone canvas not created");
 
 		if (m_MapWidgetInstance)
+			m_BR_PlaneIcon = ImageWidget.Cast(g_Game.GetWorkspace().CreateWidgets(BR_MAP_PLANE_LAYOUT, m_MapWidgetInstance));
+
+		if (!m_BR_PlaneIcon)
+			Error("[MapMenu] plane icon widget not created");
+		else
+		{
+			m_BR_PlaneIcon.SetColor(BR_PLANE_ICON_COLOR);
+			m_BR_PlaneIcon.Show(false);
+		}
+
+		if (m_MapWidgetInstance)
 			m_BR_PlayerCanvas = CanvasWidget.Cast(g_Game.GetWorkspace().CreateWidgets(BR_MAP_PLAYER_LAYOUT, m_MapWidgetInstance));
 
 		if (!m_BR_PlayerCanvas)
@@ -63,8 +96,13 @@ modded class MapMenu
 		BR_UpdatePlayerArrowScale();
 
 		b_BR_ZonesDirty = true;
+		b_BR_DrawnFlightLine = false;
 		f_BR_ShrinkRedrawWait = BattleRoyaleClient.MAP_SHRINK_REFRESH_SECONDS;
 		b_BR_PlayerDrawn = false;
+		b_BR_PlaneIconVisible = false;
+		b_BR_PlanePosSet = false;
+		f_BR_PlaneIconSize = -1;
+		b_BR_PlaneHeadingSet = false;
 		return root;
 	}
 
@@ -75,6 +113,7 @@ modded class MapMenu
 		BR_UpdateMapCompass();
 		BR_UpdateZoneCanvas(timeslice);
 		BR_UpdatePlayerCanvas();
+		BR_UpdatePlaneIcon();
 	}
 
 	//! Vanilla turns the map's compass with the body (GetYawPitchRoll, P:\scripts\5_mission\gui\mapmenu.c:249-258), which
@@ -100,14 +139,39 @@ modded class MapMenu
 		super.SetGPSDirectionVisibility(false);
 	}
 
+	//! True while the drop-plane route and icon should be drawn on the map
+	protected bool BR_IsPlaneFlightVisible()
+	{
+		if (!BattleRoyalePlaneState.IsFlightVisible())
+			return false;
+		if (BattleRoyalePlaneState.IsActive())
+			return true;
+
+		BattleRoyaleRPC br_rpc = BattleRoyaleRPC.GetInstance();
+		return br_rpc && br_rpc.match_phase == EBRMatchPhase.AIRDROP;
+	}
+
 	protected void BR_UpdatePlayerCanvas()
 	{
 		if (!m_BR_PlayerCanvas || !m_MapWidgetInstance)
 			return;
 
-		// After a screen size change with the map open, the arrow drawn at the old size goes and is drawn again below
+		// After a screen size change with the map open, markers drawn at the old size go and are drawn again below
 		if (BR_UpdatePlayerArrowScale())
 			BR_ClearPlayerCanvas();
+
+		if (!g_Game)
+		{
+			BR_ClearPlayerCanvas();
+			return;
+		}
+
+		// While aboard the plane the plane icon replaces the 1 Hz stepped body arrow
+		if (BattleRoyalePlaneState.IsActive())
+		{
+			BR_ClearPlayerCanvas();
+			return;
+		}
 
 		PlayerBase player = PlayerBase.Cast(g_Game.GetPlayer());
 		if (!player)
@@ -120,12 +184,9 @@ modded class MapMenu
 		m_MapWidgetInstance.GetScreenPos(screen_x, screen_y);
 		m_MapWidgetInstance.GetScreenSize(screen_w, screen_h);
 
-		// Centre in canvas space; the canvas covers the map widget
 		vector player_screen = m_MapWidgetInstance.MapToScreen(player.GetPosition());
 		float cx = player_screen[0] - screen_x;
 		float cy = player_screen[1] - screen_y;
-
-		// The player is out of the visible map: nothing to draw over the map frame
 		if (cx < 0 || cy < 0 || cx > screen_w || cy > screen_h)
 		{
 			BR_ClearPlayerCanvas();
@@ -160,6 +221,73 @@ modded class MapMenu
 
 		b_BR_PlayerDrawn = false;
 		m_BR_PlayerCanvas.Clear();
+	}
+
+	protected void BR_SetPlaneIconVisible(bool visible)
+	{
+		if (!m_BR_PlaneIcon || b_BR_PlaneIconVisible == visible)
+			return;
+
+		b_BR_PlaneIconVisible = visible;
+		m_BR_PlaneIcon.Show(visible);
+	}
+
+	//! Positions, sizes and rotates the drop-plane ImageWidget on the full map, hiding it when no flight is active
+	//! or when the plane falls outside the map rectangle
+	protected void BR_UpdatePlaneIcon()
+	{
+		if (!m_BR_PlaneIcon || !m_MapWidgetInstance || !g_Game || !BR_IsPlaneFlightVisible())
+		{
+			BR_SetPlaneIconVisible(false);
+			return;
+		}
+
+		float screen_x, screen_y, screen_w, screen_h;
+		m_MapWidgetInstance.GetScreenPos(screen_x, screen_y);
+		m_MapWidgetInstance.GetScreenSize(screen_w, screen_h);
+
+		vector plane_pos;
+		vector plane_dir;
+		float plane_heading;
+		BattleRoyalePlaneState.ComputePose(plane_pos, plane_dir, plane_heading);
+		vector plane_screen = m_MapWidgetInstance.MapToScreen(plane_pos);
+		float px = plane_screen[0] - screen_x;
+		float py = plane_screen[1] - screen_y;
+		if (px < 0 || py < 0 || px > screen_w || py > screen_h)
+		{
+			BR_SetPlaneIconVisible(false);
+			return;
+		}
+
+		float scale = f_BR_PlayerArrowScale;
+		if (scale <= 0)
+			scale = 1.0;
+
+		float icon_size = BR_PLANE_ICON_SIZE * scale;
+		bool size_changed = (icon_size != f_BR_PlaneIconSize);
+		if (size_changed)
+		{
+			f_BR_PlaneIconSize = icon_size;
+			m_BR_PlaneIcon.SetSize(icon_size, icon_size);
+		}
+
+		if (!b_BR_PlanePosSet || size_changed || Math.AbsFloat(px - f_BR_PlaneDrawnX) >= BR_PLAYER_MOVE_THRESHOLD_PX || Math.AbsFloat(py - f_BR_PlaneDrawnY) >= BR_PLAYER_MOVE_THRESHOLD_PX)
+		{
+			b_BR_PlanePosSet = true;
+			f_BR_PlaneDrawnX = px;
+			f_BR_PlaneDrawnY = py;
+			m_BR_PlaneIcon.SetPos(px - icon_size * 0.5, py - icon_size * 0.5);
+		}
+
+		float heading = Math.NormalizeAngle(plane_heading);
+		if (!b_BR_PlaneHeadingSet || Math.AbsFloat(Math.DiffAngle(heading, f_BR_PlaneDrawnHeading)) >= BR_PLANE_HEADING_THRESHOLD_DEG)
+		{
+			b_BR_PlaneHeadingSet = true;
+			f_BR_PlaneDrawnHeading = heading;
+			m_BR_PlaneIcon.SetRotation(0, 0, heading);
+		}
+
+		BR_SetPlaneIconVisible(true);
 	}
 
 	//! The canvas draws in screen pixels and the arrow size is given in 1/1080 of the screen height, so the scale follows
@@ -260,6 +388,12 @@ modded class MapMenu
 			next_radius = next_area.GetRadius();
 		}
 
+		bool flight_line = BR_IsPlaneFlightVisible();
+		vector flight_start = vector.Zero;
+		vector flight_end = vector.Zero;
+		if (flight_line && !BattleRoyalePlaneState.GetFlightRoute(flight_start, flight_end))
+			flight_line = false;
+
 		float scale = m_MapWidgetInstance.GetScale();
 		vector map_pos = m_MapWidgetInstance.GetMapPos();
 		float screen_x, screen_y, screen_w, screen_h;
@@ -268,8 +402,11 @@ modded class MapMenu
 
 		if (!b_BR_ZonesDirty && current_center == v_BR_DrawnCurrentCenter && current_radius == f_BR_DrawnCurrentRadius && next_center == v_BR_DrawnNextCenter && next_radius == f_BR_DrawnNextRadius)
 		{
-			if (scale == f_BR_DrawnMapScale && map_pos == v_BR_DrawnMapPos && screen_x == f_BR_DrawnScreenX && screen_y == f_BR_DrawnScreenY && screen_w == f_BR_DrawnScreenW && screen_h == f_BR_DrawnScreenH)
-				return;
+			if (flight_line == b_BR_DrawnFlightLine && flight_start == v_BR_DrawnFlightStart && flight_end == v_BR_DrawnFlightEnd)
+			{
+				if (scale == f_BR_DrawnMapScale && map_pos == v_BR_DrawnMapPos && screen_x == f_BR_DrawnScreenX && screen_y == f_BR_DrawnScreenY && screen_w == f_BR_DrawnScreenW && screen_h == f_BR_DrawnScreenH)
+					return;
+			}
 		}
 
 		// While the zone closes the circle changes and the player pans and zooms: the canvas follows 10 times a second at
@@ -283,6 +420,9 @@ modded class MapMenu
 		f_BR_DrawnCurrentRadius = current_radius;
 		v_BR_DrawnNextCenter = next_center;
 		f_BR_DrawnNextRadius = next_radius;
+		b_BR_DrawnFlightLine = flight_line;
+		v_BR_DrawnFlightStart = flight_start;
+		v_BR_DrawnFlightEnd = flight_end;
 		f_BR_DrawnMapScale = scale;
 		v_BR_DrawnMapPos = map_pos;
 		f_BR_DrawnScreenX = screen_x;
@@ -302,6 +442,15 @@ modded class MapMenu
 				next_color = BR_ZONE_COLOR_LOCKED;
 
 			BattleRoyaleMapCanvas.DrawWorldOval(m_BR_ZoneCanvas, m_MapWidgetInstance, next_center[0], next_center[2], next_radius, next_radius, next_color);
+		}
+
+		if (flight_line)
+		{
+			float line_scale = f_BR_PlayerArrowScale;
+			if (line_scale <= 0)
+				line_scale = 1.0;
+
+			BattleRoyaleMapCanvas.DrawWorldFlightLine(m_BR_ZoneCanvas, m_MapWidgetInstance, flight_start, flight_end, BR_FLIGHT_LINE_COLOR, BR_FLIGHT_LINE_BORDER, BR_FLIGHT_LINE_WIDTH * line_scale, BR_FLIGHT_DASH_PX * line_scale, BR_FLIGHT_GAP_PX * line_scale, screen_w, screen_h);
 		}
 	}
 }
