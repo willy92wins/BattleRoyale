@@ -54,7 +54,7 @@ Online Tools (COT), VPPAdminTools or none.
 | # | Folder | Steam Workshop id | Key in its `keys` folder | Load it |
 |---|---|---|---|---|
 | 1 | `@CF` | 1559212036 | `Jacob_Mango_V3.bikey` | always |
-| 2 | `@AdmiralsParachuteMod` | 2912241382 | `ADM.bikey` | always (required for plane deployment) |
+| 2 | `@AdmiralsParachuteMod` | 2912241382 | `ADM.bikey` | always (BattleRoyale does not load without it, even with plane deployment off) |
 | 3 | `@Community-Online-Tools` | 1564026768 | `Jacob_Mango_V3.bikey` | optional, admin tool |
 | 4 | `@VPPAdminTools` | 1828439124 | `VPP.bikey` | optional, admin tool |
 | 5 | `@BattleRoyale` | 3834219016 | the key shipped in `@BattleRoyale\keys` | always |
