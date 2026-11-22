@@ -1503,6 +1503,11 @@ class BattleRoyaleServer: BattleRoyaleBase
             array<int> resultKills = new array<int>;
             array<bool> resultWon = new array<bool>;
 
+            // Position points need enough players at the match start; kills always score
+            bool scorePositions = m_MatchStartPlayers >= serverData.leaderboard_min_players_for_position;
+            if (!scorePositions)
+                BattleRoyaleUtils.Info("[Leaderboard] " + m_MatchStartPlayers.ToString() + " players at the match start, under leaderboard_min_players_for_position " + serverData.leaderboard_min_players_for_position.ToString() + ": only kills score");
+
             foreach (string plainId, string participantName : m_MatchParticipants)
             {
                 int matchKills = 0;
@@ -1517,7 +1522,7 @@ class BattleRoyaleServer: BattleRoyaleBase
                 else
                     points = matchKills * serverData.leaderboard_points_per_kill;
 
-                if (position >= 1)
+                if (position >= 1 && scorePositions)
                 {
                     int positionPoints = Math.Max(0, serverData.leaderboard_points_first - serverData.leaderboard_points_step * (position - 1));
                     if (points > int.MAX - positionPoints)

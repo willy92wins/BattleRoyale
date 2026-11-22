@@ -2,6 +2,9 @@
 
 ## 2.1.0 (unreleased)
 
+### Added
+- `leaderboard_min_players_for_position` in `server_settings.json` (default `20`): a match that starts with fewer players gives no leaderboard points for the final position, only for kills. `0` keeps the previous behaviour.
+
 ### Changed
 - Replaced `enable_plane_deployment` with `legacy_spawn` in `general_settings.json` (`0` = plane deployment, default; `1` = classic spawn selection and ground start).
 - Removed the left and right side bars (`SpectatorLeft` and `SpectatorRight`) from the spectator overlay (`br_spectator.layout`), eliminating the darker overlapping corners along the bottom bar.
