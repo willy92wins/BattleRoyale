@@ -273,6 +273,7 @@ class BattleRoyaleClient: BattleRoyaleBase
 		if ( !player )
 		{
 			gameplay.HideDistance();
+			gameplay.UpdateAirdropOverSea( false );
 			gameplay.UpdateAirdropState( BattleRoyaleHud.AIRDROP_STATE_NONE );
 			return;
 		}
@@ -343,6 +344,11 @@ class BattleRoyaleClient: BattleRoyaleBase
 			}
 		}
 
+		bool over_sea = false;
+		if ( state == BattleRoyaleHud.AIRDROP_STATE_IN_PLANE && m_PlaneClient )
+			over_sea = m_PlaneClient.IsPlaneOverSea();
+
+		gameplay.UpdateAirdropOverSea( over_sea );
 		gameplay.UpdateAirdropState( state );
     }
 
@@ -478,10 +484,10 @@ class BattleRoyaleClient: BattleRoyaleBase
 		return br_rpc.match_phase == EBRMatchPhase.ROUND || br_rpc.match_phase == EBRMatchPhase.LAST_ROUND;
     }
 
-    //! The zones are in play from the start of the match, when the first zone is shown, until the match is over
+    //! The zones are in play from the airdrop or start of the match, when the first zone is shown, until the match is over
     protected bool IsZonePlayPhase(BattleRoyaleRPC br_rpc)
     {
-		return br_rpc.match_phase == EBRMatchPhase.STARTING || IsZoneDamagePhase( br_rpc );
+		return br_rpc.match_phase == EBRMatchPhase.AIRDROP || br_rpc.match_phase == EBRMatchPhase.STARTING || IsZoneDamagePhase( br_rpc );
     }
 
     //! The last round clears the current area when the final zone locks; from then on every player takes damage.

@@ -48,6 +48,18 @@ class BattleRoyalePlaneClient
 		return false;
 	}
 
+	//! True while the local drop plane is active and its interpolated position lies over the sea.
+	bool IsPlaneOverSea()
+	{
+		if (!GetGame() || !m_PlaneActive)
+			return false;
+		vector planePos;
+		vector planeDir;
+		float headingDeg;
+		BattleRoyalePlaneState.ComputePose(planePos, planeDir, headingDeg);
+		return GetGame().SurfaceIsSea(planePos[0], planePos[2]);
+	}
+
 	bool IsRecentlyJumped()
 	{
 		if (m_JumpTimeMs <= 0 || !GetGame())

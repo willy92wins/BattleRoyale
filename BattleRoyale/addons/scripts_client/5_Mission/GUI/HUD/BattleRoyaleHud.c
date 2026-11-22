@@ -48,6 +48,7 @@ class BattleRoyaleHud
     protected Widget m_PhasePanel;
     protected Widget m_ZoneDamagePanel;
     protected Widget m_AirdropPanel;
+    protected Widget m_AirdropJumpPromptPanel;
     protected Widget m_SilentModePanel;
 
     protected TextWidget m_PlayerTextWidget;
@@ -65,6 +66,8 @@ class BattleRoyaleHud
     protected TextWidget m_ZoneDamageTextWidget;
     protected TextWidget m_AirdropStatusText;
     protected TextWidget m_AirdropHintText;
+    protected TextWidget m_AirdropJumpPromptText;
+    protected TextWidget m_AirdropJumpPromptShadow;
 
     protected ImageWidget m_DistanceZoneArrow;
     protected ImageWidget m_DistanceZoneArrowShadow;
@@ -83,6 +86,7 @@ class BattleRoyaleHud
     protected int m_LastPhaseSeconds;
     protected bool m_LastPhaseFrozen;
     protected int m_LastAirdropState;
+    protected bool m_LastAirdropOverSea;
 
     void BattleRoyaleHud( Widget root )
     {
@@ -102,6 +106,7 @@ class BattleRoyaleHud
         m_PhasePanel = Widget.Cast( m_Root.FindAnyWidget( "PhasePanel" ) );
         m_ZoneDamagePanel = Widget.Cast( m_Root.FindAnyWidget( "ZoneDamagePanel" ) );
         m_AirdropPanel = m_Root.FindAnyWidget( "AirdropPanel" );
+        m_AirdropJumpPromptPanel = Widget.Cast( m_Root.FindAnyWidget( "AirdropJumpPromptPanel" ) );
         m_SilentModePanel = m_Root.FindAnyWidget( "SilentModePanel" );
 
         m_PlayerTextWidget = TextWidget.Cast( m_PlayerCountPanel.FindAnyWidget( "PlayerText" ) );
@@ -118,6 +123,8 @@ class BattleRoyaleHud
         m_ZoneDamageTextWidget = TextWidget.Cast( m_Root.FindAnyWidget( "ZoneDamageText" ) );
         m_AirdropStatusText = TextWidget.Cast( m_Root.FindAnyWidget( "AirdropStatusText" ) );
         m_AirdropHintText = TextWidget.Cast( m_Root.FindAnyWidget( "AirdropHintText" ) );
+        m_AirdropJumpPromptText = TextWidget.Cast( m_Root.FindAnyWidget( "AirdropJumpPromptText" ) );
+        m_AirdropJumpPromptShadow = TextWidget.Cast( m_Root.FindAnyWidget( "AirdropJumpPromptShadow" ) );
 
         m_DistanceZoneArrow = ImageWidget.Cast( m_Root.FindAnyWidget( "ZoneIcon" ) );
         m_DistanceZoneArrowShadow = ImageWidget.Cast( m_Root.FindAnyWidget( "ZoneIconShadow" ) );
@@ -131,6 +138,7 @@ class BattleRoyaleHud
         SetVisible( m_ZoneDamagePanel, false );
         SetVisible( m_AirdropPanel, false );
         SetVisible( m_AirdropHintText, false );
+        SetVisible( m_AirdropJumpPromptPanel, false );
         SetVisible( m_SilentModePanel, false );
 
         m_DistanceColorState = -1;
@@ -142,6 +150,7 @@ class BattleRoyaleHud
         m_LastPhaseSeconds = -1;
         m_LastPhaseFrozen = false;
         m_LastAirdropState = AIRDROP_STATE_NONE;
+        m_LastAirdropOverSea = false;
     }
 
     bool Shown()
@@ -565,7 +574,7 @@ class BattleRoyaleHud
     }
 
     //! Shows the player's airdrop state (in plane / freefall / parachute) and, while aboard the plane,
-    //! the bound jump and camera keys. Only updates widgets when the state changes.
+    //! the bound jump and camera keys plus the centered jump prompt. Only updates widgets when the state changes.
     void SetAirdropState( int state )
     {
         if ( state == m_LastAirdropState )
@@ -578,6 +587,7 @@ class BattleRoyaleHud
         {
             SetVisible( m_AirdropPanel, false );
             SetVisible( m_AirdropHintText, false );
+            SetVisible( m_AirdropJumpPromptPanel, false );
             return;
         }
 
@@ -585,9 +595,33 @@ class BattleRoyaleHud
         m_AirdropStatusText.SetText( status_text );
         SetVisible( m_AirdropPanel, true );
 
-        if ( state == AIRDROP_STATE_IN_PLANE && m_AirdropHintText )
+        if ( state == AIRDROP_STATE_IN_PLANE )
         {
-            string hint_text = FormatAirdropPlaneHint();
+            RefreshAirdropPlanePrompts();
+        }
+        else
+        {
+            SetVisible( m_AirdropHintText, false );
+            SetVisible( m_AirdropJumpPromptPanel, false );
+        }
+    }
+
+    //! Updates the over-sea state while aboard the drop plane, refreshing the prompts only when it changes.
+    void SetAirdropOverSea( bool over_sea )
+    {
+        if ( over_sea == m_LastAirdropOverSea )
+            return;
+
+        m_LastAirdropOverSea = over_sea;
+        if ( m_LastAirdropState == AIRDROP_STATE_IN_PLANE )
+            RefreshAirdropPlanePrompts();
+    }
+
+    protected void RefreshAirdropPlanePrompts()
+    {
+        if ( m_AirdropHintText )
+        {
+            string hint_text = FormatAirdropPlaneHint( m_LastAirdropOverSea );
             if ( hint_text != "" )
             {
                 m_AirdropHintText.SetText( hint_text );
@@ -598,9 +632,23 @@ class BattleRoyaleHud
                 SetVisible( m_AirdropHintText, false );
             }
         }
-        else
+
+        if ( m_AirdropJumpPromptPanel && m_AirdropJumpPromptText )
         {
-            SetVisible( m_AirdropHintText, false );
+            string prompt_text = FormatAirdropJumpPrompt( m_LastAirdropOverSea );
+            if ( prompt_text != "" )
+            {
+                SetShadowedText( m_AirdropJumpPromptText, m_AirdropJumpPromptShadow, prompt_text );
+                if ( m_LastAirdropOverSea )
+                    m_AirdropJumpPromptText.SetColor( COLOR_BR_WARNING );
+                else
+                    m_AirdropJumpPromptText.SetColor( ARGB( 255, 255, 217, 64 ) );
+                SetVisible( m_AirdropJumpPromptPanel, true );
+            }
+            else
+            {
+                SetVisible( m_AirdropJumpPromptPanel, false );
+            }
         }
     }
 
@@ -628,18 +676,25 @@ class BattleRoyaleHud
         return InputUtils.GetButtonNameFromInput( input_name, EInputDeviceType.MOUSE_AND_KEYBOARD );
     }
 
-    //! Formats the in-plane keybind help using the player's current bindings, keeping one TranslateString per statement
-    protected string FormatAirdropPlaneHint()
+    //! Formats the centered in-plane jump prompt (or the over-sea wait notice).
+    protected string FormatAirdropJumpPrompt( bool over_sea )
     {
-        string jump_key = GetInputButtonName( AIRDROP_JUMP_INPUT );
-        string view_key = GetInputButtonName( AIRDROP_VIEW_INPUT );
+        if ( over_sea )
+            return Widget.TranslateString( "#STR_BR_AIRDROP_HINT_OVER_SEA" );
 
-        string jump_part = "";
-        if ( jump_key != "" )
-        {
-            string jump_fmt = Widget.TranslateString( "#STR_BR_AIRDROP_HINT_JUMP" );
-            jump_part = string.Format( jump_fmt, jump_key );
-        }
+        string jump_key = GetInputButtonName( AIRDROP_JUMP_INPUT );
+        if ( jump_key == "" )
+            return "";
+
+        string jump_fmt = Widget.TranslateString( "#STR_BR_AIRDROP_HINT_JUMP" );
+        return string.Format( jump_fmt, jump_key );
+    }
+
+    //! Formats the in-plane keybind help using the player's current bindings, keeping one TranslateString per statement
+    protected string FormatAirdropPlaneHint( bool over_sea = false )
+    {
+        string jump_part = FormatAirdropJumpPrompt( over_sea );
+        string view_key = GetInputButtonName( AIRDROP_VIEW_INPUT );
 
         string view_part = "";
         if ( view_key != "" )

@@ -62,6 +62,16 @@ class BattleRoyalePlaneFlight
 		return GetOpenRefusal(player) == "";
 	}
 
+	//! Applies BattleRoyale's configured parachute speed and acceleration multipliers to a bag.
+	static void ApplyParachuteTuning(ADM_ParachuteBag_Base bag, BattleRoyaleGameData gameData)
+	{
+		if (!bag || !gameData || !gameData.enable_plane_deployment)
+			return;
+		if (gameData.parachute_fall_speed_multiplier <= 0.0 && gameData.parachute_forward_speed_multiplier <= 0.0 && gameData.parachute_accel_multiplier <= 0.0)
+			return;
+		bag.BR_SetParachuteTuning(gameData.parachute_fall_speed_multiplier, gameData.parachute_forward_speed_multiplier, gameData.parachute_accel_multiplier);
+	}
+
 	//! Validates and serves C->S RequestOpenParachute for any airborne player with a valid bag.
 	static bool HandleOpenParachuteRequest(PlayerBase player)
 	{
@@ -163,6 +173,7 @@ class BattleRoyalePlaneFlight
 		if (GetGame())
 			m_StartMs = GetGame().GetTime();
 
+		BattleRoyaleGameData gameData = BattleRoyaleConfig.GetConfig().GetGameData();
 		int skipped = 0;
 		if (matchPlayers)
 		{
@@ -180,6 +191,9 @@ class BattleRoyalePlaneFlight
 					RestoreBRInput(p);
 					continue;
 				}
+				ADM_ParachuteBag_Base bag = ADM_ParachuteBag_Base.Cast(p.FindAttachmentBySlotName("Back"));
+				if (bag)
+					ApplyParachuteTuning(bag, gameData);
 				if (m_Riders.Find(p) != -1)
 					continue;
 				m_Riders.Insert(p);
@@ -582,8 +596,15 @@ class BattleRoyalePlaneFlight
 				BattleRoyaleUtils.Debug("[Plane] Jump refused (not_in_ride) for " + player.BR_GetPlayerName());
 			return false;
 		}
+		float elapsed = GetElapsedSec();
+		vector planePos = GetPlanePositionAt(elapsed);
+		if (GetGame() && GetGame().SurfaceIsSea(planePos[0], planePos[2]))
+		{
+			BattleRoyaleUtils.Debug("[Plane] Jump refused (over_sea) for " + player.BR_GetPlayerName());
+			return false;
+		}
 		float lateral = Math.RandomFloatInclusive(-EXIT_LATERAL_JITTER_M, EXIT_LATERAL_JITTER_M);
-		ExecuteExit(player, GetElapsedSec(), EXIT_BACK_M, lateral, "manual");
+		ExecuteExit(player, elapsed, EXIT_BACK_M, lateral, "manual");
 		return true;
 	}
 

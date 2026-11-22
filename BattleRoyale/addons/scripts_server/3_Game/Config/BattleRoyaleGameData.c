@@ -1,7 +1,7 @@
 #ifdef SERVER
 class BattleRoyaleGameData: BattleRoyaleDataBase
 {
-	int version = 3;  // Config version
+	int version = 4;  // Config version
 
 	// Allowed admins - Are immune to kick and can go outside the play area
 	ref array<string> admins_steamid64 = {
@@ -49,6 +49,9 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 	float plane_edge_margin_m = 600;  // inset from the world border, 100..3000
 	float plane_path_max_zone_distance = 1.0;  // max distance from the first-zone centre, in multiples of that radius; 0 = no limit (0..3)
 	float parachute_auto_open_agl_m = 150;  // 30..500 and below plane_min_altitude_m - 100
+	float parachute_fall_speed_multiplier = 16;  // 0 = use Admiral's JSON; otherwise 1..60
+	float parachute_forward_speed_multiplier = 8;  // 0 = use Admiral's JSON; otherwise 1..40
+	float parachute_accel_multiplier = 4;  // 0 = use Admiral's JSON; otherwise 1..20
 	int first_zone_reveal_delay_seconds = 60;  // seconds after the plane finishes its run (0..600)
 	int first_zone_extra_seconds = 180;  // added to the first-zone countdown at reveal (0..1800)
 
@@ -112,9 +115,9 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 				ErrorEx(errorMessage);
 		}
 		// A mission file is applied onto the already-upgraded object and may carry an older version.
-		// The effective object stays on version 3; the profile was already saved by Upgrade().
-		if (version < 3)
-			version = 3;
+		// The effective object stays on version 4; the profile was already saved by Upgrade().
+		if (version < 4)
+			version = 4;
 	}
 
 	override void Save()
@@ -126,8 +129,8 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 
 	override void Upgrade()
 	{
-		// Each step is its own if. A v1 file becomes v2 and then falls through into v3
-		// on the same load. else-if would leave that file at version 2.
+		// Each step is its own if. A v1 file becomes v2, then v3, then v4
+		// on the same load. else-if would leave that file on an intermediate version.
 		if (version == 1)
 		{
 			// Set default shortcut for the first item (HuntingKnife) if not set
@@ -146,6 +149,13 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 		{
 			// New keys are absent in v2 files; JsonFileLoader leaves the declared defaults in place
 			version = 3;
+			Save();
+		}
+
+		if (version == 3)
+		{
+			// New parachute tuning keys are absent in v3 files; JsonFileLoader leaves the declared defaults in place
+			version = 4;
 			Save();
 		}
 	}
@@ -260,6 +270,24 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 		{
 			LogInvalidSetting("general_settings.json", "parachute_auto_open_agl_m", parachute_auto_open_agl_m.ToString(), "must be between 30 and 500 and lower than plane_min_altitude_m - 100");
 			parachute_auto_open_agl_m = defaults.parachute_auto_open_agl_m;
+		}
+
+		if (parachute_fall_speed_multiplier != 0 && (parachute_fall_speed_multiplier < 1 || parachute_fall_speed_multiplier > 60))
+		{
+			LogInvalidSetting("general_settings.json", "parachute_fall_speed_multiplier", parachute_fall_speed_multiplier.ToString(), "must be 0 or between 1 and 60");
+			parachute_fall_speed_multiplier = defaults.parachute_fall_speed_multiplier;
+		}
+
+		if (parachute_forward_speed_multiplier != 0 && (parachute_forward_speed_multiplier < 1 || parachute_forward_speed_multiplier > 40))
+		{
+			LogInvalidSetting("general_settings.json", "parachute_forward_speed_multiplier", parachute_forward_speed_multiplier.ToString(), "must be 0 or between 1 and 40");
+			parachute_forward_speed_multiplier = defaults.parachute_forward_speed_multiplier;
+		}
+
+		if (parachute_accel_multiplier != 0 && (parachute_accel_multiplier < 1 || parachute_accel_multiplier > 20))
+		{
+			LogInvalidSetting("general_settings.json", "parachute_accel_multiplier", parachute_accel_multiplier.ToString(), "must be 0 or between 1 and 20");
+			parachute_accel_multiplier = defaults.parachute_accel_multiplier;
 		}
 
 		if (first_zone_reveal_delay_seconds < 0 || first_zone_reveal_delay_seconds > 600)

@@ -253,6 +253,8 @@ class BattleRoyaleStartMatch: BattleRoyaleState
             f_ZoningDeferStartClock = 0.0;
             m_PlaneFlight = new BattleRoyalePlaneFlight();
             m_PlaneFlight.StartFlight(path, gameData.parachute_auto_open_agl_m, m_Players);
+            if (b_ShowFirstZone)
+                ShowFirstZone();
             MessagePlayersUntranslated( "STR_BR_MATCH_STARTED" );
 
             CheckPlaneRevealSchedule();
@@ -551,7 +553,8 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 
         if (b_ShowFirstZone)
         {
-            ShowFirstZone();
+            if (!m_FirstArea)
+                ShowFirstZone();
             NotifyFirstZoneRevealed();
         }
 
