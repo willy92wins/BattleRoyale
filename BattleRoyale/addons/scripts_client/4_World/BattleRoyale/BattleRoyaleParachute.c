@@ -32,6 +32,8 @@ class BattleRoyaleParachuteTuning
 	static const float SPRINT_DIVE_Z = 3.0;     //!< Shift+W: 24 m/s forward
 	//! Vertical speed change per second is AccelMultiY times this (4 x 3 = 12 m/s each second)
 	static const float VERTICAL_ACCEL_GAIN = 3.0;
+	//! While W is held the dive builds up slower (4 x 2 = 8 m/s each second), which carries the glide further
+	static const float DIVE_VERTICAL_ACCEL_GAIN = 2.0;
 	//! Forward speed change per second is AccelMultiZ times this (4 x 2 = 8 m/s each second)
 	static const float FORWARD_ACCEL_GAIN = 2.0;
 	//! Landing damage with plane deployment: only a dive hurts (m/s down at touchdown)
@@ -94,7 +96,10 @@ modded class HumanCommandScript_Parachute
 		super.SetJSONMultiplier();
 		if (m_pPlayer && m_pPlayer.BR_IsPlaneDeploymentActive() && m_pPlayer.IsWearingChute())
 		{
-			constantAY = constantAY * BattleRoyaleParachuteTuning.VERTICAL_ACCEL_GAIN;
+			float verticalGain = BattleRoyaleParachuteTuning.VERTICAL_ACCEL_GAIN;
+			if (locDir[2] > 0.0)
+				verticalGain = BattleRoyaleParachuteTuning.DIVE_VERTICAL_ACCEL_GAIN;
+			constantAY = constantAY * verticalGain;
 			constantAZ = constantAZ * BattleRoyaleParachuteTuning.FORWARD_ACCEL_GAIN;
 		}
 	}
