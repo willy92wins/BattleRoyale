@@ -7,7 +7,12 @@
 
 ### Changed
 - Replaced `enable_plane_deployment` with `legacy_spawn` in `general_settings.json` (`0` = plane deployment, default; `1` = classic spawn selection and ground start).
+- Parachute with plane deployment: W now dives (30 m/s down, 10 m/s forward with the default multipliers) and Shift+W dives harder (50 m/s down, 14 m/s forward); vertical speed changes three times faster, so dives and braking respond in about 3 s; the forward tilt goes to 25 degrees with W and 35 with Shift+W.
+- Parachute landing damage with plane deployment only applies to a dive (15 m/s down or more: 50 health; 35 m/s or more: 90); a neutral or braked landing no longer hurts.
 - Removed the left and right side bars (`SpectatorLeft` and `SpectatorRight`) from the spectator overlay (`br_spectator.layout`), eliminating the darker overlapping corners along the bottom bar.
+
+### Fixed
+- The parachute speedometer reads the descent's own smoothed speed instead of jumping, and its needle stops at the end of the dial instead of wrapping past it.
 
 ### Notes
 - **Config migration in `general_settings.json` (version 5):** existing version 1 to 4 files upgrade automatically to version 5 on server start. A previous `enable_plane_deployment: 0` migrates to `legacy_spawn: 1` (and `1` or absent becomes `legacy_spawn: 0`). Older mission overrides carrying `enable_plane_deployment` are translated the same way, with an explicit `legacy_spawn` taking precedence if both are present.

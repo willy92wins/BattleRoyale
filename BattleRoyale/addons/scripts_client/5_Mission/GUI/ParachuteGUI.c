@@ -27,6 +27,14 @@ modded class ParachuteGUI
 		}
 	}
 
+	//! Admiral's needle maps 0-100 km/h; a dive is faster and the needle wrapped past its end
+	override void RefreshVehicleHud( float timeslice )
+	{
+		super.RefreshVehicleHud( timeslice );
+		if ( m_CurrentPlayer && m_SpeedPointer && m_CurrentPlayer.PlayerCurrentSpeed() > 100 )
+			m_SpeedPointer.SetRotation( 0, 0, 130, true );
+	}
+
 	//! Admiral's ParachuteGUI does not clear m_CurrentPlayer on HideVehicleInfo.
 	override void HideVehicleInfo()
 	{
