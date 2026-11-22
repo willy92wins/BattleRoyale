@@ -7,7 +7,7 @@
 
 ### Changed
 - Replaced `enable_plane_deployment` with `legacy_spawn` in `general_settings.json` (`0` = plane deployment, default; `1` = classic spawn selection and ground start).
-- Parachute with plane deployment: W now dives (30 m/s down, 10 m/s forward with the default multipliers) and Shift+W dives harder (50 m/s down, 14 m/s forward); vertical speed changes three times faster, so dives and braking respond in about 3 s; the forward tilt goes to 25 degrees with W and 35 with Shift+W.
+- Parachute with plane deployment: W now dives (30 m/s down, 14 m/s forward with the default multipliers) and Shift+W dives harder (50 m/s down, 24 m/s forward); vertical speed changes three times faster and forward speed twice as fast, so dives and braking respond in about 3 s; the forward tilt goes to 25 degrees with W and 35 with Shift+W.
 - Parachute landing damage with plane deployment only applies to a dive (15 m/s down or more: 50 health; 35 m/s or more: 90); a neutral or braked landing no longer hurts.
 - Removed the left and right side bars (`SpectatorLeft` and `SpectatorRight`) from the spectator overlay (`br_spectator.layout`), eliminating the darker overlapping corners along the bottom bar.
 

@@ -27,11 +27,13 @@ class BattleRoyaleParachuteTuning
 {
 	static const float NEUTRAL_Y = -0.5;        //!< 8 m/s down, as Admiral's base
 	static const float DIVE_Y = -1.875;         //!< W: 30 m/s down
-	static const float DIVE_Z = 1.25;           //!< W: 10 m/s forward
+	static const float DIVE_Z = 1.75;           //!< W: 14 m/s forward
 	static const float SPRINT_DIVE_Y = -3.125;  //!< Shift+W: 50 m/s down (Admiral's clamp)
-	static const float SPRINT_DIVE_Z = 1.75;    //!< Shift+W: 14 m/s forward
+	static const float SPRINT_DIVE_Z = 3.0;     //!< Shift+W: 24 m/s forward
 	//! Vertical speed change per second is AccelMultiY times this (4 x 3 = 12 m/s each second)
 	static const float VERTICAL_ACCEL_GAIN = 3.0;
+	//! Forward speed change per second is AccelMultiZ times this (4 x 2 = 8 m/s each second)
+	static const float FORWARD_ACCEL_GAIN = 2.0;
 	//! Landing damage with plane deployment: only a dive hurts (m/s down at touchdown)
 	static const float DIVE_DAMAGE_FALL = 15.0;
 	static const float HARD_DIVE_DAMAGE_FALL = 35.0;
@@ -91,7 +93,10 @@ modded class HumanCommandScript_Parachute
 	{
 		super.SetJSONMultiplier();
 		if (m_pPlayer && m_pPlayer.BR_IsPlaneDeploymentActive() && m_pPlayer.IsWearingChute())
+		{
 			constantAY = constantAY * BattleRoyaleParachuteTuning.VERTICAL_ACCEL_GAIN;
+			constantAZ = constantAZ * BattleRoyaleParachuteTuning.FORWARD_ACCEL_GAIN;
+		}
 	}
 
 	override void PrePhysUpdate(float pDt)
