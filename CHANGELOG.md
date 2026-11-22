@@ -12,6 +12,7 @@
 - Removed the left and right side bars (`SpectatorLeft` and `SpectatorRight`) from the spectator overlay (`br_spectator.layout`), eliminating the darker overlapping corners along the bottom bar.
 
 ### Fixed
+- Braking the parachute with Shift+S stopped at about 115 km/h (32 m/s down); S now brakes to the neutral descent with or without Shift.
 - The parachute speedometer reads the descent's own smoothed speed instead of jumping, and its needle stops at the end of the dial instead of wrapping past it.
 
 ### Notes

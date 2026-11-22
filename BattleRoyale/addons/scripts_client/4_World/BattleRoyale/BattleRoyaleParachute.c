@@ -82,11 +82,9 @@ modded class HumanCommandScript_Parachute
 			return;
 		}
 
-		float neutralY = -0.5;
-		if (speed == 3)
-			neutralY = -2.0;
+		// S brakes to the neutral descent, Shift included
 		constantZ = 0.0;
-		constantY = neutralY;
+		constantY = BattleRoyaleParachuteTuning.NEUTRAL_Y;
 	}
 
 	override void SetJSONMultiplier()
