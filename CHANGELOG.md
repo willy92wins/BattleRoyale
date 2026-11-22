@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.0 (unreleased)
+
+### Changed
+- Replaced `enable_plane_deployment` with `legacy_spawn` in `general_settings.json` (`0` = plane deployment, default; `1` = classic spawn selection and ground start).
+- Removed the left and right side bars (`SpectatorLeft` and `SpectatorRight`) from the spectator overlay (`br_spectator.layout`), eliminating the darker overlapping corners along the bottom bar.
+
+### Notes
+- **Config migration in `general_settings.json` (version 5):** existing version 1 to 4 files upgrade automatically to version 5 on server start. A previous `enable_plane_deployment: 0` migrates to `legacy_spawn: 1` (and `1` or absent becomes `legacy_spawn: 0`). Older mission overrides carrying `enable_plane_deployment` are translated the same way, with an explicit `legacy_spawn` taking precedence if both are present.
+- No new RPCs or breaking changes to existing RPCs.
+
 ## 2.0.1 (2026-11-23)
 
 ### Changed

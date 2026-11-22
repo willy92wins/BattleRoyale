@@ -48,7 +48,7 @@ class BattleRoyaleStartMatch: BattleRoyaleState
 
         b_ArtillerySound = m_GameSettings.artillery_sound;
 
-        b_EnablePlaneDeployment = m_GameSettings.enable_plane_deployment;
+        b_EnablePlaneDeployment = (m_GameSettings.legacy_spawn == 0);
 
         b_IsGameplay = false;
         i_PlaneFirstZoneIndex = 0;

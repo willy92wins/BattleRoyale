@@ -324,7 +324,8 @@ controls damage settings (`ParachuteDamage`, `LandingSpeedDamage`) and remains s
 package.
 
 BattleRoyale never writes or modifies Admiral's Parachute config file. Before starting the server with
-plane deployment enabled (`enable_plane_deployment: 1` in `general_settings.json`), copy
+plane deployment enabled (`legacy_spawn: 0` in `general_settings.json`, the default; set `legacy_spawn: 1`
+for classic spawn selection and ground start), copy
 `ADMParachute\ParachuteJSON.json` from this package into `<profiles>\ADMParachute\ParachuteJSON.json`
 (`$profile:ADMParachute\ParachuteJSON.json`) so Admiral's uses the intended damage settings
 (`ParachuteDamage: 2`, `LandingSpeedDamage: 1`).

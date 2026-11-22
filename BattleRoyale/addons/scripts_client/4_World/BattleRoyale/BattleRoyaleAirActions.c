@@ -1,7 +1,7 @@
 //! Blocks world actions, item dropping and weapon firing while the player is aboard
 //! the drop plane or airborne during a plane-deployment match.
 //! Loads after ADM_Parachute_Mod so our airlock wins over Admiral's overrides in the air.
-//! When enable_plane_deployment is false, BR_IsAirlocked() is always false and super runs unchanged.
+//! When legacy_spawn is 1 (plane deployment off), BR_IsAirlocked() is always false and super runs unchanged.
 
 modded class ActionManagerBase
 {

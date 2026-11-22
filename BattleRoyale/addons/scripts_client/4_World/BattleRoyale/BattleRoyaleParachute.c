@@ -22,7 +22,7 @@ class BattleRoyaleParachuteTilt
 //! BattleRoyale overrides for Admiral's parachute command:
 //! - S key acts as an air brake (neutral descent, zero backward travel) instead of reversing.
 //! - Smooth pitch (W/S) and roll (A/D + yaw rate) body tilt, leveled on landing or deactivation.
-//! Inactive when enable_plane_deployment is false (all methods fall through to super).
+//! Inactive when legacy_spawn is 1 (all methods fall through to super).
 modded class HumanCommandScript_Parachute
 {
 	protected float m_BRTiltPitch;
