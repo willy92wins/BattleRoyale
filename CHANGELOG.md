@@ -13,6 +13,7 @@
 
 ### Fixed
 - Braking the parachute with Shift+S stopped at about 115 km/h (32 m/s down); S now brakes to the neutral descent with or without Shift.
+- With Community Online Tools (2026-10-20 or later), players aboard the plane or descending no longer collect anti-cheat speed and teleport flags; the grace ends a few seconds after landing.
 - The parachute speedometer with plane deployment shows the smoothed descent speed instead of a jumping total, and its needle stops at the end of the dial instead of wrapping past it.
 
 ### Notes

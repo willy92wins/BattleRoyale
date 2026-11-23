@@ -32,6 +32,9 @@ class BattleRoyalePlaneFlight
 	protected ref array<PlayerBase> m_Riders;
 	protected ref array<PlayerBase> m_Airborne;
 	protected ref array<PlayerBase> m_AirborneSeen;
+	//! COT anti-cheat movement grace for riders and airborne players, renewed every second
+	static const float ANTICHEAT_GRACE_SEC = 5.0;
+	protected float m_AntiCheatGraceTimer;
 
 	void BattleRoyalePlaneFlight()
 	{
@@ -202,6 +205,7 @@ class BattleRoyalePlaneFlight
 				p.BR_SetPlaneFrozen(true);
 				p.BR_SetPlaneHidden(true);
 				SetVelocity(p, vector.Zero);
+				GrantAntiCheatMovement(p);
 				p.SetPosition(m_Start);
 				SendStartPlaneFlight(p, 0.0);
 			}
@@ -947,8 +951,39 @@ class BattleRoyalePlaneFlight
 		}
 	}
 
+	//! The plane moves riders at flight speed and the parachute glide is faster than a
+	//! runner, so COT's speed and teleport rules would flag every player in the drop.
+	protected void GrantAntiCheatMovement(PlayerBase player)
+	{
+#ifdef COT_2026_1020
+		if (player)
+			player.COT_GrantAction(JMAntiCheatSanction.MOVEMENT, ANTICHEAT_GRACE_SEC);
+#endif
+	}
+
+	protected void TickAntiCheatGrace(float dt)
+	{
+		m_AntiCheatGraceTimer = m_AntiCheatGraceTimer - dt;
+		if (m_AntiCheatGraceTimer > 0.0)
+			return;
+		m_AntiCheatGraceTimer = 1.0;
+
+		int i;
+		if (m_FlightActive && m_Riders)
+		{
+			for (i = 0; i < m_Riders.Count(); i++)
+				GrantAntiCheatMovement(m_Riders.Get(i));
+		}
+		if (m_Airborne)
+		{
+			for (i = 0; i < m_Airborne.Count(); i++)
+				GrantAntiCheatMovement(m_Airborne.Get(i));
+		}
+	}
+
 	void Tick(float dt)
 	{
+		TickAntiCheatGrace(dt);
 		if (m_FlightActive && !m_Paused)
 			TickRide(dt);
 		TickAirborneAndAutoOpen();
