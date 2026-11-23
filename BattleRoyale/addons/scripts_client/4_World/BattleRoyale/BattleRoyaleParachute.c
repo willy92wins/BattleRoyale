@@ -39,8 +39,9 @@ class BattleRoyaleParachuteTuning
 	//! Forward speed change per second is AccelMultiZ times this (4 x 2 = 8 m/s each second)
 	static const float FORWARD_ACCEL_GAIN = 2.0;
 	//! Landing damage with plane deployment: only a dive hurts (m/s down at touchdown)
-	static const float DIVE_DAMAGE_FALL = 9.5;        //!< a full W dive lands at 10 m/s
-	static const float HARD_DIVE_DAMAGE_FALL = 15.0;  //!< a full Shift+W dive lands at 16.7 m/s
+	//! A W glide (10 m/s) and an idle descent stay under these; an idle landing was measured at 10 m/s
+	static const float DIVE_DAMAGE_FALL = 12.0;
+	static const float HARD_DIVE_DAMAGE_FALL = 16.0;  //!< a full Shift+W dive lands at 16.7 m/s
 }
 
 //! BattleRoyale overrides for Admiral's parachute command:
