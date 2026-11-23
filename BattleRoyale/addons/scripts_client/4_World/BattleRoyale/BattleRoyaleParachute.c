@@ -26,10 +26,12 @@ class BattleRoyaleParachuteTilt
 class BattleRoyaleParachuteTuning
 {
 	static const float NEUTRAL_Y = -0.5;        //!< 8 m/s down, as Admiral's base
-	static const float DIVE_Y = -1.875;         //!< W: 30 m/s down
-	static const float DIVE_Z = 1.75;           //!< W: 14 m/s forward
-	static const float SPRINT_DIVE_Y = -3.125;  //!< Shift+W: 50 m/s down (Admiral's clamp)
-	static const float SPRINT_DIVE_Z = 3.0;     //!< Shift+W: 24 m/s forward
+	static const float DIVE_Y = -0.625;         //!< W: 10 m/s down
+	static const float DIVE_Z = 17.5;           //!< W: 140 m/s forward
+	static const float SPRINT_DIVE_Y = -1.0417; //!< Shift+W: 16.7 m/s down
+	static const float SPRINT_DIVE_Z = 30.0;    //!< Shift+W: 240 m/s forward
+	//! Forward clamp in m/s; Admiral's own is 80, under the dive targets above
+	static const float MAX_FORWARD_SPEED = 250.0;
 	//! Vertical speed change per second is AccelMultiY times this (4 x 3 = 12 m/s each second)
 	static const float VERTICAL_ACCEL_GAIN = 3.0;
 	//! While W is held the dive builds up slower (4 x 2 = 8 m/s each second), which carries the glide further
@@ -37,16 +39,16 @@ class BattleRoyaleParachuteTuning
 	//! Forward speed change per second is AccelMultiZ times this (4 x 2 = 8 m/s each second)
 	static const float FORWARD_ACCEL_GAIN = 2.0;
 	//! Landing damage with plane deployment: only a dive hurts (m/s down at touchdown)
-	static const float DIVE_DAMAGE_FALL = 15.0;
-	static const float HARD_DIVE_DAMAGE_FALL = 35.0;
+	static const float DIVE_DAMAGE_FALL = 9.5;        //!< a full W dive lands at 10 m/s
+	static const float HARD_DIVE_DAMAGE_FALL = 15.0;  //!< a full Shift+W dive lands at 16.7 m/s
 }
 
 //! BattleRoyale overrides for Admiral's parachute command:
 //! - S key acts as an air brake (neutral descent, zero backward travel) instead of reversing.
-//! - W dives (mostly down, some forward), Shift+W dives harder; vertical speed changes faster.
+//! - W glides forward with a slightly faster descent, Shift+W faster still; vertical speed changes faster.
 //! - The filtered velocity is handed to the player for the speedometer and dive landing damage.
 //! - Smooth pitch (W/S) and roll (A/D + yaw rate) body tilt, leveled on landing or deactivation.
-//! Inactive when legacy_spawn is 1 (all methods fall through to super).
+//! Inactive when ParachuteDeploy is 0 (all methods fall through to super).
 modded class HumanCommandScript_Parachute
 {
 	protected float m_BRTiltPitch;
@@ -102,6 +104,24 @@ modded class HumanCommandScript_Parachute
 			constantAY = constantAY * verticalGain;
 			constantAZ = constantAZ * BattleRoyaleParachuteTuning.FORWARD_ACCEL_GAIN;
 		}
+	}
+
+	//! Same smoothing as Admiral's, with the forward clamp raised for the plane glide
+	override void Filters(float pDt)
+	{
+		if (!m_pPlayer || !m_pPlayer.BR_IsPlaneDeploymentActive() || !m_pPlayer.IsWearingChute())
+		{
+			super.Filters(pDt);
+			return;
+		}
+
+		filterX = Math.SmoothCD(filterX, constantX, filterXV, 0.3, constantAX, pDt);
+		filterY = Math.SmoothCD(filterY, constantY, filterYV, 0.3, constantAY, pDt);
+		filterZ = Math.SmoothCD(filterZ, constantZ, filterZV, 0.3, constantAZ, pDt);
+
+		filterX = Math.Clamp(filterX, -80, 80);
+		filterY = Math.Clamp(filterY, -50, 50);
+		filterZ = Math.Clamp(filterZ, -BattleRoyaleParachuteTuning.MAX_FORWARD_SPEED, BattleRoyaleParachuteTuning.MAX_FORWARD_SPEED);
 	}
 
 	override void PrePhysUpdate(float pDt)
