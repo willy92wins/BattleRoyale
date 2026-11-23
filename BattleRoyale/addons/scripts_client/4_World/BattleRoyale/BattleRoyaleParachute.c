@@ -25,10 +25,10 @@ class BattleRoyaleParachuteTilt
 //! comments are for the defaults (16 and 8).
 class BattleRoyaleParachuteTuning
 {
-	static const float NEUTRAL_Y = -0.5;        //!< 8 m/s down, as Admiral's base
-	static const float DIVE_Y = -0.625;         //!< W: 10 m/s down
+	static const float NEUTRAL_Y = -0.35;       //!< 5.6 m/s down
+	static const float DIVE_Y = -0.4375;        //!< W: 7 m/s down
 	static const float DIVE_Z = 17.5;           //!< W: 140 m/s forward
-	static const float SPRINT_DIVE_Y = -1.0417; //!< Shift+W: 16.7 m/s down
+	static const float SPRINT_DIVE_Y = -0.7292; //!< Shift+W: 11.7 m/s down
 	static const float SPRINT_DIVE_Z = 30.0;    //!< Shift+W: 240 m/s forward
 	//! Forward clamp in m/s; Admiral's own is 80, under the dive targets above
 	static const float MAX_FORWARD_SPEED = 250.0;
@@ -39,9 +39,9 @@ class BattleRoyaleParachuteTuning
 	//! Forward speed change per second is AccelMultiZ times this (4 x 2 = 8 m/s each second)
 	static const float FORWARD_ACCEL_GAIN = 2.0;
 	//! Landing damage with plane deployment: only a dive hurts (m/s down at touchdown)
-	//! A W glide (10 m/s) and an idle descent stay under these; an idle landing was measured at 10 m/s
-	static const float DIVE_DAMAGE_FALL = 12.0;
-	static const float HARD_DIVE_DAMAGE_FALL = 16.0;  //!< a full Shift+W dive lands at 16.7 m/s
+	//! A W glide (7 m/s) and an idle descent (5.6 m/s) stay under these
+	static const float DIVE_DAMAGE_FALL = 8.4;
+	static const float HARD_DIVE_DAMAGE_FALL = 11.2;  //!< a full Shift+W dive lands at 11.7 m/s
 }
 
 //! BattleRoyale overrides for Admiral's parachute command:
