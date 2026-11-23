@@ -58,11 +58,12 @@ modded class PlayerBase
 		m_BRChuteVelocityValid = false;
 	}
 
-	//! The speedometer reads the command's filtered velocity: GetVelocity jumps because the command moves the body by translation
+	//! The speedometer shows the descent speed from the command's filtered velocity (GetVelocity jumps because the
+	//! command moves the body by translation); forward glide is left out
 	override float PlayerCurrentSpeed()
 	{
 		if (m_BRPlaneDeployment && m_BRChuteVelocityValid)
-			return m_BRChuteVelocity.Length() * 3.6;
+			return Math.Max(0.0, -m_BRChuteVelocity[1]) * 3.6;
 		return super.PlayerCurrentSpeed();
 	}
 

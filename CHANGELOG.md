@@ -7,13 +7,13 @@
 
 ### Changed
 - Replaced `enable_plane_deployment` with `ParachuteDeploy` in `general_settings.json` (`1` = plane deployment, default; `0` = classic spawn selection and ground start).
-- Parachute with plane deployment: W now dives (30 m/s down, 14 m/s forward with the default multipliers) and Shift+W dives harder (50 m/s down, 24 m/s forward); vertical speed builds up twice as fast in a dive and three times as fast when braking, and forward speed twice as fast; the forward tilt goes to 25 degrees with W and 35 with Shift+W.
-- Parachute landing damage with plane deployment only applies to a dive (15 m/s down or more: 50 health; 35 m/s or more: 90); a neutral or braked landing no longer hurts.
+- Parachute with plane deployment: W now glides (10 m/s down, up to 140 m/s forward with the default multipliers) and Shift+W goes further and faster (16.7 m/s down, up to 240 m/s forward); forward speed builds up twice as fast and is no longer capped at Admiral's 80 m/s; vertical speed builds up twice as fast in a glide and three times as fast when braking; the forward tilt goes to 25 degrees with W and 35 with Shift+W.
+- Parachute landing damage with plane deployment only applies to a Shift+W dive (12 m/s down or more: 50 health; 16 m/s or more: 90); a neutral, W or braked landing no longer hurts.
 - Removed the left and right side bars (`SpectatorLeft` and `SpectatorRight`) from the spectator overlay (`br_spectator.layout`), eliminating the darker overlapping corners along the bottom bar.
 
 ### Fixed
 - Braking the parachute with Shift+S stopped at about 115 km/h (32 m/s down); S now brakes to the neutral descent with or without Shift.
-- The parachute speedometer reads the descent's own smoothed speed instead of jumping, and its needle stops at the end of the dial instead of wrapping past it.
+- The parachute speedometer with plane deployment shows the smoothed descent speed instead of a jumping total, and its needle stops at the end of the dial instead of wrapping past it.
 
 ### Notes
 - **Config migration in `general_settings.json` (version 5):** existing version 1 to 4 files upgrade automatically to version 5 on server start. A previous `enable_plane_deployment: 0` migrates to `ParachuteDeploy: 0` (and `1` or absent becomes `ParachuteDeploy: 1`). Older mission overrides carrying `enable_plane_deployment` are translated the same way, with an explicit `ParachuteDeploy` taking precedence if both are present.
