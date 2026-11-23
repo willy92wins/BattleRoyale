@@ -7,7 +7,7 @@
 
 ### Changed
 - Replaced `enable_plane_deployment` with `ParachuteDeploy` in `general_settings.json` (`1` = plane deployment, default; `0` = classic spawn selection and ground start).
-- Parachute with plane deployment: the neutral descent is 5.6 m/s (was 8), W now glides (7 m/s down, up to 140 m/s forward with the default multipliers) and Shift+W goes further and faster (11.7 m/s down, up to 240 m/s forward); forward speed builds up twice as fast and is no longer capped at Admiral's 80 m/s; vertical speed builds up twice as fast in a glide and three times as fast when braking; the forward tilt goes to 25 degrees with W and 35 with Shift+W.
+- Parachute with plane deployment: the neutral descent is 5.6 m/s (was 8), W now glides (7 m/s down, up to 70 m/s forward with the default multipliers) and Shift+W goes further and faster (11.7 m/s down, up to 120 m/s forward); forward speed builds up twice as fast and is no longer capped at Admiral's 80 m/s; vertical speed builds up twice as fast in a glide and three times as fast when braking; the forward tilt goes to 25 degrees with W and 35 with Shift+W.
 - Parachute landing damage with plane deployment only applies to a Shift+W dive (8.4 m/s down or more: 50 health; 11.2 m/s or more: 90); a neutral, W or braked landing no longer hurts.
 - Removed the left and right side bars (`SpectatorLeft` and `SpectatorRight`) from the spectator overlay (`br_spectator.layout`), eliminating the darker overlapping corners along the bottom bar.
 

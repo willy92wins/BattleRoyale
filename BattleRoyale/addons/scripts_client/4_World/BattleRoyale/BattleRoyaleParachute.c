@@ -27,11 +27,11 @@ class BattleRoyaleParachuteTuning
 {
 	static const float NEUTRAL_Y = -0.35;       //!< 5.6 m/s down
 	static const float DIVE_Y = -0.4375;        //!< W: 7 m/s down
-	static const float DIVE_Z = 17.5;           //!< W: 140 m/s forward
+	static const float DIVE_Z = 8.75;           //!< W: 70 m/s forward
 	static const float SPRINT_DIVE_Y = -0.7292; //!< Shift+W: 11.7 m/s down
-	static const float SPRINT_DIVE_Z = 30.0;    //!< Shift+W: 240 m/s forward
+	static const float SPRINT_DIVE_Z = 15.0;    //!< Shift+W: 120 m/s forward
 	//! Forward clamp in m/s; Admiral's own is 80, under the dive targets above
-	static const float MAX_FORWARD_SPEED = 250.0;
+	static const float MAX_FORWARD_SPEED = 125.0;
 	//! Vertical speed change per second is AccelMultiY times this (4 x 3 = 12 m/s each second)
 	static const float VERTICAL_ACCEL_GAIN = 3.0;
 	//! While W is held the dive builds up slower (4 x 2 = 8 m/s each second), which carries the glide further
