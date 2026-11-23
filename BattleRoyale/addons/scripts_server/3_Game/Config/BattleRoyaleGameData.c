@@ -42,7 +42,7 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
     bool artillery_sound = true;  // Play the artillery sound when the zone shrinks
 
 	// Plane deployment (default) and legacy ground start
-	int legacy_spawn = 0;  // 1 = classic spawn selection and ground start, no plane
+	int ParachuteDeploy = 1;  // 1 = drop plane and parachute; 0 = classic spawn selection and ground start
 	float plane_speed_mps = 100;  // metres per second, 40..200
 	float plane_min_altitude_m = 800;  // AMSL, 400..2000, must stay below plane_max_altitude_m
 	float plane_max_altitude_m = 1100;  // AMSL, 400..2500
@@ -133,12 +133,12 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 		// Override from mission folder
 		if (FileExist(GetMissionPath()))
 		{
-			// Translate retired enable_plane_deployment first so an explicit legacy_spawn in the mission file wins
+			// Translate retired enable_plane_deployment first so an explicit ParachuteDeploy in the mission file wins
 			int legacyPlane = ReadLegacyPlaneKey(GetMissionPath());
 			if (legacyPlane == 0)
-				legacy_spawn = 1;
+				ParachuteDeploy = 0;
 			else if (legacyPlane == 1)
-				legacy_spawn = 0;
+				ParachuteDeploy = 1;
 
 			if (!JsonFileLoader<BattleRoyaleGameData>.LoadFile(GetMissionPath(), this, errorMessage))
 				ErrorEx(errorMessage);
@@ -195,9 +195,9 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 
 		if (version == 4)
 		{
-			// enable_plane_deployment was replaced by legacy_spawn (0 = plane, 1 = classic ground start)
+			// enable_plane_deployment was replaced by ParachuteDeploy (1 = plane, 0 = classic ground start)
 			if (legacyPlane == 0)
-				legacy_spawn = 1;
+				ParachuteDeploy = 0;
 			version = 5;
 			Save();
 		}

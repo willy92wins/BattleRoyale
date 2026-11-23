@@ -65,7 +65,7 @@ class BattleRoyalePlaneFlight
 	//! Applies BattleRoyale's configured parachute speed and acceleration multipliers to a bag.
 	static void ApplyParachuteTuning(ADM_ParachuteBag_Base bag, BattleRoyaleGameData gameData)
 	{
-		if (!bag || !gameData || gameData.legacy_spawn != 0)
+		if (!bag || !gameData || gameData.ParachuteDeploy == 0)
 			return;
 		if (gameData.parachute_fall_speed_multiplier <= 0.0 && gameData.parachute_forward_speed_multiplier <= 0.0 && gameData.parachute_accel_multiplier <= 0.0)
 			return;

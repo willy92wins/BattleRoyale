@@ -6,7 +6,7 @@ Enforce source of truth (do not drift):
   Upgrade v1->v2->v3->v4->v5, separate ifs (not else-if), each Save(); reads
   retired enable_plane_deployment before earlier steps overwrite the profile file
     BattleRoyaleGameData.Upgrade
-  LoadMission translates retired enable_plane_deployment (explicit legacy_spawn
+  LoadMission translates retired enable_plane_deployment (explicit ParachuteDeploy
   wins) and clamps version back to 5 after a mission file overwrites it
     BattleRoyaleGameData.LoadMission
   Validate: inverted altitudes (min >= max), including a side outside its
@@ -69,7 +69,7 @@ DEFAULTS = {
     "hide_players_endgame": False,
     "show_first_zone_at_start": True,
     "artillery_sound": True,
-    "legacy_spawn": 0,
+    "ParachuteDeploy": 1,
     "plane_speed_mps": 100,
     "plane_min_altitude_m": 800,
     "plane_max_altitude_m": 1100,
@@ -181,7 +181,7 @@ def upgrade(data, logs, raw_profile=None):
         logs.append("save-v4")
     if data.get("version") == 4:
         if legacy_plane == 0:
-            data["legacy_spawn"] = 1
+            data["ParachuteDeploy"] = 0
         data["version"] = 5
         logs.append("save-v5")
     return data
@@ -293,14 +293,14 @@ def validate(data, logs, rules=None, mission=None):
 
 
 def apply_mission(data, mission):
-    """LoadMission: translate retired enable_plane_deployment, then overlay known keys so explicit legacy_spawn wins."""
+    """LoadMission: translate retired enable_plane_deployment, then overlay known keys so explicit ParachuteDeploy wins."""
     if mission is None:
         return data
     legacy_plane = read_legacy_plane_key(mission)
     if legacy_plane == 0:
-        data["legacy_spawn"] = 1
+        data["ParachuteDeploy"] = 0
     elif legacy_plane == 1:
-        data["legacy_spawn"] = 0
+        data["ParachuteDeploy"] = 1
     for key, value in mission.items():
         if key not in DEFAULTS:
             continue
@@ -480,10 +480,10 @@ def run_cases(rules=None):
             failures.append("auto_open_equal: auto-open %s" % got.get("parachute_auto_open_agl_m"))
         if case["name"] == "speed_float32_ceiling" and got.get("plane_speed_mps") != 200:
             failures.append("speed_float32_ceiling: speed %s" % got.get("plane_speed_mps"))
-        if case["name"] == "v4_plane_off" and (got.get("legacy_spawn") != 1 or saved.get("legacy_spawn") != 1):
-            failures.append("v4_plane_off: legacy_spawn got=%s saved=%s" % (got.get("legacy_spawn"), saved.get("legacy_spawn")))
-        if case["name"] == "v4_plane_on" and (got.get("legacy_spawn") != 0 or saved.get("legacy_spawn") != 0):
-            failures.append("v4_plane_on: legacy_spawn got=%s saved=%s" % (got.get("legacy_spawn"), saved.get("legacy_spawn")))
+        if case["name"] == "v4_plane_off" and (got.get("ParachuteDeploy") != 0 or saved.get("ParachuteDeploy") != 0):
+            failures.append("v4_plane_off: ParachuteDeploy got=%s saved=%s" % (got.get("ParachuteDeploy"), saved.get("ParachuteDeploy")))
+        if case["name"] == "v4_plane_on" and (got.get("ParachuteDeploy") != 1 or saved.get("ParachuteDeploy") != 1):
+            failures.append("v4_plane_on: ParachuteDeploy got=%s saved=%s" % (got.get("ParachuteDeploy"), saved.get("ParachuteDeploy")))
     return failures
 
 

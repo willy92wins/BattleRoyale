@@ -44,7 +44,7 @@ class BattleRoyalePrepare: BattleRoyaleState
 		a_StartingItems = m_GameSettings.player_starting_items;
 		a_AvoidCitySpawn = m_SpawnsSettings.avoid_city_spawn;
 		b_EnableSpawnSelectionMenu = m_GameSettings.enable_spawn_selection_menu;
-		b_EnablePlaneDeployment = (m_GameSettings.legacy_spawn == 0);
+		b_EnablePlaneDeployment = (m_GameSettings.ParachuteDeploy != 0);
 
         a_PlayerList = new array<PlayerBase>();
         m_SafeVillagePoints = new map<string, ref array<vector>>();

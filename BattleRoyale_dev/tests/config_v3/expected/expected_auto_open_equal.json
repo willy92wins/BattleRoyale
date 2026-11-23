@@ -30,7 +30,7 @@
   "hide_players_endgame": false,
   "show_first_zone_at_start": true,
   "artillery_sound": true,
-  "legacy_spawn": 0,
+  "ParachuteDeploy": 1,
   "plane_speed_mps": 100.0,
   "plane_min_altitude_m": 500.0,
   "plane_max_altitude_m": 1100.0,

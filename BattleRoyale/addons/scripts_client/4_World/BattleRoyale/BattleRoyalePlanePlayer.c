@@ -1,6 +1,6 @@
 //! PlayerBase state and overrides for plane deployment and parachute descent.
 //! All plane/airlock behavior is gated by m_BRPlaneDeployment (synced from server when
-//! legacy_spawn is 0); with plane deployment off, every override delegates directly to super.
+//! ParachuteDeploy is 1); with plane deployment off, every override delegates directly to super.
 modded class PlayerBase
 {
 	protected bool m_BRPlaneDeployment;
