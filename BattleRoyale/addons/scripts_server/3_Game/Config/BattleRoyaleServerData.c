@@ -57,6 +57,7 @@ class BattleRoyaleServerData: BattleRoyaleDataBase
 	int leaderboard_points_first = 10;     // 1st place
 	int leaderboard_points_step = 2;       // each later place gets this much less, never below 0
 	int leaderboard_points_per_kill = 1;   // each kill the HUD counts in the match
+	int leaderboard_min_players_for_position = 20;  // below this many players at the match start only kills score; 0 = always
 	string leaderboard_wipe = "monthly";   // "monthly" (1st of the month), "weekly" (Monday) or "yearly" (1 January)
 	string leaderboard_webhook_url = "";   // Discord webhook for the top 30 after a match that changed it; empty = off
 
@@ -89,6 +90,12 @@ class BattleRoyaleServerData: BattleRoyaleDataBase
 		{
 			LogInvalidSetting("server_settings.json", "leaderboard_points_per_kill", leaderboard_points_per_kill.ToString(), "must be between 0 and 1000");
 			leaderboard_points_per_kill = 1;
+		}
+
+		if (leaderboard_min_players_for_position < 0 || leaderboard_min_players_for_position > 1000)
+		{
+			LogInvalidSetting("server_settings.json", "leaderboard_min_players_for_position", leaderboard_min_players_for_position.ToString(), "must be between 0 and 1000");
+			leaderboard_min_players_for_position = 20;
 		}
 
 		// The webhook URL is never a logged value, so it is not validated here

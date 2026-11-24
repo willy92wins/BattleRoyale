@@ -1,7 +1,7 @@
 #ifdef SERVER
 class BattleRoyaleGameData: BattleRoyaleDataBase
 {
-	int version = 4;  // Config version
+	int version = 5;  // Config version
 
 	// Allowed admins - Are immune to kick and can go outside the play area
 	ref array<string> admins_steamid64 = {
@@ -41,8 +41,8 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 
     bool artillery_sound = true;  // Play the artillery sound when the zone shrinks
 
-	// Plane deployment. Read by the flight-path generator; no match state reads these yet.
-	bool enable_plane_deployment = true;
+	// Plane deployment (default) and legacy ground start
+	int ParachuteDeploy = 1;  // 1 = drop plane and parachute; 0 = classic spawn selection and ground start
 	float plane_speed_mps = 100;  // metres per second, 40..200
 	float plane_min_altitude_m = 800;  // AMSL, 400..2000, must stay below plane_max_altitude_m
 	float plane_max_altitude_m = 1100;  // AMSL, 400..2500
@@ -105,19 +105,48 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 		Upgrade();
 	}
 
+	//! Reads retired enable_plane_deployment from a JSON file: 0 = off, 1 = on, -1 = absent or unreadable
+	protected int ReadLegacyPlaneKey(string path)
+	{
+		string errorMessage;
+		BattleRoyaleLegacyPlaneKey probeTrue = new BattleRoyaleLegacyPlaneKey;
+		probeTrue.enable_plane_deployment = true;
+		if (!JsonFileLoader<BattleRoyaleLegacyPlaneKey>.LoadFile(path, probeTrue, errorMessage))
+			return -1;
+
+		BattleRoyaleLegacyPlaneKey probeFalse = new BattleRoyaleLegacyPlaneKey;
+		probeFalse.enable_plane_deployment = false;
+		if (!JsonFileLoader<BattleRoyaleLegacyPlaneKey>.LoadFile(path, probeFalse, errorMessage))
+			return -1;
+
+		if (probeTrue.enable_plane_deployment != probeFalse.enable_plane_deployment)
+			return -1;
+
+		if (probeTrue.enable_plane_deployment)
+			return 1;
+		return 0;
+	}
+
 	override void LoadMission()
 	{
 		string errorMessage;
 		// Override from mission folder
 		if (FileExist(GetMissionPath()))
 		{
+			// Translate retired enable_plane_deployment first so an explicit ParachuteDeploy in the mission file wins
+			int legacyPlane = ReadLegacyPlaneKey(GetMissionPath());
+			if (legacyPlane == 0)
+				ParachuteDeploy = 0;
+			else if (legacyPlane == 1)
+				ParachuteDeploy = 1;
+
 			if (!JsonFileLoader<BattleRoyaleGameData>.LoadFile(GetMissionPath(), this, errorMessage))
 				ErrorEx(errorMessage);
 		}
 		// A mission file is applied onto the already-upgraded object and may carry an older version.
-		// The effective object stays on version 4; the profile was already saved by Upgrade().
-		if (version < 4)
-			version = 4;
+		// The effective object stays on version 5; the profile was already saved by Upgrade().
+		if (version < 5)
+			version = 5;
 	}
 
 	override void Save()
@@ -129,7 +158,12 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 
 	override void Upgrade()
 	{
-		// Each step is its own if. A v1 file becomes v2, then v3, then v4
+		// Read the retired key before earlier steps call Save() and overwrite the profile file on disk
+		int legacyPlane = -1;
+		if (version < 5 && FileExist(GetProfilePath()))
+			legacyPlane = ReadLegacyPlaneKey(GetProfilePath());
+
+		// Each step is its own if. A v1 file becomes v2, then v3, then v4, then v5
 		// on the same load. else-if would leave that file on an intermediate version.
 		if (version == 1)
 		{
@@ -156,6 +190,15 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 		{
 			// New parachute tuning keys are absent in v3 files; JsonFileLoader leaves the declared defaults in place
 			version = 4;
+			Save();
+		}
+
+		if (version == 4)
+		{
+			// enable_plane_deployment was replaced by ParachuteDeploy (1 = plane, 0 = classic ground start)
+			if (legacyPlane == 0)
+				ParachuteDeploy = 0;
+			version = 5;
 			Save();
 		}
 	}
@@ -302,5 +345,11 @@ class BattleRoyaleGameData: BattleRoyaleDataBase
 			first_zone_extra_seconds = defaults.first_zone_extra_seconds;
 		}
 	}
+};
+
+//! Auxiliary loader for the retired enable_plane_deployment key during v4->v5 upgrade and mission overrides
+class BattleRoyaleLegacyPlaneKey
+{
+	bool enable_plane_deployment = true;
 };
 #endif

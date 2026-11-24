@@ -67,28 +67,5 @@ FrameWidgetClass SpectatorRoot {
     }
    }
   }
-  PanelWidgetClass SpectatorLeft {
-   ignorepointer 1
-   color 0 0 0 0.549
-   position 0 72
-   size 24 1
-   hexactpos 1
-   vexactpos 1
-   hexactsize 1
-   vexactsize 0
-   style rover_sim_colorable
-  }
-  PanelWidgetClass SpectatorRight {
-   ignorepointer 1
-   color 0 0 0 0.549
-   position 0 72
-   size 24 1
-   halign right_ref
-   hexactpos 1
-   vexactpos 1
-   hexactsize 1
-   vexactsize 0
-   style rover_sim_colorable
-  }
  }
 }

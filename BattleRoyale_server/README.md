@@ -270,6 +270,7 @@ that same `server_settings.json`:
 "leaderboard_points_first": 10,
 "leaderboard_points_step": 2,
 "leaderboard_points_per_kill": 1,
+"leaderboard_min_players_for_position": 20,
 "leaderboard_wipe": "monthly",
 "leaderboard_webhook_url": ""
 ```
@@ -277,6 +278,8 @@ that same `server_settings.json`:
 - `"leaderboard_points_first"` is what 1st place gets, `"leaderboard_points_step"` how much less each
   later place gets (never below 0), and `"leaderboard_points_per_kill"` what each kill adds. With 10
   and 2 the first five places get 10, 8, 6, 4, 2 points, plus 1 per kill with the default kill value.
+- `"leaderboard_min_players_for_position"` (20 by default): a match that starts with fewer players
+  gives no position points, only the kill points; the win still counts. 0 scores positions always.
 - A kill is the one the kill counter of the HUD counts. In teams, every player gets the points of the
   position they held when they left the match (died or disconnected); the winners share 1st place.
 - `"leaderboard_wipe"` is `"monthly"` by default: the board starts over on the 1st of the month.
@@ -324,7 +327,8 @@ controls damage settings (`ParachuteDamage`, `LandingSpeedDamage`) and remains s
 package.
 
 BattleRoyale never writes or modifies Admiral's Parachute config file. Before starting the server with
-plane deployment enabled (`enable_plane_deployment: 1` in `general_settings.json`), copy
+plane deployment enabled (`"ParachuteDeploy": 1` in `general_settings.json`, the default; set `"ParachuteDeploy": 0`
+for classic spawn selection and ground start), copy
 `ADMParachute\ParachuteJSON.json` from this package into `<profiles>\ADMParachute\ParachuteJSON.json`
 (`$profile:ADMParachute\ParachuteJSON.json`) so Admiral's uses the intended damage settings
 (`ParachuteDamage: 2`, `LandingSpeedDamage: 1`).

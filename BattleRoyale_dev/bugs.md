@@ -27,3 +27,21 @@ Live list of known defects outside the scope of the work in progress. One entry 
 
 - **Found:** 2026-11-19, Sol review round 2. The status packs the total into 8 bits (`BattleRoyaleServer.c:2044`), so `num_zones=257` shows «Ronda 2 / 1».
 - **State:** open. No realistic config comes close: the tables have about 7 zones.
+
+## BR-005 — Client crash on quitting after a parachute landing (fixed in `9621215`, confirming)
+
+- Census of client sessions since 2026-11-20: shutdown leak `HumanCommandScript_Parachute (-1x)` closed cleanly 7/7; `-2x`/`-3x` crashed 6/7 (access violation in shutdown, `crash_<stamp>.log`); no parachute 0/5. Also happened with plane deployment off.
+- Cause (hypothesis): Admiral's `HandleParachute` starts a command while `IsParachuteOpen()`, a flag only the server clears; on the client it stays set for some frames after landing, so a second command started on the ground.
+- Fix: modded `DayZPlayerImplementParachute.HandleParachute` returns false when the player has landed and the flag is still set (`BattleRoyaleParachute.c`). In game 2026-11-24: 2 landings + quit, both `-1x`, no crash file. Close after 1-2 more.
+
+## BR-006 — Client parachute command keeps running after the server's landing (open)
+
+- Round 2026-11-24 15:19 (run `088e4583`): server logged `Landing fall=5.13` at 15:19:39; the client kept logging `[Parachute] Glide` until 15:19:54 (when Guillermo left the session), the last 11 lines at `fwd=8 vy=-8`, Admiral's defaults when the chute is no longer worn. Client script log `DayZ_MCP_dev\_client\profiles\script_2026-11-24_15-17-13.log`.
+- So the client's command did not finish on landing (Admiral finishes it in `PostPhysUpdate` on `PlayerHasLanded`). Unknown whether the player saw it (stuck or sliding). Next: ask Guillermo; check the client's leak count for this session; consider finishing the command when `!IsWearingChute()` in plane mode.
+
+### Update 2026-11-24 21:35 (BR-005 and BR-006)
+
+- BR-005 reopened: the client session of 15:17 (run `088e4583`) quit with `HumanCommandScript_Parachute (-2x)` and `crash_2026-11-24_15-17-13.log` (access violation at 15:34:08). With the guard: 2 clean, 1 crash.
+- That is the same session where BR-006 showed (client command alive 15 s after the server's landing), so BR-006 is the likely remaining path to the `-2x` leak. Fix BR-006 first, then re-measure exits.
+- Cause of BR-006 (read in Admiral's source): the server's landing ruins or deletes the chute bag (`DeleteCanopy` -> `DamageParachuteBag`), and `PlayerHasLanded` only returns true while `IsWearingChute()`; a client that had not yet seen its own touchdown kept the command forever. Fix (not yet tested in game): in plane mode the client finishes the command when the open flag clears or the chute is no longer worn, and `HandleParachute` does not start a command without a worn device. Gate as base, standalone 0 errors, build c20.
+- In game 2026-11-24 21:51 (run `dc56f5aa`, build `867af28`): server landing at 21:51:20, the client's last `Glide` line at 21:51:20.581 and none after; quit with `(-1x)` and no crash file. BR-006 fixed on one landing; BR-005 at 4 clean exits, 1 crash (before this fix).

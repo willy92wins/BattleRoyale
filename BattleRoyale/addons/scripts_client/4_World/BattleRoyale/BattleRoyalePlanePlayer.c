@@ -1,6 +1,6 @@
 //! PlayerBase state and overrides for plane deployment and parachute descent.
 //! All plane/airlock behavior is gated by m_BRPlaneDeployment (synced from server when
-//! enable_plane_deployment is true); with it false, every override delegates directly to super.
+//! ParachuteDeploy is 1); with plane deployment off, every override delegates directly to super.
 modded class PlayerBase
 {
 	protected bool m_BRPlaneDeployment;
@@ -18,6 +18,9 @@ modded class PlayerBase
 	protected bool m_BRChuteWasOpen;
 	protected bool m_BRAutoOpenSkipLogged;
 	protected ref HumanMovementState m_BRPlaneMoveState;
+	//! Filtered parachute velocity from the descent command (local, both sides, never net-synced)
+	protected vector m_BRChuteVelocity;
+	protected bool m_BRChuteVelocityValid;
 
 	override void Init()
 	{
@@ -41,6 +44,55 @@ modded class PlayerBase
 	bool BR_IsPlaneDeploymentActive()
 	{
 		return m_BRPlaneDeployment;
+	}
+
+	void BR_SetChuteVelocity(vector velocity)
+	{
+		m_BRChuteVelocity = velocity;
+		m_BRChuteVelocityValid = true;
+	}
+
+	void BR_ClearChuteVelocity()
+	{
+		m_BRChuteVelocity = vector.Zero;
+		m_BRChuteVelocityValid = false;
+	}
+
+	//! The speedometer shows the descent speed from the command's filtered velocity (GetVelocity jumps because the
+	//! command moves the body by translation); forward glide is left out
+	override float PlayerCurrentSpeed()
+	{
+		if (m_BRPlaneDeployment && m_BRChuteVelocityValid)
+			return Math.Max(0.0, -m_BRChuteVelocity[1]) * 3.6;
+		return super.PlayerCurrentSpeed();
+	}
+
+	//! With plane deployment only a dive hurts on landing; a neutral or braked descent lands safely
+	override void PlayerLandDamage()
+	{
+		if (!m_BRPlaneDeployment || !m_BRChuteVelocityValid)
+		{
+			super.PlayerLandDamage();
+			return;
+		}
+
+		if (!LandingSpeedDamage())
+			return;
+
+		float fall = -m_BRChuteVelocity[1];
+		#ifdef SERVER
+		if (fall >= BattleRoyaleParachuteTuning.HARD_DIVE_DAMAGE_FALL)
+		{
+			DecreaseHealth("", "Health", 90);
+			DecreaseHealth("", "Shock", 90);
+		}
+		else if (fall >= BattleRoyaleParachuteTuning.DIVE_DAMAGE_FALL)
+		{
+			DecreaseHealth("", "Health", 50);
+			DecreaseHealth("", "Shock", 50);
+		}
+		BattleRoyaleUtils.Trace("[Parachute] Landing fall=" + fall.ToString() + " m/s");
+		#endif
 	}
 
 	void BR_SetPlaneInRide(bool inRide)

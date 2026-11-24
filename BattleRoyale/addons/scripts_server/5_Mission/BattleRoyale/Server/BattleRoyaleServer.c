@@ -169,7 +169,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         //load config (this may error because GetBattleRoyale would return false)
         BattleRoyaleGameData m_GameData = BattleRoyaleConfig.GetConfig().GetGameData();
         i_NumRounds = m_GameData.num_zones;
-        b_EnableSpawnSelectionMenu = m_GameData.enable_spawn_selection_menu && !m_GameData.enable_plane_deployment;
+        b_EnableSpawnSelectionMenu = m_GameData.enable_spawn_selection_menu && (m_GameData.ParachuteDeploy == 0);
 
         ref array<ref BattleRoyaleState> states = new array<ref BattleRoyaleState>;
 
@@ -401,7 +401,7 @@ class BattleRoyaleServer: BattleRoyaleBase
         }
 
         BattleRoyaleGameData turnoverGameData = BattleRoyaleConfig.GetConfig().GetGameData();
-        if (turnoverGameData && turnoverGameData.enable_plane_deployment && GetGame())
+        if (turnoverGameData && turnoverGameData.ParachuteDeploy != 0 && GetGame())
         {
             array<Man> allPlayers = new array<Man>;
             GetGame().GetPlayers(allPlayers);
@@ -488,7 +488,7 @@ class BattleRoyaleServer: BattleRoyaleBase
 
         PlayerBase previous = PlayerBase.Cast( identity.GetPlayer() );
         BattleRoyaleGameData returnGameData = BattleRoyaleConfig.GetConfig().GetGameData();
-        if (returnGameData && returnGameData.enable_plane_deployment)
+        if (returnGameData && returnGameData.ParachuteDeploy != 0)
         {
             if (previous)
                 BattleRoyalePlaneFlight.NormalizePlayerForTurnover(previous, "turnover_return");
@@ -1223,11 +1223,11 @@ class BattleRoyaleServer: BattleRoyaleBase
             laterRoundsCount = 0;
             withLastRound = false;
         }
-        else if (gameSettings.enable_plane_deployment && Class.CastTo(startMatch, state))
+        else if (gameSettings.ParachuteDeploy != 0 && Class.CastTo(startMatch, state))
         {
             seconds += startMatch.GetEstimatedSecondsLeft();
         }
-        else if (gameSettings.enable_plane_deployment)
+        else if (gameSettings.ParachuteDeploy != 0)
         {
             // Preparation before plane deployment: estimated flight cross + reveal delay + first zone wait
             float estFlightSec = 120.0;
@@ -1503,6 +1503,11 @@ class BattleRoyaleServer: BattleRoyaleBase
             array<int> resultKills = new array<int>;
             array<bool> resultWon = new array<bool>;
 
+            // Position points need enough players at the match start; kills always score
+            bool scorePositions = m_MatchStartPlayers >= serverData.leaderboard_min_players_for_position;
+            if (!scorePositions)
+                BattleRoyaleUtils.Info("[Leaderboard] " + m_MatchStartPlayers.ToString() + " players at the match start, under leaderboard_min_players_for_position " + serverData.leaderboard_min_players_for_position.ToString() + ": only kills score");
+
             foreach (string plainId, string participantName : m_MatchParticipants)
             {
                 int matchKills = 0;
@@ -1517,7 +1522,7 @@ class BattleRoyaleServer: BattleRoyaleBase
                 else
                     points = matchKills * serverData.leaderboard_points_per_kill;
 
-                if (position >= 1)
+                if (position >= 1 && scorePositions)
                 {
                     int positionPoints = Math.Max(0, serverData.leaderboard_points_first - serverData.leaderboard_points_step * (position - 1));
                     if (points > int.MAX - positionPoints)
@@ -1942,7 +1947,7 @@ class BattleRoyaleServer: BattleRoyaleBase
             return;
 
         BattleRoyaleGameData gameData = BattleRoyaleConfig.GetConfig().GetGameData();
-        if (!gameData || !gameData.enable_plane_deployment)
+        if (!gameData || gameData.ParachuteDeploy == 0)
             return;
 
         PlayerBase targetBase = ResolveSenderPlayer(sender, target);

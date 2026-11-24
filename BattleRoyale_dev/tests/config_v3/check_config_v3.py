@@ -1,19 +1,19 @@
-"""Mirror of BattleRoyaleGameData migration v1->v2->v3 and Validate().
+"""Mirror of BattleRoyaleGameData migration v1->v2->v3->v4->v5 and Validate().
 
 Enforce source of truth (do not drift):
-  version default and new keys
+  version default and keys
     BattleRoyale/addons/scripts_server/3_Game/Config/BattleRoyaleGameData.c
-  Upgrade v1 then v2, two separate ifs (not else-if), each Save()
+  Upgrade v1->v2->v3->v4->v5, separate ifs (not else-if), each Save(); reads
+  retired enable_plane_deployment before earlier steps overwrite the profile file
     BattleRoyaleGameData.Upgrade
-  LoadMission clamps version back to 3 after a mission file overwrites it
+  LoadMission translates retired enable_plane_deployment (explicit ParachuteDeploy
+  wins) and clamps version back to 5 after a mission file overwrites it
     BattleRoyaleGameData.LoadMission
   Validate: inverted altitudes (min >= max), including a side outside its
   own range, are one pair log and both defaults. Per-field range logs run
-  only when min < max. Auto-open uses >= min - 100.
+  only when min < max. Auto-open uses >= min - 100. Parachute multipliers
+  accept 0 or their inclusive range (1..60, 1..40, 1..20).
     BattleRoyaleGameData.Validate
-  Each rejection is prefixed profile: or mission: from SettingFile, which
-  reads the mission file text (ReadMissionText) so the serialized object
-  gains no extra field. This mirror uses the mission object's keys the same way.
   Load order: Load() calls Upgrade() before the mission file is applied;
   Validate() runs only after LoadMission().
     BattleRoyaleConfig.c Load / LoadMission / Validate
@@ -46,7 +46,7 @@ EXPECTED = os.path.join(HERE, "expected")
 
 # BattleRoyaleGameData.c field defaults. Key order follows the class.
 DEFAULTS = {
-    "version": 3,
+    "version": 5,
     "admins_steamid64": ["123456789123456789"],
     "num_zones": 7,
     "round_duration_minutes": 5,
@@ -69,13 +69,16 @@ DEFAULTS = {
     "hide_players_endgame": False,
     "show_first_zone_at_start": True,
     "artillery_sound": True,
-    "enable_plane_deployment": True,
+    "ParachuteDeploy": 1,
     "plane_speed_mps": 100,
     "plane_min_altitude_m": 800,
     "plane_max_altitude_m": 1100,
     "plane_edge_margin_m": 600,
     "plane_path_max_zone_distance": 1.0,
     "parachute_auto_open_agl_m": 150,
+    "parachute_fall_speed_multiplier": 16,
+    "parachute_forward_speed_multiplier": 8,
+    "parachute_accel_multiplier": 4,
     "first_zone_reveal_delay_seconds": 60,
     "first_zone_extra_seconds": 180,
     "airdrop_enabled": True,
@@ -94,6 +97,9 @@ FLOAT_FIELDS = {
     "plane_edge_margin_m",
     "plane_path_max_zone_distance",
     "parachute_auto_open_agl_m",
+    "parachute_fall_speed_multiplier",
+    "parachute_forward_speed_multiplier",
+    "parachute_accel_multiplier",
 }
 
 PROFILE_FILE = "general_settings.json"
@@ -113,6 +119,9 @@ RULES = {
     "plane_edge_margin_m": (100, 3000),
     "plane_path_max_zone_distance": (0, 3),
     "parachute_auto_open_agl_m": (30, 500),
+    "parachute_fall_speed_multiplier": (1, 60),
+    "parachute_forward_speed_multiplier": (1, 40),
+    "parachute_accel_multiplier": (1, 20),
     "first_zone_reveal_delay_seconds": (0, 600),
     "first_zone_extra_seconds": (0, 1800),
     "spectator_delay_seconds": (0, 10),
@@ -123,12 +132,21 @@ def fresh_defaults():
     return copy.deepcopy(DEFAULTS)
 
 
+def read_legacy_plane_key(raw):
+    """Mirror of BattleRoyaleGameData.ReadLegacyPlaneKey: 0 = off, 1 = on, -1 = absent."""
+    if not isinstance(raw, dict) or "enable_plane_deployment" not in raw:
+        return -1
+    return 1 if bool(raw["enable_plane_deployment"]) else 0
+
+
 def load_object(raw):
-    """JsonFileLoader into a new BattleRoyaleGameData: missing keys stay default."""
+    """JsonFileLoader into a new BattleRoyaleGameData: missing keys stay default, unknown keys are ignored."""
     data = fresh_defaults()
     if not isinstance(raw, dict):
         raise TypeError("config root must be an object")
     for key, value in raw.items():
+        if key not in DEFAULTS:
+            continue
         if key in FLOAT_FIELDS and isinstance(value, (int, float)) and not isinstance(value, bool):
             value = f32(value)
         data[key] = copy.deepcopy(value)
@@ -140,8 +158,12 @@ def setting_file(mission, field):
     return PROFILE_FILE
 
 
-def upgrade(data, logs):
-    """BattleRoyaleGameData.Upgrade. Two separate steps so v1 reaches v3."""
+def upgrade(data, logs, raw_profile=None):
+    """BattleRoyaleGameData.Upgrade. Four separate steps so v1 reaches v5."""
+    legacy_plane = -1
+    if int(data.get("version", 0)) < 5 and raw_profile is not None:
+        legacy_plane = read_legacy_plane_key(raw_profile)
+
     if data.get("version") == 1:
         shortcut = data.get("player_starting_items_shortcut")
         if shortcut is None:
@@ -154,6 +176,14 @@ def upgrade(data, logs):
     if data.get("version") == 2:
         data["version"] = 3
         logs.append("save-v3")
+    if data.get("version") == 3:
+        data["version"] = 4
+        logs.append("save-v4")
+    if data.get("version") == 4:
+        if legacy_plane == 0:
+            data["ParachuteDeploy"] = 0
+        data["version"] = 5
+        logs.append("save-v5")
     return data
 
 
@@ -236,6 +266,21 @@ def validate(data, logs, rules=None, mission=None):
     if auto_open < lo or auto_open > hi or auto_open >= data["plane_min_altitude_m"] - 100:
         _reject(data, logs, mission, "parachute_auto_open_agl_m", "must be between 30 and 500 and lower than plane_min_altitude_m - 100")
 
+    lo, hi = rules["parachute_fall_speed_multiplier"]
+    fall_mult = data["parachute_fall_speed_multiplier"]
+    if fall_mult != 0 and (fall_mult < lo or fall_mult > hi):
+        _reject(data, logs, mission, "parachute_fall_speed_multiplier", "must be 0 or between 1 and 60")
+
+    lo, hi = rules["parachute_forward_speed_multiplier"]
+    fwd_mult = data["parachute_forward_speed_multiplier"]
+    if fwd_mult != 0 and (fwd_mult < lo or fwd_mult > hi):
+        _reject(data, logs, mission, "parachute_forward_speed_multiplier", "must be 0 or between 1 and 40")
+
+    lo, hi = rules["parachute_accel_multiplier"]
+    accel_mult = data["parachute_accel_multiplier"]
+    if accel_mult != 0 and (accel_mult < lo or accel_mult > hi):
+        _reject(data, logs, mission, "parachute_accel_multiplier", "must be 0 or between 1 and 20")
+
     lo, hi = rules["first_zone_reveal_delay_seconds"]
     if data["first_zone_reveal_delay_seconds"] < lo or data["first_zone_reveal_delay_seconds"] > hi:
         _reject(data, logs, mission, "first_zone_reveal_delay_seconds", "must be between 0 and 600")
@@ -248,10 +293,17 @@ def validate(data, logs, rules=None, mission=None):
 
 
 def apply_mission(data, mission):
-    """LoadMission: JsonFileLoader over the object already upgraded from the profile."""
+    """LoadMission: translate retired enable_plane_deployment, then overlay known keys so explicit ParachuteDeploy wins."""
     if mission is None:
         return data
+    legacy_plane = read_legacy_plane_key(mission)
+    if legacy_plane == 0:
+        data["ParachuteDeploy"] = 0
+    elif legacy_plane == 1:
+        data["ParachuteDeploy"] = 1
     for key, value in mission.items():
+        if key not in DEFAULTS:
+            continue
         if key in FLOAT_FIELDS and isinstance(value, (int, float)) and not isinstance(value, bool):
             value = f32(value)
         data[key] = copy.deepcopy(value)
@@ -261,12 +313,12 @@ def apply_mission(data, mission):
 def migrate(profile, mission=None, rules=None):
     logs = []
     data = load_object(profile)
-    upgrade(data, logs)
+    upgrade(data, logs, profile)
     saved = copy.deepcopy(data)
     apply_mission(data, mission)
     # BattleRoyaleGameData.LoadMission clamps an older mission version.
-    if int(data.get("version", 0)) < 3:
-        data["version"] = 3
+    if int(data.get("version", 0)) < 5:
+        data["version"] = 5
     validate(data, logs, rules, mission)
     return saved, data, logs
 
@@ -345,6 +397,8 @@ CASES = [
         "mission": "mission_speed_float32.json",
         "expected": "expected_mission_speed_float32.json",
     },
+    {"name": "v4_plane_off", "profile": "v4_plane_off.json", "expected": "expected_v4_plane_off.json"},
+    {"name": "v4_plane_on", "profile": "v4_plane_on.json", "expected": "expected_v4_plane_on.json"},
 ]
 
 # Substrings that must appear in the rejection log for that case. Empty means no rejection.
@@ -368,6 +422,8 @@ REJECT_LOGS = {
     "speed_float32_ceiling": [],
     "mission_min_below_range": ["invalid " + PROFILE_FILE + " plane_min_altitude_m = 300", "invalid " + PROFILE_FILE + " plane_min_altitude_m / plane_max_altitude_m"],
     "mission_speed_float32": [],
+    "v4_plane_off": [],
+    "v4_plane_on": [],
 }
 
 
@@ -382,12 +438,16 @@ def run_cases(rules=None):
         expected = _read(os.path.join(EXPECTED, case["expected"]))
         if not _same(got, expected):
             failures.append("%s: effective JSON mismatch\n got=%s\n expected=%s" % (case["name"], json.dumps(got, sort_keys=True), json.dumps(expected, sort_keys=True)))
-        if saved.get("version") != 3:
+        if saved.get("version") != 5:
             failures.append("%s: saved version %s" % (case["name"], saved.get("version")))
         missing = [key for key in DEFAULTS if key not in saved]
         if missing:
             failures.append("%s: saved JSON missing %s" % (case["name"], missing))
-        if int(profile.get("version", 3)) < 3 and "save-v3" not in logs:
+        if int(profile.get("version", 5)) < 5 and "save-v5" not in logs:
+            failures.append("%s: upgrade did not record save-v5 (%s)" % (case["name"], logs))
+        if int(profile.get("version", 5)) < 4 and "save-v4" not in logs:
+            failures.append("%s: upgrade did not record save-v4 (%s)" % (case["name"], logs))
+        if int(profile.get("version", 5)) < 3 and "save-v3" not in logs:
             failures.append("%s: upgrade did not record save-v3 (%s)" % (case["name"], logs))
         if profile.get("version") == 1 and "save-v2" not in logs:
             failures.append("%s: upgrade did not record save-v2 (%s)" % (case["name"], logs))
@@ -408,7 +468,7 @@ def run_cases(rules=None):
         for fragment in wanted:
             if not any(fragment in line for line in invalid_lines):
                 failures.append("%s: missing rejection %s in %s" % (case["name"], fragment, logs))
-        if case["name"] == "mission_version_2" and got.get("version") != 3:
+        if case["name"] == "mission_version_2" and got.get("version") != 5:
             failures.append("mission_version_2: effective version %s" % got.get("version"))
         if case["name"] == "inverted_out_of_range":
             if got.get("plane_min_altitude_m") != 800 or got.get("plane_max_altitude_m") != 1100:
@@ -420,6 +480,10 @@ def run_cases(rules=None):
             failures.append("auto_open_equal: auto-open %s" % got.get("parachute_auto_open_agl_m"))
         if case["name"] == "speed_float32_ceiling" and got.get("plane_speed_mps") != 200:
             failures.append("speed_float32_ceiling: speed %s" % got.get("plane_speed_mps"))
+        if case["name"] == "v4_plane_off" and (got.get("ParachuteDeploy") != 0 or saved.get("ParachuteDeploy") != 0):
+            failures.append("v4_plane_off: ParachuteDeploy got=%s saved=%s" % (got.get("ParachuteDeploy"), saved.get("ParachuteDeploy")))
+        if case["name"] == "v4_plane_on" and (got.get("ParachuteDeploy") != 1 or saved.get("ParachuteDeploy") != 1):
+            failures.append("v4_plane_on: ParachuteDeploy got=%s saved=%s" % (got.get("ParachuteDeploy"), saved.get("ParachuteDeploy")))
     return failures
 
 
