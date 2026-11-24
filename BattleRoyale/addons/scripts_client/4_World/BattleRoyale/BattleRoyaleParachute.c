@@ -38,6 +38,14 @@ class BattleRoyaleParachuteTuning
 	static const float DIVE_VERTICAL_ACCEL_GAIN = 2.0;
 	//! Forward speed change per second is AccelMultiZ times this (4 x 2 = 8 m/s each second)
 	static const float FORWARD_ACCEL_GAIN = 2.0;
+	//! Forward speed bleeds off slower without S (4 x 1 = 4 m/s each second)
+	static const float FORWARD_COAST_ACCEL_GAIN = 1.0;
+	//! Looking down past this angle turns forward speed into descent
+	static const float DIVE_PITCH_START_DEG = 10.0;
+	//! Look-down angle past the start where the transfer stops growing
+	static const float DIVE_PITCH_MAX_DEG = 60.0;
+	//! Share of the current forward speed added to the descent, times the sine of the dive angle
+	static const float DIVE_TRANSFER = 1.0;
 	//! Landing damage with plane deployment: only a dive hurts (m/s down at touchdown)
 	//! A W glide (6.3 m/s) and an idle descent (5.05 m/s) stay under these
 	static const float DIVE_DAMAGE_FALL = 7.55;
@@ -47,6 +55,7 @@ class BattleRoyaleParachuteTuning
 //! BattleRoyale overrides for Admiral's parachute command:
 //! - S key acts as an air brake (neutral descent, zero backward travel) instead of reversing.
 //! - W glides forward with a slightly faster descent, Shift+W faster still; vertical speed changes faster.
+//! - Looking down turns forward speed into descent; forward speed bleeds off slowly without S.
 //! - The filtered velocity is handed to the player for the speedometer and dive landing damage.
 //! - Smooth pitch (W/S) and roll (A/D + yaw rate) body tilt, leveled on landing or deactivation.
 //! Inactive when ParachuteDeploy is 0 (all methods fall through to super).
@@ -57,6 +66,7 @@ modded class HumanCommandScript_Parachute
 	protected float m_BRPrevYaw;
 	protected bool m_BRHasYaw;
 	protected bool m_BRTiltApplied;
+	protected float m_BRDiveLogTimer;
 
 	protected void BR_ApplyWorldTilt(float yaw, float pitch, float roll)
 	{
@@ -94,16 +104,46 @@ modded class HumanCommandScript_Parachute
 		constantY = BattleRoyaleParachuteTuning.NEUTRAL_Y;
 	}
 
+	//! Base aiming angle in degrees, negative below the horizon; 0 without a weapons modifier
+	protected float BR_GetLookPitch()
+	{
+		HumanCommandWeapons hcw = m_pPlayer.GetCommandModifier_Weapons();
+		if (!hcw)
+			return 0.0;
+		return hcw.GetBaseAimingAngleUD();
+	}
+
+	//! Looking down rotates the target velocity: the forward target shrinks by the cosine of the
+	//! dive angle and the current forward speed times its sine is added to the descent.
+	protected void BR_ApplyDivePitch()
+	{
+		float dive = -BR_GetLookPitch() - BattleRoyaleParachuteTuning.DIVE_PITCH_START_DEG;
+		if (dive <= 0.0)
+			return;
+		dive = Math.Min(dive, BattleRoyaleParachuteTuning.DIVE_PITCH_MAX_DEG);
+		float rad = dive * Math.DEG2RAD;
+		float forward = Math.Max(filterZ, 0.0);
+		constantY = constantY - (forward * Math.Sin(rad) * BattleRoyaleParachuteTuning.DIVE_TRANSFER);
+		constantZ = constantZ * Math.Cos(rad);
+	}
+
 	override void SetJSONMultiplier()
 	{
 		super.SetJSONMultiplier();
 		if (m_pPlayer && m_pPlayer.BR_IsPlaneDeploymentActive() && m_pPlayer.IsWearingChute())
 		{
+			BR_ApplyDivePitch();
+
 			float verticalGain = BattleRoyaleParachuteTuning.VERTICAL_ACCEL_GAIN;
 			if (locDir[2] > 0.0)
 				verticalGain = BattleRoyaleParachuteTuning.DIVE_VERTICAL_ACCEL_GAIN;
 			constantAY = constantAY * verticalGain;
-			constantAZ = constantAZ * BattleRoyaleParachuteTuning.FORWARD_ACCEL_GAIN;
+
+			// S keeps the quick brake; anything else slowing the glide coasts down
+			float forwardGain = BattleRoyaleParachuteTuning.FORWARD_ACCEL_GAIN;
+			if (locDir[2] >= 0.0 && constantZ < filterZ)
+				forwardGain = BattleRoyaleParachuteTuning.FORWARD_COAST_ACCEL_GAIN;
+			constantAZ = constantAZ * forwardGain;
 		}
 	}
 
@@ -129,7 +169,15 @@ modded class HumanCommandScript_Parachute
 	{
 		super.PrePhysUpdate(pDt);
 		if (m_pPlayer && m_pPlayer.BR_IsPlaneDeploymentActive())
+		{
 			m_pPlayer.BR_SetChuteVelocity(Vector(filterX, filterY, filterZ));
+			m_BRDiveLogTimer = m_BRDiveLogTimer + pDt;
+			if (m_BRDiveLogTimer >= 1.0)
+			{
+				m_BRDiveLogTimer = 0.0;
+				BattleRoyaleUtils.Trace("[Parachute] Glide pitch=" + BR_GetLookPitch().ToString() + " fwd=" + filterZ.ToString() + " vy=" + filterY.ToString());
+			}
+		}
 	}
 
 	override void OnActivate()
@@ -140,6 +188,7 @@ modded class HumanCommandScript_Parachute
 		m_BRPrevYaw = 0.0;
 		m_BRHasYaw = false;
 		m_BRTiltApplied = false;
+		m_BRDiveLogTimer = 0.0;
 	}
 
 	override bool PostPhysUpdate(float pDt)
