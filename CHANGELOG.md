@@ -1,19 +1,20 @@
 # Changelog
 
-## 2.1.0 (unreleased)
+## 2.1.0 (2026-11-24)
 
 ### Added
 - `leaderboard_min_players_for_position` in `server_settings.json` (default `20`): a match that starts with fewer players gives no leaderboard points for the final position, only for kills. `0` keeps the previous behaviour.
 
 ### Changed
 - Replaced `enable_plane_deployment` with `ParachuteDeploy` in `general_settings.json` (`1` = plane deployment, default; `0` = classic spawn selection and ground start).
-- Parachute with plane deployment: the neutral descent is 5.05 m/s (was 8), W now glides (6.3 m/s down, up to 44.8 m/s forward with the default multipliers) and Shift+W goes further and faster (10.5 m/s down, up to 76.8 m/s forward); forward speed builds up twice as fast and is no longer capped at Admiral's 80 m/s; vertical speed builds up twice as fast in a glide and three times as fast when braking; the forward tilt goes to 25 degrees with W and 35 with Shift+W.
+- Parachute with plane deployment: the neutral descent is 5.05 m/s (was 8), W now glides (6.3 m/s down, up to 44.8 m/s forward with the default multipliers) and Shift+W goes further and faster (10.5 m/s down, up to 76.8 m/s forward); forward speed builds up twice as fast and stays within Admiral's 80 m/s cap; vertical speed builds up twice as fast in a glide and three times as fast when braking; the forward tilt goes to 25 degrees with W and 35 with Shift+W.
 - Plane-mode parachute: looking down turns forward speed into descent (the steeper the look, the faster the dive), and releasing W bleeds forward speed off at half the old rate; S still brakes quickly.
 - Parachute landing damage with plane deployment only applies to a Shift+W dive (7.55 m/s down or more: 50 health; 10.1 m/s or more: 90); a neutral, W or braked landing no longer hurts.
 - Removed the left and right side bars (`SpectatorLeft` and `SpectatorRight`) from the spectator overlay (`br_spectator.layout`), eliminating the darker overlapping corners along the bottom bar.
 
 ### Fixed
 - After a parachute landing the client could start extra parachute commands on the ground while the open state was still syncing, which preceded a client crash when quitting the game; a landed player no longer starts one.
+- With plane deployment the client's parachute could keep flying after the server had landed the player (the landing removes the chute, and the client's own landing check needs a worn chute), which also preceded the crash on quitting; the client now ends it when the server closes the parachute or the chute is gone.
 - Braking the parachute with Shift+S stopped at about 115 km/h (32 m/s down); S now brakes to the neutral descent with or without Shift.
 - With Community Online Tools (2026-10-20 or later), players aboard the plane or descending no longer collect anti-cheat speed and teleport flags; the grace ends a few seconds after landing.
 - The parachute speedometer with plane deployment shows the smoothed descent speed instead of a jumping total, and its needle stops at the end of the dial instead of wrapping past it.

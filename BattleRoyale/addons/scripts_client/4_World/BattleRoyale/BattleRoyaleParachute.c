@@ -66,7 +66,6 @@ modded class HumanCommandScript_Parachute
 	protected float m_BRPrevYaw;
 	protected bool m_BRHasYaw;
 	protected bool m_BRTiltApplied;
-	protected float m_BRDiveLogTimer;
 
 	protected void BR_ApplyWorldTilt(float yaw, float pitch, float roll)
 	{
@@ -169,15 +168,7 @@ modded class HumanCommandScript_Parachute
 	{
 		super.PrePhysUpdate(pDt);
 		if (m_pPlayer && m_pPlayer.BR_IsPlaneDeploymentActive())
-		{
 			m_pPlayer.BR_SetChuteVelocity(Vector(filterX, filterY, filterZ));
-			m_BRDiveLogTimer = m_BRDiveLogTimer + pDt;
-			if (m_BRDiveLogTimer >= 1.0)
-			{
-				m_BRDiveLogTimer = 0.0;
-				BattleRoyaleUtils.Trace("[Parachute] Glide pitch=" + BR_GetLookPitch().ToString() + " fwd=" + filterZ.ToString() + " vy=" + filterY.ToString());
-			}
-		}
 	}
 
 	override void OnActivate()
@@ -188,7 +179,6 @@ modded class HumanCommandScript_Parachute
 		m_BRPrevYaw = 0.0;
 		m_BRHasYaw = false;
 		m_BRTiltApplied = false;
-		m_BRDiveLogTimer = 0.0;
 	}
 
 	override bool PostPhysUpdate(float pDt)
