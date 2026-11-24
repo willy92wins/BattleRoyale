@@ -227,3 +227,21 @@ modded class HumanCommandScript_Parachute
 		}
 	}
 }
+
+//! Admiral's handler starts a parachute command whenever the open flag is set and no script
+//! command runs. The flag is cleared by the server, and on the client it stays set for a few
+//! frames after the command ends on landing, so the client could start extra parachute
+//! commands on the ground. A player who has landed never starts a new one.
+modded class DayZPlayerImplementParachute
+{
+	override bool HandleParachute(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
+	{
+		if (pCurrentCommandID != DayZPlayerConstants.COMMANDID_SCRIPT)
+		{
+			PlayerBase player = PlayerBase.Cast(dp_player);
+			if (player && player.IsParachuteOpen() && player.PlayerHasLanded())
+				return false;
+		}
+		return super.HandleParachute(pDt, pCurrentCommandID, pCurrentCommandFinished);
+	}
+}
