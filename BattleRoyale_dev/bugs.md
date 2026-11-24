@@ -38,3 +38,8 @@ Live list of known defects outside the scope of the work in progress. One entry 
 
 - Round 2026-11-24 15:19 (run `088e4583`): server logged `Landing fall=5.13` at 15:19:39; the client kept logging `[Parachute] Glide` until 15:19:54 (when Guillermo left the session), the last 11 lines at `fwd=8 vy=-8`, Admiral's defaults when the chute is no longer worn. Client script log `DayZ_MCP_dev\_client\profiles\script_2026-11-24_15-17-13.log`.
 - So the client's command did not finish on landing (Admiral finishes it in `PostPhysUpdate` on `PlayerHasLanded`). Unknown whether the player saw it (stuck or sliding). Next: ask Guillermo; check the client's leak count for this session; consider finishing the command when `!IsWearingChute()` in plane mode.
+
+### Update 2026-11-24 21:35 (BR-005 and BR-006)
+
+- BR-005 reopened: the client session of 15:17 (run `088e4583`) quit with `HumanCommandScript_Parachute (-2x)` and `crash_2026-11-24_15-17-13.log` (access violation at 15:34:08). With the guard: 2 clean, 1 crash.
+- That is the same session where BR-006 showed (client command alive 15 s after the server's landing), so BR-006 is the likely remaining path to the `-2x` leak. Fix BR-006 first, then re-measure exits.
