@@ -202,6 +202,13 @@ modded class HumanCommandScript_Parachute
 		float curRot[4];
 		vector curAng;
 
+		#ifndef SERVER
+		// The server's landing ruins or removes the chute bag; Admiral's landing check needs a worn
+		// chute, so a client that has not seen its own touchdown yet would keep the command running.
+		if (result && !m_bNeedFinish && (closed || !m_pPlayer.IsWearingChute()))
+			m_bNeedFinish = true;
+		#endif
+
 		if (!result || m_bNeedFinish || closed)
 		{
 			m_BRTiltPitch = 0.0;
@@ -280,7 +287,7 @@ modded class HumanCommandScript_Parachute
 //! Admiral's handler starts a parachute command whenever the open flag is set and no script
 //! command runs. The flag is cleared by the server, and on the client it stays set for a few
 //! frames after the command ends on landing, so the client could start extra parachute
-//! commands on the ground. A player who has landed never starts a new one.
+//! commands on the ground. A player who has landed, or no longer wears a device, never starts a new one.
 modded class DayZPlayerImplementParachute
 {
 	override bool HandleParachute(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
@@ -288,8 +295,14 @@ modded class DayZPlayerImplementParachute
 		if (pCurrentCommandID != DayZPlayerConstants.COMMANDID_SCRIPT)
 		{
 			PlayerBase player = PlayerBase.Cast(dp_player);
-			if (player && player.IsParachuteOpen() && player.PlayerHasLanded())
-				return false;
+			if (player && player.IsParachuteOpen())
+			{
+				if (player.PlayerHasLanded())
+					return false;
+				// The flag can outlive the chute bag on the client; without a worn device there is nothing to fly
+				if (!player.IsWearingChute() && !player.IsWearingJetPack() && !player.IsWearingParaMotor())
+					return false;
+			}
 		}
 		return super.HandleParachute(pDt, pCurrentCommandID, pCurrentCommandFinished);
 	}
